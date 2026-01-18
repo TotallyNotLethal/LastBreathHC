@@ -1,5 +1,9 @@
 package com.lastbreath.hc.lastBreathHC.asteroid;
 
+import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
+import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
+import com.lastbreath.hc.lastBreathHC.titles.Title;
+import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.event.EventHandler;
@@ -59,6 +63,17 @@ public class AsteroidListener implements Listener {
         }
 
         if (empty) {
+            if (e.getPlayer() != null) {
+                PlayerStats stats = StatsManager.get(e.getPlayer().getUniqueId());
+                stats.asteroidLoots++;
+                TitleManager.unlockTitle(e.getPlayer(), Title.ASTEROID_HUNTER, "You looted your first asteroid.");
+                if (stats.asteroidLoots >= 3) {
+                    TitleManager.unlockTitle(e.getPlayer(), Title.RELIC_SEEKER, "You have looted multiple asteroids.");
+                }
+                if (stats.asteroidLoots >= 5) {
+                    TitleManager.unlockTitle(e.getPlayer(), Title.STAR_FORGER, "You have mastered asteroid hunting.");
+                }
+            }
             AsteroidManager.remove(asteroidLoc);
         }
     }

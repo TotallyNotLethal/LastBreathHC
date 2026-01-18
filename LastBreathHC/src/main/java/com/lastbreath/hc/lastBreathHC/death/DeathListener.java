@@ -2,6 +2,10 @@ package com.lastbreath.hc.lastBreathHC.death;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
+import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
+import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
+import com.lastbreath.hc.lastBreathHC.titles.Title;
+import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.token.ReviveToken;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -16,6 +20,13 @@ public class DeathListener implements Listener {
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        stats.deaths++;
+        TitleManager.unlockTitle(player, Title.THE_FALLEN, "You have tasted defeat.");
+        if (stats.deaths >= 3) {
+            TitleManager.unlockTitle(player, Title.DEATH_DEFIER, "You keep fighting after repeated deaths.");
+        }
+        TitleManager.checkTimeBasedTitles(player);
 
         // Stop vanilla behavior
         event.setDeathMessage(null);
@@ -56,7 +67,7 @@ public class DeathListener implements Listener {
         );
 
         Bukkit.broadcastMessage(
-                "§4☠ " + player.getName() + " has fallen..."
+                "§4☠ " + TitleManager.getTitleTag(player) + player.getName() + " has fallen..."
         );
 
         ReviveGUI.open(player);
@@ -64,7 +75,7 @@ public class DeathListener implements Listener {
 
     public static void banPlayer(Player player, String reason) {
         Bukkit.broadcastMessage(
-                "§4☠ " + player.getName() + " has perished permanently."
+                "§4☠ " + TitleManager.getTitleTag(player) + player.getName() + " has perished permanently."
         );
 
         Bukkit.getBanList(BanList.Type.NAME)
