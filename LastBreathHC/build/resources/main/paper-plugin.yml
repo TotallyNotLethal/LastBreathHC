@@ -1,0 +1,5 @@
+name: LastBreathHC
+version: '1.0-SNAPSHOT'
+main: com.lastbreath.hc.lastBreathHC.LastBreathHC
+api-version: '1.21'
+author: LethalLuck
