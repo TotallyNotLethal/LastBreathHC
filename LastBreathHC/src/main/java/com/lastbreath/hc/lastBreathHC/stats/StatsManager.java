@@ -1,6 +1,10 @@
 package com.lastbreath.hc.lastBreathHC.stats;
 
-import java.util.*;
+import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class StatsManager {
 
@@ -10,6 +14,7 @@ public class StatsManager {
         return stats.computeIfAbsent(uuid, k -> {
             PlayerStats s = new PlayerStats();
             s.uuid = k;
+            TitleManager.initialize(s);
             return s;
         });
     }

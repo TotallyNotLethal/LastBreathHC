@@ -1,5 +1,9 @@
 package com.lastbreath.hc.lastBreathHC.stats;
 
+import com.lastbreath.hc.lastBreathHC.titles.Title;
+
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public class PlayerStats {
@@ -8,4 +12,7 @@ public class PlayerStats {
     public int deaths;
     public int revives;
     public int mobsKilled;
+    public int asteroidLoots;
+    public Set<Title> unlockedTitles = new HashSet<>();
+    public Title equippedTitle;
 }

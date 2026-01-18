@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
+import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
 import org.bukkit.plugin.java.JavaPlugin;
 import com.lastbreath.hc.lastBreathHC.token.TokenRecipe;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
@@ -31,6 +32,9 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new AsteroidListener(), this
         );
+        getServer().getPluginManager().registerEvents(
+                new TitleListener(), this
+        );
 
         TokenRecipe.register();
 
@@ -39,6 +43,9 @@ public final class LastBreathHC extends JavaPlugin {
                 event -> event.registrar().register(
                         "asteroid",
                         new com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand()
+                ).register(
+                        "titles",
+                        new com.lastbreath.hc.lastBreathHC.commands.TitlesCommand()
                 )
         );
     }

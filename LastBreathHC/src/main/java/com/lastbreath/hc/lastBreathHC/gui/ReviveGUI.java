@@ -1,6 +1,10 @@
 package com.lastbreath.hc.lastBreathHC.gui;
 
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
+import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
+import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
+import com.lastbreath.hc.lastBreathHC.titles.Title;
+import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.token.ReviveToken;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -44,6 +48,12 @@ public class ReviveGUI implements Listener {
 
         if (e.getCurrentItem().getType() == Material.LIME_WOOL) {
             consumeToken(player);
+            PlayerStats stats = StatsManager.get(player.getUniqueId());
+            stats.revives++;
+            TitleManager.unlockTitle(player, Title.REVIVED, "You returned from the brink.");
+            if (stats.revives >= 3) {
+                TitleManager.unlockTitle(player, Title.SOUL_RECLAIMER, "You have reclaimed your soul multiple times.");
+            }
 
             player.setGameMode(GameMode.SURVIVAL);
             player.teleport(
@@ -53,7 +63,7 @@ public class ReviveGUI implements Listener {
             );
 
             Bukkit.broadcastMessage(
-                    "§6⚡ " + player.getName() + " defied death!"
+                    "§6⚡ " + TitleManager.getTitleTag(player) + player.getName() + " defied death!"
             );
 
             player.closeInventory();
