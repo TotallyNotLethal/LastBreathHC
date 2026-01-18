@@ -1,12 +1,15 @@
 package com.lastbreath.hc.lastBreathHC.heads;
 
+import com.lastbreath.hc.lastBreathHC.token.ReviveToken;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Skull;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -126,9 +129,46 @@ public class HeadListener implements Listener {
 
         e.setCancelled(true);
 
-        UUID uuid = UUID.fromString(
-                pdc.get(HeadManager.getKey(), PersistentDataType.STRING)
-        );
+        String storedUuid = pdc.get(HeadManager.getKey(), PersistentDataType.STRING);
+        if (storedUuid == null) {
+            e.getPlayer().sendMessage("§cThis head is missing its soul data.");
+            return;
+        }
+
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(storedUuid);
+        } catch (IllegalArgumentException ex) {
+            e.getPlayer().sendMessage("§cThis head is corrupted.");
+            return;
+        }
+
+        if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+            if (!consumeReviveToken(e.getPlayer())) {
+                e.getPlayer().sendMessage("§cYou need a Revival Token to revive this soul.");
+                return;
+            }
+
+            if (!HeadManager.has(uuid)) {
+                e.getPlayer().sendMessage("§cThis soul has already been claimed.");
+                return;
+            }
+
+            OfflinePlayer target = Bukkit.getOfflinePlayer(uuid);
+            String targetName = target.getName();
+            if (targetName == null || targetName.isBlank()) {
+                e.getPlayer().sendMessage("§cUnable to resolve the soul's name.");
+                return;
+            }
+
+            Bukkit.getBanList(BanList.Type.NAME).pardon(targetName);
+            Bukkit.broadcastMessage("§a✦ " + targetName + " has been revived!");
+
+            HeadManager.remove(uuid);
+            pdc.remove(HeadManager.getKey());
+            skull.update();
+            return;
+        }
 
         Inventory inv = HeadManager.get(uuid);
         if (inv == null) {
@@ -225,5 +265,21 @@ public class HeadListener implements Listener {
                 HeadManager.getKey(),
                 PersistentDataType.STRING
         );
+    }
+
+    private boolean consumeReviveToken(Player player) {
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
+            if (ReviveToken.isToken(item)) {
+                if (item.getAmount() > 1) {
+                    item.setAmount(item.getAmount() - 1);
+                } else {
+                    player.getInventory().setItem(i, null);
+                }
+                return true;
+            }
+        }
+
+        return false;
     }
 }
