@@ -32,6 +32,9 @@ import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveNameGUI;
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
+import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
+import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
+import com.lastbreath.hc.lastBreathHC.items.GracestoneListener;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -100,9 +103,16 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new BloodMoonListener(bloodMoonManager), this
         );
+        getServer().getPluginManager().registerEvents(
+                new EnhancedGrindstoneListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new GracestoneListener(), this
+        );
 
         TokenRecipe.register();
         ReviveGuiTokenRecipe.register();
+        CustomItemRecipes.register();
         scheduleNextAsteroid();
         scheduleBountyTimers();
         scheduleBloodMoonChecks();

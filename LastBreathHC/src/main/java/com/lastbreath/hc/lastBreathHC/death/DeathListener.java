@@ -6,6 +6,7 @@ import com.lastbreath.hc.lastBreathHC.bounty.BountyRecord;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
+import com.lastbreath.hc.lastBreathHC.items.Gracestone;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.token.ReviveToken;
@@ -36,6 +37,12 @@ public class DeathListener implements Listener {
         if (killer != null) {
             handleBountyClaim(player, killer);
             BountyManager.createBounty(killer.getUniqueId());
+        }
+
+        if (Gracestone.isGraceActive(player)) {
+            Gracestone.clearGrace(player);
+            player.sendMessage("§eYour Gracestone grace has faded. Hardcore rules restored.");
+            return;
         }
 
         // Stop vanilla behavior

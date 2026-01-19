@@ -1,0 +1,103 @@
+package com.lastbreath.hc.lastBreathHC.items;
+
+import org.bukkit.Material;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.inventory.AnvilInventory;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class EnhancedGrindstoneListener implements Listener {
+
+    private final Set<UUID> activeUsers = ConcurrentHashMap.newKeySet();
+
+    @EventHandler
+    public void onUse(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR
+                && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+
+        ItemStack item = event.getItem();
+        if (!EnhancedGrindstone.isEnhancedGrindstone(item)) {
+            return;
+        }
+
+        event.setCancelled(true);
+        Player player = event.getPlayer();
+        activeUsers.add(player.getUniqueId());
+        player.openAnvil(null, true);
+    }
+
+    @EventHandler
+    public void onPrepareAnvil(PrepareAnvilEvent event) {
+        if (!(event.getView().getPlayer() instanceof Player player)) {
+            return;
+        }
+
+        if (!activeUsers.contains(player.getUniqueId())) {
+            return;
+        }
+
+        AnvilInventory inventory = event.getInventory();
+        ItemStack left = inventory.getItem(0);
+        ItemStack right = inventory.getItem(1);
+        if (left == null || right == null || right.getType() != Material.BOOK) {
+            return;
+        }
+
+        Map<Enchantment, Integer> enchants = extractEnchantments(left);
+        if (enchants.isEmpty()) {
+            return;
+        }
+
+        ItemStack result = new ItemStack(Material.ENCHANTED_BOOK);
+        ItemMeta meta = result.getItemMeta();
+        if (!(meta instanceof EnchantmentStorageMeta storageMeta)) {
+            return;
+        }
+
+        for (Map.Entry<Enchantment, Integer> entry : enchants.entrySet()) {
+            storageMeta.addStoredEnchant(entry.getKey(), entry.getValue(), true);
+        }
+        result.setItemMeta(storageMeta);
+        event.setResult(result);
+        inventory.setRepairCost(1);
+    }
+
+    @EventHandler
+    public void onClose(InventoryCloseEvent event) {
+        activeUsers.remove(event.getPlayer().getUniqueId());
+    }
+
+    private Map<Enchantment, Integer> extractEnchantments(ItemStack item) {
+        if (item == null) {
+            return Map.of();
+        }
+
+        if (item.getType() == Material.ENCHANTED_BOOK
+                && item.getItemMeta() instanceof EnchantmentStorageMeta storageMeta) {
+            return new HashMap<>(storageMeta.getStoredEnchants());
+        }
+
+        return new HashMap<>(item.getEnchantments());
+    }
+}
