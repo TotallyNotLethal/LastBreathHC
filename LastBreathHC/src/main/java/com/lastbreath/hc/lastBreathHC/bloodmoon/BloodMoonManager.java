@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
@@ -20,9 +21,10 @@ public class BloodMoonManager {
     private static final int EFFECT_AMPLIFIER = 0;
     private static final int DARKNESS_INTERVAL_TICKS = 20 * 45;
     private static final int DARKNESS_DURATION_TICKS = 80;
-    private static final float HURT_ANIMATION_INTENSITY = 0.75f;
     private static final float THUNDER_VOLUME = 0.2f;
     private static final float THUNDER_PITCH = 0.8f;
+    private static final double BORDER_OVERLAY_SIZE = 1.0;
+    private static final double BORDER_OVERLAY_OFFSET = 2000.0;
 
     private final Plugin plugin;
     private final Map<UUID, WorldState> worldStates = new HashMap<>();
@@ -105,7 +107,7 @@ public class BloodMoonManager {
 
     private void applyBloodMoonEffects(Player player, boolean applyDarknessNow) {
         applyEffects(player, applyDarknessNow);
-        player.playHurtAnimation(HURT_ANIMATION_INTENSITY);
+        applyWorldBorderOverlay(player);
         player.playSound(player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, THUNDER_VOLUME, THUNDER_PITCH);
     }
 
@@ -121,6 +123,7 @@ public class BloodMoonManager {
         player.removePotionEffect(PotionEffectType.DARKNESS);
         player.removePotionEffect(PotionEffectType.NAUSEA);
         player.removePotionEffect(PotionEffectType.SLOW);
+        player.setWorldBorder(null);
     }
 
     private boolean tickDarkness() {
@@ -131,6 +134,17 @@ public class BloodMoonManager {
 
         darknessCountdownTicks = DARKNESS_INTERVAL_TICKS;
         return true;
+    }
+
+    private void applyWorldBorderOverlay(Player player) {
+        WorldBorder overlay = Bukkit.createWorldBorder();
+        overlay.setSize(BORDER_OVERLAY_SIZE);
+        double centerX = player.getLocation().getX() + BORDER_OVERLAY_OFFSET;
+        double centerZ = player.getLocation().getZ() + BORDER_OVERLAY_OFFSET;
+        overlay.setCenter(centerX, centerZ);
+        overlay.setWarningDistance(0);
+        overlay.setWarningTime(0);
+        player.setWorldBorder(overlay);
     }
 
     private record WorldState(long time, boolean storm, boolean thunder) {
