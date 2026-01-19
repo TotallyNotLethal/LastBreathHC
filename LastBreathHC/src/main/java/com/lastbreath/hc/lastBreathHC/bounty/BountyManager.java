@@ -2,8 +2,12 @@ package com.lastbreath.hc.lastBreathHC.bounty;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,6 +25,9 @@ public class BountyManager {
     private static final Map<UUID, BountyRecord> BOUNTIES = new HashMap<>();
     public static final long IN_GAME_HOUR_TICKS = 1000L;
     public static final long BOUNTY_EXPIRATION_TICKS = IN_GAME_HOUR_TICKS * 8L;
+    private static final long MAX_REWARD_HOURS = 7L;
+    private static final int MIN_DIAMOND_REWARD = 1;
+    private static final int MAX_DIAMOND_REWARD = 7;
     private static final String FILE_NAME = "bounties.yml";
 
     private BountyManager() {
@@ -94,8 +102,7 @@ public class BountyManager {
             record.targetName = resolveName(uuid);
             record.accumulatedOnlineSeconds = 0L;
             record.accumulatedOnlineTicks = 0L;
-            record.rewardTier = 1;
-            record.rewardValue = calculateRewardValue(record.rewardTier);
+            updateReward(record);
             save();
             return record;
         });
@@ -130,8 +137,33 @@ public class BountyManager {
             return;
         }
 
-        record.rewardTier = calculateTier(record.accumulatedOnlineSeconds, record.accumulatedOnlineTicks);
-        record.rewardValue = calculateRewardValue(record.rewardTier);
+        updateReward(record);
+    }
+
+    public static ItemStack getRewardItemStack(UUID targetUuid) {
+        BountyRecord record = BOUNTIES.get(targetUuid);
+        if (record == null) {
+            return null;
+        }
+        return getRewardItemStack(record);
+    }
+
+    public static ItemStack getRewardItemStack(BountyRecord record) {
+        RewardDescriptor descriptor = calculateRewardDescriptor(
+                record.accumulatedOnlineSeconds,
+                record.accumulatedOnlineTicks
+        );
+        ItemStack itemStack = new ItemStack(descriptor.material, descriptor.amount);
+        ItemMeta meta = itemStack.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.GOLD + "Bounty Reward");
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.GRAY + "Reward: " + descriptor.displayName);
+            lore.add(ChatColor.DARK_GRAY + "Online time: " + descriptor.formattedHours);
+            meta.setLore(lore);
+            itemStack.setItemMeta(meta);
+        }
+        return itemStack;
     }
 
     public static void incrementOnlineTimeForOnlinePlayers(long ticks, long seconds) {
@@ -186,16 +218,56 @@ public class BountyManager {
         return name == null ? uuid.toString() : name;
     }
 
-    private static int calculateTier(long seconds, long ticks) {
-        long totalSeconds = seconds + (ticks / 20L);
-        int tier = (int) (totalSeconds / 3600L) + 1;
-        return Math.max(tier, 1);
+    private static void updateReward(BountyRecord record) {
+        RewardDescriptor descriptor = calculateRewardDescriptor(
+                record.accumulatedOnlineSeconds,
+                record.accumulatedOnlineTicks
+        );
+        record.rewardTier = descriptor.tier;
+        record.rewardValue = descriptor.inGameHours;
     }
 
-    private static double calculateRewardValue(int tier) {
-        double base = 100.0;
-        double increment = 50.0;
-        return base + (Math.max(1, tier) - 1) * increment;
+    private static RewardDescriptor calculateRewardDescriptor(long seconds, long ticks) {
+        long totalInGameTicks = calculateTotalInGameTicks(seconds, ticks);
+        double inGameHours = totalInGameTicks / (double) IN_GAME_HOUR_TICKS;
+        double cappedHours = Math.min(inGameHours, MAX_REWARD_HOURS);
+        if (inGameHours >= MAX_REWARD_HOURS) {
+            return new RewardDescriptor(
+                    Material.NETHERITE_INGOT,
+                    1,
+                    MAX_DIAMOND_REWARD + 1,
+                    inGameHours,
+                    "1 Netherite Ingot",
+                    formatHours(cappedHours)
+            );
+        }
+
+        int diamondAmount = Math.min(
+                MAX_DIAMOND_REWARD,
+                MIN_DIAMOND_REWARD + (int) Math.floor(cappedHours)
+        );
+        String label = diamondAmount + (diamondAmount == 1 ? " Diamond" : " Diamonds");
+        return new RewardDescriptor(
+                Material.DIAMOND,
+                diamondAmount,
+                diamondAmount,
+                inGameHours,
+                label,
+                formatHours(cappedHours)
+        );
+    }
+
+    private static long calculateTotalSeconds(long seconds, long ticks) {
+        return seconds + (ticks / 20L);
+    }
+
+    private static long calculateTotalInGameTicks(long seconds, long ticks) {
+        long totalSeconds = calculateTotalSeconds(seconds, ticks);
+        return totalSeconds * 20L;
+    }
+
+    private static String formatHours(double hours) {
+        return String.format(Locale.US, "%.1f", hours) + "h";
     }
 
     private static Instant readInstant(ConfigurationSection section, String path) {
@@ -227,6 +299,31 @@ public class BountyManager {
             LastBreathHC.getInstance().getLogger().warning(
                     "Unable to create bounty data directory: " + dir.getAbsolutePath()
             );
+        }
+    }
+
+    private static class RewardDescriptor {
+        private final Material material;
+        private final int amount;
+        private final int tier;
+        private final double inGameHours;
+        private final String displayName;
+        private final String formattedHours;
+
+        private RewardDescriptor(
+                Material material,
+                int amount,
+                int tier,
+                double inGameHours,
+                String displayName,
+                String formattedHours
+        ) {
+            this.material = material;
+            this.amount = amount;
+            this.tier = tier;
+            this.inGameHours = inGameHours;
+            this.displayName = displayName;
+            this.formattedHours = formattedHours;
         }
     }
 }
