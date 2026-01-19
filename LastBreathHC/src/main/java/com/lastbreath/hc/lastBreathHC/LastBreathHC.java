@@ -6,6 +6,7 @@ import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand;
+import com.lastbreath.hc.lastBreathHC.commands.BloodMoonCommand;
 import com.lastbreath.hc.lastBreathHC.commands.BountyCommand;
 import com.lastbreath.hc.lastBreathHC.commands.TitlesCommand;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
@@ -92,6 +93,7 @@ public final class LastBreathHC extends JavaPlugin {
                 LifecycleEvents.COMMANDS,
                 event -> {
                     event.registrar().register("asteroid", new AsteroidCommand());
+                    event.registrar().register("bloodmoon", new BloodMoonCommand());
                     event.registrar().register("titles", new TitlesCommand());
                     event.registrar().register("bounty", new BountyCommand());
                 }
@@ -122,6 +124,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     public static LastBreathHC getInstance() {
         return instance;
+    }
+
+    public BloodMoonManager getBloodMoonManager() {
+        return bloodMoonManager;
     }
 
     private void scheduleNextAsteroid() {
