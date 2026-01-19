@@ -123,6 +123,24 @@ public class BountyManager {
         return true;
     }
 
+    public static BountyRecord claimBounty(UUID targetUuid, String reason) {
+        BountyRecord removed;
+        synchronized (BOUNTIES) {
+            removed = BOUNTIES.remove(targetUuid);
+        }
+        if (removed == null) {
+            return null;
+        }
+
+        if (reason != null && !reason.isBlank()) {
+            LastBreathHC.getInstance().getLogger().info(
+                    "Claimed bounty for " + targetUuid + ": " + reason
+            );
+        }
+        save();
+        return removed;
+    }
+
     public static Map<UUID, BountyRecord> getBounties() {
         return Collections.unmodifiableMap(BOUNTIES);
     }

@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC.death;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
+import com.lastbreath.hc.lastBreathHC.bounty.BountyRecord;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
@@ -15,6 +16,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+
+import java.util.Locale;
+import java.util.Map;
 
 public class DeathListener implements Listener {
 
@@ -30,6 +34,7 @@ public class DeathListener implements Listener {
         TitleManager.checkTimeBasedTitles(player);
         Player killer = event.getEntity().getKiller();
         if (killer != null) {
+            handleBountyClaim(player, killer);
             BountyManager.createBounty(killer.getUniqueId());
         }
 
@@ -87,5 +92,49 @@ public class DeathListener implements Listener {
                 .addBan(player.getName(), reason, null, null);
 
         player.kickPlayer("You have died.\nNo revival token was used.");
+    }
+
+    private void handleBountyClaim(Player victim, Player killer) {
+        BountyRecord record = BountyManager.claimBounty(
+                victim.getUniqueId(),
+                "Killed by " + killer.getName()
+        );
+        if (record == null) {
+            return;
+        }
+
+        ItemStack reward = BountyManager.getRewardItemStack(record);
+        if (reward == null) {
+            return;
+        }
+
+        Map<Integer, ItemStack> leftover = killer.getInventory().addItem(reward);
+        for (ItemStack item : leftover.values()) {
+            killer.getWorld().dropItemNaturally(killer.getLocation(), item);
+        }
+
+        String targetName = record.targetName == null ? victim.getName() : record.targetName;
+        String rewardLabel = reward.getAmount() + " " + formatMaterialName(reward.getType());
+        Bukkit.broadcastMessage(
+                "§6⚔ " + killer.getName() + " claimed the bounty on " + targetName + " for " + rewardLabel + "."
+        );
+        LastBreathHC.getInstance().getLogger().info(
+                killer.getName() + " claimed the bounty on " + targetName + " for " + rewardLabel + "."
+        );
+    }
+
+    private String formatMaterialName(Material material) {
+        String name = material.name().toLowerCase(Locale.US).replace('_', ' ');
+        String[] parts = name.split(" ");
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+            builder.append(Character.toUpperCase(part.charAt(0)))
+                    .append(part.substring(1))
+                    .append(' ');
+        }
+        return builder.toString().trim();
     }
 }
