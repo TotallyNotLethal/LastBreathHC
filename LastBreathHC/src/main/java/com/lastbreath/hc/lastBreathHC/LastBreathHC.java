@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC;
 
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidListener;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
+import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand;
@@ -39,6 +40,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask asteroidTask;
     private BukkitTask bountyTimeTask;
     private BukkitTask bountyCleanupTask;
+    private BloodMoonManager bloodMoonManager;
 
     @Override
     public void onEnable() {
@@ -48,6 +50,7 @@ public final class LastBreathHC extends JavaPlugin {
         HeadManager.init();
         BountyManager.load();
         AsteroidManager.initialize(this);
+        bloodMoonManager = new BloodMoonManager(this);
 
         getServer().getPluginManager().registerEvents(
                 new DeathListener(), this
@@ -108,6 +111,9 @@ public final class LastBreathHC extends JavaPlugin {
         if (bountyCleanupTask != null) {
             bountyCleanupTask.cancel();
             bountyCleanupTask = null;
+        }
+        if (bloodMoonManager != null) {
+            bloodMoonManager.shutdown();
         }
         AsteroidManager.clearAllAsteroids();
         BountyManager.save();
