@@ -4,6 +4,7 @@ import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidListener;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
+import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -46,6 +47,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new TitleListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new MobScalingListener(), this
         );
 
         TokenRecipe.register();
