@@ -16,6 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import com.lastbreath.hc.lastBreathHC.token.TokenRecipe;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
+import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -61,6 +62,9 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new BountyListener(), this
         );
+        getServer().getPluginManager().registerEvents(
+                new BountyBoardGUI(), this
+        );
 
         TokenRecipe.register();
         scheduleNextAsteroid();
@@ -74,6 +78,9 @@ public final class LastBreathHC extends JavaPlugin {
                 ).register(
                         "titles",
                         new com.lastbreath.hc.lastBreathHC.commands.TitlesCommand()
+                ).register(
+                        "bounty",
+                        new com.lastbreath.hc.lastBreathHC.commands.BountyCommand()
                 )
         );
     }
