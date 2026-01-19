@@ -26,24 +26,5 @@ public class TokenRecipe {
         recipe.setIngredient('O', Material.DRAGON_EGG);
 
         Bukkit.addRecipe(recipe);
-
-        NamespacedKey guiKey = new NamespacedKey(
-                LastBreathHC.getInstance(), "revive_gui_token"
-        );
-
-        ShapedRecipe guiRecipe = new ShapedRecipe(guiKey, ReviveGuiToken.create());
-
-        guiRecipe.shape(
-                "CSC",
-                "SOS",
-                "SBS"
-        );
-
-        guiRecipe.setIngredient('C', Material.HEAVY_CORE);
-        guiRecipe.setIngredient('O', Material.DRAGON_EGG);
-        guiRecipe.setIngredient('S', Material.NETHER_STAR);
-        guiRecipe.setIngredient('B', Material.NETHERITE_BLOCK);
-
-        Bukkit.addRecipe(guiRecipe);
     }
 }
