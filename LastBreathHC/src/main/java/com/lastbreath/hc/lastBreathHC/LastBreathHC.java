@@ -4,10 +4,14 @@ import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidListener;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
+import com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand;
+import com.lastbreath.hc.lastBreathHC.commands.BountyCommand;
+import com.lastbreath.hc.lastBreathHC.commands.TitlesCommand;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -77,17 +81,12 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleBountyTimers();
 
         getLifecycleManager().registerEventHandler(
-                io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents.COMMANDS,
-                event -> event.registrar().register(
-                        "asteroid",
-                        new com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand()
-                ).register(
-                        "titles",
-                        new com.lastbreath.hc.lastBreathHC.commands.TitlesCommand()
-                ).register(
-                        "bounty",
-                        new com.lastbreath.hc.lastBreathHC.commands.BountyCommand()
-                )
+                LifecycleEvents.COMMANDS,
+                event -> {
+                    event.registrar().register("asteroid", new AsteroidCommand());
+                    event.registrar().register("titles", new TitlesCommand());
+                    event.registrar().register("bounty", new BountyCommand());
+                }
         );
     }
 
