@@ -28,9 +28,11 @@ public class BloodMoonManager {
 
     private final Plugin plugin;
     private final Map<UUID, WorldState> worldStates = new HashMap<>();
+    private final Map<UUID, Long> lastTriggeredDays = new HashMap<>();
     private boolean active;
     private BukkitTask task;
     private int darknessCountdownTicks = DARKNESS_INTERVAL_TICKS;
+    private long activeDay = -1L;
 
     public BloodMoonManager(Plugin plugin) {
         this.plugin = plugin;
@@ -38,6 +40,22 @@ public class BloodMoonManager {
 
     public boolean isActive() {
         return active;
+    }
+
+    public long getLastTriggeredDay(World world) {
+        return lastTriggeredDays.getOrDefault(world.getUID(), -1L);
+    }
+
+    public void setLastTriggeredDay(World world, long day) {
+        lastTriggeredDays.put(world.getUID(), day);
+    }
+
+    public long getActiveDay() {
+        return activeDay;
+    }
+
+    public void setActiveDay(long day) {
+        activeDay = day;
     }
 
     public void start() {
@@ -73,6 +91,7 @@ public class BloodMoonManager {
         }
 
         active = false;
+        activeDay = -1L;
 
         if (task != null) {
             task.cancel();

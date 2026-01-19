@@ -4,6 +4,7 @@ import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidListener;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonListener;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
+import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonScheduler;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand;
@@ -42,6 +43,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask asteroidTask;
     private BukkitTask bountyTimeTask;
     private BukkitTask bountyCleanupTask;
+    private BukkitTask bloodMoonTask;
     private BloodMoonManager bloodMoonManager;
 
     @Override
@@ -92,6 +94,7 @@ public final class LastBreathHC extends JavaPlugin {
         ReviveGuiTokenRecipe.register();
         scheduleNextAsteroid();
         scheduleBountyTimers();
+        scheduleBloodMoonChecks();
 
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS,
@@ -117,6 +120,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (bountyCleanupTask != null) {
             bountyCleanupTask.cancel();
             bountyCleanupTask = null;
+        }
+        if (bloodMoonTask != null) {
+            bloodMoonTask.cancel();
+            bloodMoonTask = null;
         }
         if (bloodMoonManager != null) {
             bloodMoonManager.shutdown();
@@ -219,6 +226,14 @@ public final class LastBreathHC extends JavaPlugin {
                 }
             }
         }.runTaskTimer(this, dailyTicks, dailyTicks);
+    }
+
+    private void scheduleBloodMoonChecks() {
+        if (bloodMoonTask != null) {
+            bloodMoonTask.cancel();
+        }
+
+        bloodMoonTask = new BloodMoonScheduler(bloodMoonManager).runTaskTimer(this, 0L, 100L);
     }
 
     private World pickAsteroidWorld() {
