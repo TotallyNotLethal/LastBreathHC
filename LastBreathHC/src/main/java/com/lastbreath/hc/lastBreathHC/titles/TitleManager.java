@@ -12,9 +12,9 @@ public class TitleManager {
 
     private static final Title DEFAULT_TITLE = Title.WANDERER;
     private static final long ONE_HOUR_SECONDS = 60 * 60;
-    private static final long TWO_HOURS_SECONDS = 2 * 60 * 60;
-    private static final long FOUR_HOURS_SECONDS = 4 * 60 * 60;
-    private static final long SIX_HOURS_SECONDS = 6 * 60 * 60;
+    private static final long TEN_HOURS_SECONDS = 10 * 60 * 60;
+    private static final long TWENTY_FIVE_HOURS_SECONDS = 25 * 60 * 60;
+    private static final long ONE_HUNDRED_HOURS_SECONDS = 100 * 60 * 60;
 
     private TitleManager() {
     }
@@ -80,14 +80,14 @@ public class TitleManager {
         if (seconds >= ONE_HOUR_SECONDS) {
             unlockTitle(player, Title.TIME_TOUCHED, "Survived for at least one hour.");
         }
-        if (seconds >= TWO_HOURS_SECONDS) {
-            unlockTitle(player, Title.IRON_WILL, "Survived for at least two hours.");
+        if (seconds >= TEN_HOURS_SECONDS) {
+            unlockTitle(player, Title.IRON_WILL, "Survived for at least 10 hours.");
         }
-        if (seconds >= FOUR_HOURS_SECONDS) {
-            unlockTitle(player, Title.VOID_WALKER, "Survived for at least four hours.");
+        if (seconds >= TWENTY_FIVE_HOURS_SECONDS) {
+            unlockTitle(player, Title.VOID_WALKER, "Survived for at least 25 hours.");
         }
-        if (seconds >= SIX_HOURS_SECONDS) {
-            unlockTitle(player, Title.LAST_SURVIVOR, "Survived for at least six hours.");
+        if (seconds >= ONE_HUNDRED_HOURS_SECONDS) {
+            unlockTitle(player, Title.LAST_SURVIVOR, "Survived for at least 100 hours.");
         }
     }
 }
