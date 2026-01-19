@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC;
 
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidListener;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
+import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonListener;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
@@ -82,6 +83,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new SpawnerListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new BloodMoonListener(bloodMoonManager), this
         );
 
         TokenRecipe.register();

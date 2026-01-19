@@ -54,9 +54,7 @@ public class BloodMoonManager {
             @Override
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    applyEffects(player);
-                    player.playHurtAnimation(HURT_ANIMATION_INTENSITY);
-                    player.playSound(player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, THUNDER_VOLUME, THUNDER_PITCH);
+                    applyBloodMoonEffects(player);
                 }
             }
         }.runTaskTimer(plugin, 0L, TASK_INTERVAL_TICKS);
@@ -94,6 +92,12 @@ public class BloodMoonManager {
 
     public void shutdown() {
         stop();
+    }
+
+    public void applyBloodMoonEffects(Player player) {
+        applyEffects(player);
+        player.playHurtAnimation(HURT_ANIMATION_INTENSITY);
+        player.playSound(player.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, THUNDER_VOLUME, THUNDER_PITCH);
     }
 
     private void applyEffects(Player player) {
