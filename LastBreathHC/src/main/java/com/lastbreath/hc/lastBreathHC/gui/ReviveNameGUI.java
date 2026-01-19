@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.gui;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.token.ReviveGuiToken;
 import org.bukkit.BanList;
 import org.bukkit.Bukkit;
@@ -91,6 +92,8 @@ public class ReviveNameGUI implements Listener {
             return;
         }
 
+        UUID targetId = Bukkit.getOfflinePlayer(resolvedName).getUniqueId();
+        ReviveStateManager.markRevivePending(targetId);
         player.sendMessage("§aSuccessfully revived " + resolvedName + "!");
     }
 

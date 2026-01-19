@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.heads;
 
 import com.lastbreath.hc.lastBreathHC.token.ReviveToken;
+import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.BlockState;
@@ -170,6 +171,7 @@ public class HeadListener implements Listener {
                 }
 
                 Bukkit.getBanList(BanList.Type.NAME).pardon(targetName);
+                ReviveStateManager.markRevivePending(uuid);
                 Bukkit.broadcastMessage("§a✦ " + targetName + " has been revived!");
 
                 HeadManager.remove(uuid);

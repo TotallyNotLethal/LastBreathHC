@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.gui;
 
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
+import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
@@ -56,6 +57,7 @@ public class ReviveGUI implements Listener {
             }
 
             player.setGameMode(GameMode.SURVIVAL);
+            ReviveStateManager.markRevivePending(player.getUniqueId());
             player.teleport(
                     player.getBedSpawnLocation() != null
                             ? player.getBedSpawnLocation()
