@@ -9,3 +9,34 @@ asteroid:
   countdownSeconds: 10
   worlds:
     - world
+  tiers:
+    tier2MinDistance: 10000
+    tier3MinDistance: 100000
+    effects:
+      tier1:
+        mobType: NONE
+        mobCount: 0
+        aoe:
+          enabled: false
+          particle: DRAGON_BREATH
+          radius: 2.5
+          durationTicks: 160
+          waitTimeTicks: 0
+      tier2:
+        mobType: BLAZE
+        mobCount: 2
+        aoe:
+          enabled: true
+          particle: DRAGON_BREATH
+          radius: 3.0
+          durationTicks: 200
+          waitTimeTicks: 0
+      tier3:
+        mobType: WITHER_SKELETON
+        mobCount: 4
+        aoe:
+          enabled: true
+          particle: DRAGON_BREATH
+          radius: 4.0
+          durationTicks: 240
+          waitTimeTicks: 0
