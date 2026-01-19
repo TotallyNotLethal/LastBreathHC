@@ -35,6 +35,7 @@ import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneListener;
+import com.lastbreath.hc.lastBreathHC.mobs.ArrowAggroListener;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -108,6 +109,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new GracestoneListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new ArrowAggroListener(this), this
         );
 
         TokenRecipe.register();
