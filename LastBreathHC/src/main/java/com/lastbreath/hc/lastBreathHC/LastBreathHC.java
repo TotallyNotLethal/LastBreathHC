@@ -10,6 +10,7 @@ import com.lastbreath.hc.lastBreathHC.commands.TitlesCommand;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
+import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
@@ -73,6 +74,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new BountyBoardGUI(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new SpawnerListener(), this
         );
 
         TokenRecipe.register();
