@@ -160,24 +160,38 @@ public final class LastBreathHC extends JavaPlugin {
 
     private Location pickAsteroidLocation(World world) {
         WorldBorder border = world.getWorldBorder();
-        double radius = border.getSize() / 2.0;
-        Location center = border.getCenter();
+        double borderRadius = border.getSize() / 2.0;
+        double spawnRadius = Math.min(10_000.0, borderRadius);
 
         int minHeight = world.getMinHeight();
         int maxHeight = world.getMaxHeight() - 1;
 
-        for (int attempt = 0; attempt < 20; attempt++) {
-            double x = center.getX() + (random.nextDouble() * 2 - 1) * radius;
-            double z = center.getZ() + (random.nextDouble() * 2 - 1) * radius;
+        for (int attempt = 0; attempt < 30; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2;
+            double distance = Math.sqrt(random.nextDouble()) * spawnRadius;
+            double x = Math.cos(angle) * distance;
+            double z = Math.sin(angle) * distance;
             int blockX = (int) Math.floor(x);
             int blockZ = (int) Math.floor(z);
-            int blockY = world.getHighestBlockYAt(blockX, blockZ);
 
-            if (blockY < minHeight || blockY > maxHeight) {
+            int scanY = world.getHighestBlockYAt(blockX, blockZ);
+            if (scanY < minHeight || scanY > maxHeight) {
                 continue;
             }
 
-            Location candidate = new Location(world, blockX, blockY, blockZ);
+            int groundY = -1;
+            for (int y = scanY; y >= minHeight; y--) {
+                if (world.getBlockAt(blockX, y, blockZ).getType().isSolid()) {
+                    groundY = y;
+                    break;
+                }
+            }
+
+            if (groundY < minHeight || groundY >= maxHeight) {
+                continue;
+            }
+
+            Location candidate = new Location(world, blockX, groundY, blockZ);
             if (!border.isInside(candidate)) {
                 continue;
             }
