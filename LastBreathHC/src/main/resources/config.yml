@@ -2,4 +2,10 @@
 
 debug: false
 
-# Future settings will go here
+asteroid:
+  spawn:
+    minSeconds: 300
+    maxSeconds: 600
+  countdownSeconds: 10
+  worlds:
+    - world
