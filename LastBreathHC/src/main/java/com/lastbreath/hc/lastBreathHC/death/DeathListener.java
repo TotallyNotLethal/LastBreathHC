@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.death;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
@@ -27,6 +28,10 @@ public class DeathListener implements Listener {
             TitleManager.unlockTitle(player, Title.DEATH_DEFIER, "You keep fighting after repeated deaths.");
         }
         TitleManager.checkTimeBasedTitles(player);
+        Player killer = event.getEntity().getKiller();
+        if (killer != null) {
+            BountyManager.createBounty(killer.getUniqueId());
+        }
 
         // Stop vanilla behavior
         event.setDeathMessage(null);
