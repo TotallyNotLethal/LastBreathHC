@@ -31,6 +31,7 @@ import com.lastbreath.hc.lastBreathHC.token.ReviveGuiTokenRecipe;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveNameGUI;
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
+import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
@@ -53,6 +54,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask bountyCleanupTask;
     private BukkitTask bloodMoonTask;
     private BloodMoonManager bloodMoonManager;
+    private EnvironmentalEffectsManager environmentalEffectsManager;
 
     @Override
     public void onEnable() {
@@ -113,6 +115,10 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new ArrowAggroListener(this), this
         );
+        environmentalEffectsManager = new EnvironmentalEffectsManager(this);
+        getServer().getPluginManager().registerEvents(
+                environmentalEffectsManager, this
+        );
 
         TokenRecipe.register();
         ReviveGuiTokenRecipe.register();
@@ -149,6 +155,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (bloodMoonTask != null) {
             bloodMoonTask.cancel();
             bloodMoonTask = null;
+        }
+        if (environmentalEffectsManager != null) {
+            environmentalEffectsManager.shutdown();
+            environmentalEffectsManager = null;
         }
         if (bloodMoonManager != null) {
             bloodMoonManager.shutdown();
