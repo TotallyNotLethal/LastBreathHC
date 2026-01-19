@@ -15,4 +15,11 @@ public class PlayerStats {
     public int asteroidLoots;
     public Set<Title> unlockedTitles = new HashSet<>();
     public Title equippedTitle;
+
+    public PlayerStats(UUID uuid) {
+        this.uuid = uuid;
+    }
+
+    public PlayerStats() {
+    }
 }

@@ -17,6 +17,8 @@ import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
+import com.lastbreath.hc.lastBreathHC.stats.StatsListener;
+import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
@@ -93,6 +95,9 @@ public final class LastBreathHC extends JavaPlugin {
                 new SpawnerListener(), this
         );
         getServer().getPluginManager().registerEvents(
+                new StatsListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
                 new BloodMoonListener(bloodMoonManager), this
         );
 
@@ -137,6 +142,7 @@ public final class LastBreathHC extends JavaPlugin {
         AsteroidManager.clearAllAsteroids();
         BountyManager.save();
         ReviveStateManager.save();
+        StatsManager.saveAll();
         getLogger().info("LastBreathHC disabled.");
     }
 
