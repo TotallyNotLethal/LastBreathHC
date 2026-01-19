@@ -141,13 +141,13 @@ public class BloodMoonManager {
             player.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, DARKNESS_DURATION_TICKS, EFFECT_AMPLIFIER, true, false, false));
         }
         player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, EFFECT_DURATION_TICKS, EFFECT_AMPLIFIER, true, false, false));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, EFFECT_DURATION_TICKS, EFFECT_AMPLIFIER, true, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, EFFECT_DURATION_TICKS, EFFECT_AMPLIFIER, true, false, false));
     }
 
     private void clearEffects(Player player) {
         player.removePotionEffect(PotionEffectType.DARKNESS);
         player.removePotionEffect(PotionEffectType.NAUSEA);
-        player.removePotionEffect(PotionEffectType.SLOW);
+        player.removePotionEffect(PotionEffectType.SLOWNESS);
         player.setWorldBorder(null);
     }
 
@@ -166,7 +166,8 @@ public class BloodMoonManager {
         overlay.setSize(BORDER_OVERLAY_SIZE);
         overlay.setCenter(player.getLocation());
         overlay.setWarningDistance(0);
-        overlay.setWarningTime(0);
+        overlay.setDamageBuffer(0.0);
+        overlay.setDamageAmount(0.0);
         player.setWorldBorder(overlay);
     }
 
