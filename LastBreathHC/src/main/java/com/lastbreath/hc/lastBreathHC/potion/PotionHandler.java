@@ -32,10 +32,10 @@ public class PotionHandler implements Listener {
     private static final double CONCENTRATION_REDUCTION = 0.7D;
     private static final int MAX_AMPLIFIER = 2;
 
-    private static final Set<PotionEffectType> NEGATIVE_EFFECTS = EnumSet.of(
+    private static final Set<PotionEffectType> NEGATIVE_EFFECTS = Set.of(
             PotionEffectType.POISON,
             PotionEffectType.WITHER,
-            PotionEffectType.SLOW,
+            PotionEffectType.SLOWNESS,
             PotionEffectType.WEAKNESS,
             PotionEffectType.BLINDNESS,
             PotionEffectType.DARKNESS,
@@ -340,7 +340,7 @@ public class PotionHandler implements Listener {
                         "§rPotion of Copper Rush",
                         List.of(
                                 new PotionEffect(PotionEffectType.HASTE, 60 * 20, 0),
-                                new PotionEffect(PotionEffectType.SLOW, 10 * 20, 0)
+                                new PotionEffect(PotionEffectType.SLOWNESS, 10 * 20, 0)
                         )
                 ),
                 Material.ECHO_SHARD,
@@ -358,7 +358,7 @@ public class PotionHandler implements Listener {
                         "§rPotion of Honeyed Guard",
                         List.of(
                                 new PotionEffect(PotionEffectType.RESISTANCE, 35 * 20, 0),
-                                new PotionEffect(PotionEffectType.SLOW, 20 * 20, 0)
+                                new PotionEffect(PotionEffectType.SLOWNESS, 20 * 20, 0)
                         )
                 ),
                 Material.GLOW_BERRIES,
@@ -385,7 +385,7 @@ public class PotionHandler implements Listener {
                         "§rPotion of Tidal Step",
                         List.of(
                                 new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 60 * 20, 0),
-                                new PotionEffect(PotionEffectType.SLOW, 10 * 20, 0)
+                                new PotionEffect(PotionEffectType.SLOWNESS, 10 * 20, 0)
                         )
                 ),
                 Material.SWEET_BERRIES,
