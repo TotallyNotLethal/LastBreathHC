@@ -147,33 +147,36 @@ public class HeadListener implements Listener {
         String targetName = target.getName();
 
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (!consumeReviveToken(e.getPlayer())) {
-                e.getPlayer().sendMessage("§cYou need a Revival Token to revive this soul.");
+            ItemStack mainHand = e.getPlayer().getInventory().getItemInMainHand();
+            if (ReviveToken.isToken(mainHand)) {
+                if (!consumeReviveToken(e.getPlayer())) {
+                    e.getPlayer().sendMessage("§cYou need a Revival Token to revive this soul.");
+                    return;
+                }
+
+                if (!HeadManager.has(uuid)) {
+                    e.getPlayer().sendMessage("§cThis soul has already been claimed.");
+                    return;
+                }
+
+                if (targetName == null || targetName.isBlank()) {
+                    e.getPlayer().sendMessage("§cUnable to resolve the soul's name.");
+                    return;
+                }
+
+                if (!Bukkit.getBanList(BanList.Type.NAME).isBanned(targetName)) {
+                    e.getPlayer().sendMessage("§cThis soul is not ban-bound; you cannot revive it.");
+                    return;
+                }
+
+                Bukkit.getBanList(BanList.Type.NAME).pardon(targetName);
+                Bukkit.broadcastMessage("§a✦ " + targetName + " has been revived!");
+
+                HeadManager.remove(uuid);
+                pdc.remove(HeadManager.getKey());
+                skull.update();
                 return;
             }
-
-            if (!HeadManager.has(uuid)) {
-                e.getPlayer().sendMessage("§cThis soul has already been claimed.");
-                return;
-            }
-
-            if (targetName == null || targetName.isBlank()) {
-                e.getPlayer().sendMessage("§cUnable to resolve the soul's name.");
-                return;
-            }
-
-            if (!Bukkit.getBanList(BanList.Type.NAME).isBanned(targetName)) {
-                e.getPlayer().sendMessage("§cThis soul is not ban-bound; you cannot revive it.");
-                return;
-            }
-
-            Bukkit.getBanList(BanList.Type.NAME).pardon(targetName);
-            Bukkit.broadcastMessage("§a✦ " + targetName + " has been revived!");
-
-            HeadManager.remove(uuid);
-            pdc.remove(HeadManager.getKey());
-            skull.update();
-            return;
         }
 
         Inventory inv = HeadManager.get(uuid);
@@ -274,18 +277,17 @@ public class HeadListener implements Listener {
     }
 
     private boolean consumeReviveToken(Player player) {
-        for (int i = 0; i < player.getInventory().getSize(); i++) {
-            ItemStack item = player.getInventory().getItem(i);
-            if (ReviveToken.isToken(item)) {
-                if (item.getAmount() > 1) {
-                    item.setAmount(item.getAmount() - 1);
-                } else {
-                    player.getInventory().setItem(i, null);
-                }
-                return true;
-            }
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (!ReviveToken.isToken(item)) {
+            return false;
         }
 
-        return false;
+        if (item.getAmount() > 1) {
+            item.setAmount(item.getAmount() - 1);
+        } else {
+            player.getInventory().setItemInMainHand(null);
+        }
+
+        return true;
     }
 }
