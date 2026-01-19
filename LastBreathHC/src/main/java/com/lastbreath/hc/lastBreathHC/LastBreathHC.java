@@ -14,6 +14,7 @@ import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.plugin.java.JavaPlugin;
 import com.lastbreath.hc.lastBreathHC.token.TokenRecipe;
+import com.lastbreath.hc.lastBreathHC.token.ReviveGuiTokenRecipe;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveNameGUI;
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
@@ -71,6 +72,7 @@ public final class LastBreathHC extends JavaPlugin {
         );
 
         TokenRecipe.register();
+        ReviveGuiTokenRecipe.register();
         scheduleNextAsteroid();
         scheduleBountyTimers();
 
