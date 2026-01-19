@@ -47,6 +47,7 @@ public final class LastBreathHC extends JavaPlugin {
         getLogger().info("LastBreathHC enabled.");
         HeadManager.init();
         BountyManager.load();
+        AsteroidManager.initialize(this);
 
         getServer().getPluginManager().registerEvents(
                 new DeathListener(), this
@@ -108,6 +109,7 @@ public final class LastBreathHC extends JavaPlugin {
             bountyCleanupTask.cancel();
             bountyCleanupTask = null;
         }
+        AsteroidManager.clearAllAsteroids();
         BountyManager.save();
         getLogger().info("LastBreathHC disabled.");
     }
