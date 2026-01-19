@@ -14,6 +14,8 @@ import com.lastbreath.hc.lastBreathHC.commands.TitlesCommand;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
+import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
+import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
@@ -54,6 +56,7 @@ public final class LastBreathHC extends JavaPlugin {
         HeadManager.init();
         BountyManager.load();
         AsteroidManager.initialize(this);
+        ReviveStateManager.initialize(this);
         bloodMoonManager = new BloodMoonManager(this);
 
         getServer().getPluginManager().registerEvents(
@@ -67,6 +70,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new ReviveNameGUI(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new ReviveStateListener(), this
         );
         getServer().getPluginManager().registerEvents(
                 new AsteroidListener(), this
@@ -130,6 +136,7 @@ public final class LastBreathHC extends JavaPlugin {
         }
         AsteroidManager.clearAllAsteroids();
         BountyManager.save();
+        ReviveStateManager.save();
         getLogger().info("LastBreathHC disabled.");
     }
 
