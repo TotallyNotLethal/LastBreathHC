@@ -23,8 +23,7 @@ public class BloodMoonManager {
     private static final int DARKNESS_DURATION_TICKS = 80;
     private static final float THUNDER_VOLUME = 0.2f;
     private static final float THUNDER_PITCH = 0.8f;
-    private static final double BORDER_OVERLAY_SIZE = 1.0;
-    private static final double BORDER_OVERLAY_OFFSET = 2000.0;
+    private static final double BORDER_OVERLAY_SIZE = 10000.0;
     private static final double MONSTER_SPAWN_LIMIT_MULTIPLIER = 2.0;
 
     private final Plugin plugin;
@@ -165,9 +164,7 @@ public class BloodMoonManager {
     private void applyWorldBorderOverlay(Player player) {
         WorldBorder overlay = Bukkit.createWorldBorder();
         overlay.setSize(BORDER_OVERLAY_SIZE);
-        double centerX = player.getLocation().getX() + BORDER_OVERLAY_OFFSET;
-        double centerZ = player.getLocation().getZ() + BORDER_OVERLAY_OFFSET;
-        overlay.setCenter(centerX, centerZ);
+        overlay.setCenter(player.getLocation());
         overlay.setWarningDistance(0);
         overlay.setWarningTime(0);
         player.setWorldBorder(overlay);
