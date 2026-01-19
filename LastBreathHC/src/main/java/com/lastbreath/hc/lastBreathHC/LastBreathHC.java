@@ -75,7 +75,7 @@ public final class LastBreathHC extends JavaPlugin {
                 new TitleListener(), this
         );
         getServer().getPluginManager().registerEvents(
-                new MobScalingListener(), this
+                new MobScalingListener(bloodMoonManager), this
         );
         getServer().getPluginManager().registerEvents(
                 new BountyListener(), this
