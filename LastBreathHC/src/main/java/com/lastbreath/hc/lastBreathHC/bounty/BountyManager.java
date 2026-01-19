@@ -8,14 +8,18 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 public class BountyManager {
 
     private static final Map<UUID, BountyRecord> BOUNTIES = new HashMap<>();
+    public static final long IN_GAME_HOUR_TICKS = 1000L;
+    public static final long BOUNTY_EXPIRATION_TICKS = IN_GAME_HOUR_TICKS * 8L;
     private static final String FILE_NAME = "bounties.yml";
 
     private BountyManager() {
@@ -116,6 +120,10 @@ public class BountyManager {
         return Collections.unmodifiableMap(BOUNTIES);
     }
 
+    public static BountyRecord getBounty(UUID targetUuid) {
+        return BOUNTIES.get(targetUuid);
+    }
+
     public static void updateReward(UUID targetUuid) {
         BountyRecord record = BOUNTIES.get(targetUuid);
         if (record == null) {
@@ -124,6 +132,53 @@ public class BountyManager {
 
         record.rewardTier = calculateTier(record.accumulatedOnlineSeconds, record.accumulatedOnlineTicks);
         record.rewardValue = calculateRewardValue(record.rewardTier);
+    }
+
+    public static void incrementOnlineTimeForOnlinePlayers(long ticks, long seconds) {
+        if (ticks <= 0L && seconds <= 0L) {
+            return;
+        }
+
+        List<UUID> expired = new ArrayList<>();
+        for (Map.Entry<UUID, BountyRecord> entry : BOUNTIES.entrySet()) {
+            UUID uuid = entry.getKey();
+            org.bukkit.entity.Player player = Bukkit.getPlayer(uuid);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+
+            BountyRecord record = entry.getValue();
+            record.accumulatedOnlineTicks += ticks;
+            record.accumulatedOnlineSeconds += seconds;
+            updateReward(uuid);
+
+            if (record.accumulatedOnlineTicks >= BOUNTY_EXPIRATION_TICKS) {
+                expired.add(uuid);
+            }
+        }
+
+        for (UUID uuid : expired) {
+            removeBounty(uuid, "Expired after 8 in-game hours online.");
+        }
+    }
+
+    public static int purgeExpiredLogouts(Instant cutoff) {
+        if (cutoff == null) {
+            return 0;
+        }
+
+        List<UUID> expired = new ArrayList<>();
+        for (Map.Entry<UUID, BountyRecord> entry : BOUNTIES.entrySet()) {
+            Instant lastLogout = entry.getValue().lastLogoutInstant;
+            if (lastLogout != null && lastLogout.isBefore(cutoff)) {
+                expired.add(entry.getKey());
+            }
+        }
+
+        for (UUID uuid : expired) {
+            removeBounty(uuid, "Removed after 30 days of inactivity.");
+        }
+        return expired.size();
     }
 
     private static String resolveName(UUID uuid) {
