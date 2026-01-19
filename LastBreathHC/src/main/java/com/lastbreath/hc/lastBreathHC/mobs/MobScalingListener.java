@@ -16,7 +16,7 @@ public class MobScalingListener implements Listener {
     private static final double START_HEALTH_MULTIPLIER = 0.75;
     private static final double END_HEALTH_MULTIPLIER = 10.0;
     private static final double START_DAMAGE_MULTIPLIER = 0.5;
-    private static final double END_DAMAGE_HEARTS = 50.0;
+    private static final double END_DAMAGE_HEARTS = 25.0;
     private static final double HEART_TO_DAMAGE = 2.0;
 
     @EventHandler
@@ -35,7 +35,7 @@ public class MobScalingListener implements Listener {
         double healthMultiplier = interpolate(distance, START_RADIUS, END_RADIUS,
                 START_HEALTH_MULTIPLIER, END_HEALTH_MULTIPLIER);
 
-        AttributeInstance maxHealth = entity.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance maxHealth = entity.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealth != null) {
             double baseHealth = maxHealth.getBaseValue();
             double newMaxHealth = Math.max(1.0, baseHealth * healthMultiplier);
@@ -43,7 +43,7 @@ public class MobScalingListener implements Listener {
             entity.setHealth(newMaxHealth);
         }
 
-        AttributeInstance attackDamage = entity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+        AttributeInstance attackDamage = entity.getAttribute(Attribute.ATTACK_DAMAGE);
         if (attackDamage != null) {
             double baseDamage = attackDamage.getBaseValue();
             double endDamageMultiplier = baseDamage > 0.0
