@@ -143,6 +143,15 @@ public class HeadListener implements Listener {
             return;
         }
 
+        OfflinePlayer target = Bukkit.getOfflinePlayer(uuid);
+        String targetName = target.getName();
+        boolean isBanned = targetName != null
+                && Bukkit.getBanList(BanList.Type.NAME).isBanned(targetName);
+        if (!isBanned) {
+            e.getPlayer().sendMessage("§cThis soul is not ban-bound; you cannot open it.");
+            return;
+        }
+
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
             if (!consumeReviveToken(e.getPlayer())) {
                 e.getPlayer().sendMessage("§cYou need a Revival Token to revive this soul.");
@@ -154,8 +163,6 @@ public class HeadListener implements Listener {
                 return;
             }
 
-            OfflinePlayer target = Bukkit.getOfflinePlayer(uuid);
-            String targetName = target.getName();
             if (targetName == null || targetName.isBlank()) {
                 e.getPlayer().sendMessage("§cUnable to resolve the soul's name.");
                 return;
