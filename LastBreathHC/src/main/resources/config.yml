@@ -43,3 +43,47 @@ asteroid:
           radius: 4.0
           durationTicks: 240
           waitTimeTicks: 0
+
+environment:
+  moveCooldownTicks: 20
+  distanceScaling:
+    checkIntervalTicks: 80
+    spawnRadiusBlocks: 6000
+    minScale: 0.8
+    maxScale: 1.4
+  biomes:
+    swamp:
+      poisonChance: 0.08
+      poisonDurationTicks: 100
+      poisonAmplifier: 0
+      biomes:
+        - SWAMP
+        - MANGROVE_SWAMP
+    desert:
+      idleThresholdTicks: 160
+      heatTicks: 60
+      heatChance: 0.25
+      biomes:
+        - DESERT
+        - BADLANDS
+        - ERODED_BADLANDS
+        - WOODED_BADLANDS
+    mountain:
+      knockbackMultiplier: 1.25
+      biomes:
+        - WINDSWEPT_HILLS
+        - WINDSWEPT_GRAVELLY_HILLS
+        - WINDSWEPT_FOREST
+        - JAGGED_PEAKS
+        - FROZEN_PEAKS
+        - STONY_PEAKS
+        - MEADOW
+        - SNOWY_SLOPES
+    deepOcean:
+      swimSlowMultiplier: 0.6
+      drownedDamageMultiplier: 1.35
+      biomes:
+        - DEEP_OCEAN
+        - DEEP_COLD_OCEAN
+        - DEEP_FROZEN_OCEAN
+        - DEEP_LUKEWARM_OCEAN
