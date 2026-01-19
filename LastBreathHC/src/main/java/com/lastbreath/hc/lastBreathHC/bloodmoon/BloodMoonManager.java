@@ -25,6 +25,7 @@ public class BloodMoonManager {
     private static final float THUNDER_PITCH = 0.8f;
     private static final double BORDER_OVERLAY_SIZE = 1.0;
     private static final double BORDER_OVERLAY_OFFSET = 2000.0;
+    private static final double MONSTER_SPAWN_LIMIT_MULTIPLIER = 2.0;
 
     private final Plugin plugin;
     private final Map<UUID, WorldState> worldStates = new HashMap<>();
@@ -68,10 +69,15 @@ public class BloodMoonManager {
         darknessCountdownTicks = DARKNESS_INTERVAL_TICKS;
 
         for (World world : Bukkit.getWorlds()) {
-            worldStates.put(world.getUID(), new WorldState(world.getTime(), world.hasStorm(), world.isThundering()));
+            int monsterSpawnLimit = world.getMonsterSpawnLimit();
+            worldStates.put(world.getUID(), new WorldState(world.getTime(), world.hasStorm(), world.isThundering(), monsterSpawnLimit));
             world.setTime(18000L);
             world.setStorm(true);
             world.setThundering(true);
+            if (monsterSpawnLimit > 0) {
+                int boostedLimit = (int) Math.round(monsterSpawnLimit * MONSTER_SPAWN_LIMIT_MULTIPLIER);
+                world.setMonsterSpawnLimit(Math.max(monsterSpawnLimit, boostedLimit));
+            }
         }
 
         task = new BukkitRunnable() {
@@ -110,6 +116,7 @@ public class BloodMoonManager {
                 world.setTime(state.time());
                 world.setStorm(state.storm());
                 world.setThundering(state.thunder());
+                world.setMonsterSpawnLimit(state.monsterSpawnLimit());
             }
         }
 
@@ -166,6 +173,6 @@ public class BloodMoonManager {
         player.setWorldBorder(overlay);
     }
 
-    private record WorldState(long time, boolean storm, boolean thunder) {
+    private record WorldState(long time, boolean storm, boolean thunder, int monsterSpawnLimit) {
     }
 }
