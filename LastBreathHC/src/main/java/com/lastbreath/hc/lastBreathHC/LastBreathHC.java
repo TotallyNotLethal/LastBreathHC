@@ -2,6 +2,8 @@ package com.lastbreath.hc.lastBreathHC;
 
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidListener;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
+import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
+import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
@@ -17,6 +19,8 @@ import com.lastbreath.hc.lastBreathHC.death.DeathListener;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Random;
 
@@ -25,6 +29,8 @@ public final class LastBreathHC extends JavaPlugin {
     private static LastBreathHC instance;
     private final Random random = new Random();
     private BukkitTask asteroidTask;
+    private BukkitTask bountyTimeTask;
+    private BukkitTask bountyCleanupTask;
 
     @Override
     public void onEnable() {
@@ -32,6 +38,7 @@ public final class LastBreathHC extends JavaPlugin {
         saveDefaultConfig();
         getLogger().info("LastBreathHC enabled.");
         HeadManager.init();
+        BountyManager.load();
 
         getServer().getPluginManager().registerEvents(
                 new DeathListener(), this
@@ -51,9 +58,13 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new MobScalingListener(), this
         );
+        getServer().getPluginManager().registerEvents(
+                new BountyListener(), this
+        );
 
         TokenRecipe.register();
         scheduleNextAsteroid();
+        scheduleBountyTimers();
 
         getLifecycleManager().registerEventHandler(
                 io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents.COMMANDS,
@@ -73,6 +84,15 @@ public final class LastBreathHC extends JavaPlugin {
             asteroidTask.cancel();
             asteroidTask = null;
         }
+        if (bountyTimeTask != null) {
+            bountyTimeTask.cancel();
+            bountyTimeTask = null;
+        }
+        if (bountyCleanupTask != null) {
+            bountyCleanupTask.cancel();
+            bountyCleanupTask = null;
+        }
+        BountyManager.save();
         getLogger().info("LastBreathHC disabled.");
     }
 
@@ -137,6 +157,34 @@ public final class LastBreathHC extends JavaPlugin {
         }
 
         AsteroidManager.spawnAsteroid(world, location);
+    }
+
+    private void scheduleBountyTimers() {
+        if (bountyTimeTask != null) {
+            bountyTimeTask.cancel();
+        }
+        if (bountyCleanupTask != null) {
+            bountyCleanupTask.cancel();
+        }
+
+        bountyTimeTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                BountyManager.incrementOnlineTimeForOnlinePlayers(20L, 1L);
+            }
+        }.runTaskTimer(this, 20L, 20L);
+
+        long dailyTicks = 20L * 60L * 60L * 24L;
+        bountyCleanupTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                Instant cutoff = Instant.now().minus(Duration.ofDays(30));
+                int removed = BountyManager.purgeExpiredLogouts(cutoff);
+                if (removed > 0) {
+                    getLogger().info("Removed " + removed + " expired bounty record(s).");
+                }
+            }
+        }.runTaskTimer(this, dailyTicks, dailyTicks);
     }
 
     private World pickAsteroidWorld() {
