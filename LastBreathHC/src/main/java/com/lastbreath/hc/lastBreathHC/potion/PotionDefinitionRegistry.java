@@ -66,6 +66,7 @@ public class PotionDefinitionRegistry {
             List<HardcorePotionDefinition.EffectDefinition> afterEffects = readEffects(entry, "afterEffects", EffectTrigger.AFTER_EFFECT);
             List<HardcorePotionDefinition.CustomEffectDefinition> customEffects = readCustomEffects(entry, "customEffects");
             List<String> branches = readStringList(entry, "branches");
+            List<String> branchBrews = readStringList(entry, "branchBrews");
 
             HardcorePotionDefinition definition = new HardcorePotionDefinition(
                     id,
@@ -77,7 +78,8 @@ public class PotionDefinitionRegistry {
                     drawbacks,
                     afterEffects,
                     customEffects,
-                    branches
+                    branches,
+                    branchBrews
             );
 
             if (byIngredient.containsKey(ingredient)) {

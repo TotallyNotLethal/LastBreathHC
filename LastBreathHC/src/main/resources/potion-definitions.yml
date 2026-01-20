@@ -34,6 +34,9 @@ potions:
       - copper_rush
       - echoed_veil
       - lucid_mind
+    branchBrews:
+      - crimson_guard
+      - warped_focus
   - id: copper_rush
     displayName: "§rPotion of Copper Rush"
     craftingIngredient: COPPER_INGOT
@@ -69,6 +72,9 @@ potions:
       - honeyed_guard
       - glow_warmth
       - tempered_rush
+    branchBrews:
+      - clear_mind
+      - warped_focus
   - id: echoed_veil
     displayName: "§rPotion of Echoed Veil"
     craftingIngredient: ECHO_SHARD
@@ -104,6 +110,8 @@ potions:
       - warped_focus
       - tidal_step
       - veiled_resonance
+    branchBrews:
+      - clear_mind
   - id: honeyed_guard
     displayName: "§rPotion of Honeyed Guard"
     craftingIngredient: HONEYCOMB
@@ -139,6 +147,8 @@ potions:
       - crimson_guard
       - deep_breath
       - amber_bulwark
+    branchBrews:
+      - copper_rush
   - id: glow_warmth
     displayName: "§rPotion of Glow Warmth"
     craftingIngredient: GLOW_BERRIES
@@ -174,6 +184,8 @@ potions:
       - deep_breath
       - tidal_step
       - radiant_warmth
+    branchBrews:
+      - copper_rush
   - id: deep_breath
     displayName: "§rPotion of Deep Breath"
     craftingIngredient: PRISMARINE_CRYSTALS
@@ -209,6 +221,9 @@ potions:
       - tidal_step
       - forager_edge
       - abyssal_breath
+    branchBrews:
+      - honeyed_guard
+      - glow_warmth
   - id: tidal_step
     displayName: "§rPotion of Tidal Step"
     craftingIngredient: NAUTILUS_SHELL
@@ -244,6 +259,10 @@ potions:
       - forager_edge
       - warped_focus
       - maelstrom_stride
+    branchBrews:
+      - echoed_veil
+      - glow_warmth
+      - deep_breath
   - id: forager_edge
     displayName: "§rPotion of Forager's Edge"
     craftingIngredient: SWEET_BERRIES
@@ -279,6 +298,9 @@ potions:
       - crimson_guard
       - warped_focus
       - harvester_edge
+    branchBrews:
+      - deep_breath
+      - tidal_step
   - id: crimson_guard
     displayName: "§rPotion of Crimson Guard"
     craftingIngredient: CRIMSON_FUNGUS
@@ -314,6 +336,9 @@ potions:
       - warped_focus
       - clear_mind
       - soulflame_guard
+    branchBrews:
+      - honeyed_guard
+      - forager_edge
   - id: warped_focus
     displayName: "§rPotion of Warped Focus"
     craftingIngredient: WARPED_FUNGUS
@@ -349,6 +374,11 @@ potions:
       - clear_mind
       - copper_rush
       - void_focus
+    branchBrews:
+      - echoed_veil
+      - tidal_step
+      - forager_edge
+      - crimson_guard
   - id: lucid_mind
     displayName: "§rElixir of Lucid Mind"
     craftingIngredient: AMETHYST_CLUSTER
@@ -388,6 +418,10 @@ potions:
     branches:
       - tempered_rush
       - veiled_resonance
+    branchBrews:
+      - clear_mind
+      - soulfame_guard
+      - void_focus
   - id: tempered_rush
     displayName: "§rPotion of Tempered Rush"
     craftingIngredient: COPPER_BLOCK
@@ -422,6 +456,10 @@ potions:
     branches:
       - amber_bulwark
       - radiant_warmth
+    branchBrews:
+      - copper_rush
+      - lucid_mind
+      - void_focus
   - id: veiled_resonance
     displayName: "§rPotion of Veiled Resonance"
     craftingIngredient: SCULK_CATALYST
@@ -456,6 +494,9 @@ potions:
     branches:
       - void_focus
       - maelstrom_stride
+    branchBrews:
+      - echoed_veil
+      - lucid_mind
   - id: amber_bulwark
     displayName: "§rPotion of Amber Bulwark"
     craftingIngredient: HONEY_BLOCK
@@ -490,6 +531,9 @@ potions:
     branches:
       - soulflame_guard
       - abyssal_breath
+    branchBrews:
+      - honeyed_guard
+      - tempered_rush
   - id: radiant_warmth
     displayName: "§rPotion of Radiant Warmth"
     craftingIngredient: GLOWSTONE
@@ -524,6 +568,9 @@ potions:
     branches:
       - abyssal_breath
       - maelstrom_stride
+    branchBrews:
+      - glow_warmth
+      - tempered_rush
   - id: abyssal_breath
     displayName: "§rPotion of Abyssal Breath"
     craftingIngredient: HEART_OF_THE_SEA
@@ -563,6 +610,10 @@ potions:
     branches:
       - maelstrom_stride
       - harvester_edge
+    branchBrews:
+      - deep_breath
+      - amber_bulwark
+      - radiant_warmth
   - id: maelstrom_stride
     displayName: "§rPotion of Maelstrom Stride"
     craftingIngredient: SEA_LANTERN
@@ -597,6 +648,11 @@ potions:
     branches:
       - harvester_edge
       - void_focus
+    branchBrews:
+      - tidal_step
+      - veiled_resonance
+      - radiant_warmth
+      - abyssal_breath
   - id: harvester_edge
     displayName: "§rPotion of Harvester's Edge"
     craftingIngredient: MOSS_BLOCK
@@ -631,6 +687,10 @@ potions:
     branches:
       - soulflame_guard
       - void_focus
+    branchBrews:
+      - forager_edge
+      - abyssal_breath
+      - maelstrom_stride
   - id: soulflame_guard
     displayName: "§rPotion of Soulflame Guard"
     craftingIngredient: MAGMA_CREAM
@@ -670,6 +730,10 @@ potions:
     branches:
       - void_focus
       - lucid_mind
+    branchBrews:
+      - crimson_guard
+      - amber_bulwark
+      - harvester_edge
   - id: void_focus
     displayName: "§rPotion of Void Focus"
     craftingIngredient: ENDER_EYE
@@ -704,3 +768,9 @@ potions:
     branches:
       - lucid_mind
       - tempered_rush
+    branchBrews:
+      - warped_focus
+      - veiled_resonance
+      - maelstrom_stride
+      - harvester_edge
+      - soulfame_guard

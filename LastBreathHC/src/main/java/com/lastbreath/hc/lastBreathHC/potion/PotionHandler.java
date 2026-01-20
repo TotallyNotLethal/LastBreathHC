@@ -200,7 +200,8 @@ public class PotionHandler implements Listener {
         if (current == null) {
             return false;
         }
-        return current.branches().contains(targetDefinition.id());
+        return current.branches().contains(targetDefinition.id())
+                || targetDefinition.branchBrews().contains(currentId);
     }
 
     private ItemStack applyRedstone(ItemStack potion) {
