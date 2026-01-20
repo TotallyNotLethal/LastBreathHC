@@ -31,6 +31,42 @@ These potions **must** be brewed by re-adding the listed **previous custom potio
 - **Potion of Soulflame Guard** (`soulflame_guard`) requires: **Potion of Crimson Guard** (`crimson_guard`) *or* **Potion of Amber Bulwark** (`amber_bulwark`) *or* **Potion of Harvester's Edge** (`harvester_edge`) + `MAGMA_CREAM`
 - **Potion of Void Focus** (`void_focus`) requires: **Potion of Warped Focus** (`warped_focus`) *or* **Potion of Veiled Resonance** (`veiled_resonance`) *or* **Potion of Maelstrom Stride** (`maelstrom_stride`) *or* **Potion of Harvester's Edge** (`harvester_edge`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) + `ENDER_EYE`
 
+## Cauldron brewing recipes
+Use a **water cauldron on a lit soul campfire**. Toss in the potion (or a water bottle for base brews) and then the ingredient. The cauldron consumes **one** potion and **one** ingredient, then drops the result on top.
+
+### Cauldron setup
+- Place a **water cauldron** on top of a **lit soul campfire**.
+- Drop in a **potion or water bottle**, then the listed **ingredient**.
+- Water bottles are treated as **Awkward** only when using a custom potion ingredient.
+- Optional modifiers work on any custom potion in the cauldron:
+  - `REDSTONE` ➜ extends duration
+  - `GLOWSTONE_DUST` ➜ concentrates effects
+  - `NETHER_STAR` ➜ purifies negative effects
+
+### Base cauldron brews (water bottle/awkward + ingredient)
+- Water bottle/Awkward + `AMETHYST_SHARD` ➜ **Potion of Clear Mind** (`clear_mind`)
+- Water bottle/Awkward + `COPPER_INGOT` ➜ **Potion of Copper Rush** (`copper_rush`)
+- Water bottle/Awkward + `ECHO_SHARD` ➜ **Potion of Echoed Veil** (`echoed_veil`)
+- Water bottle/Awkward + `HONEYCOMB` ➜ **Potion of Honeyed Guard** (`honeyed_guard`)
+- Water bottle/Awkward + `GLOW_BERRIES` ➜ **Potion of Glow Warmth** (`glow_warmth`)
+- Water bottle/Awkward + `PRISMARINE_CRYSTALS` ➜ **Potion of Deep Breath** (`deep_breath`)
+- Water bottle/Awkward + `NAUTILUS_SHELL` ➜ **Potion of Tidal Step** (`tidal_step`)
+- Water bottle/Awkward + `SWEET_BERRIES` ➜ **Potion of Forager's Edge** (`forager_edge`)
+- Water bottle/Awkward + `CRIMSON_FUNGUS` ➜ **Potion of Crimson Guard** (`crimson_guard`)
+- Water bottle/Awkward + `WARPED_FUNGUS` ➜ **Potion of Warped Focus** (`warped_focus`)
+
+### Branch-only cauldron brews (previous potion + ingredient)
+- **Potion of Clear Mind** (`clear_mind`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) *or* **Potion of Void Focus** (`void_focus`) + `AMETHYST_CLUSTER` ➜ **Elixir of Lucid Mind** (`lucid_mind`)
+- **Potion of Copper Rush** (`copper_rush`) *or* **Elixir of Lucid Mind** (`lucid_mind`) *or* **Potion of Void Focus** (`void_focus`) + `COPPER_BLOCK` ➜ **Potion of Tempered Rush** (`tempered_rush`)
+- **Potion of Echoed Veil** (`echoed_veil`) *or* **Elixir of Lucid Mind** (`lucid_mind`) + `SCULK_CATALYST` ➜ **Potion of Veiled Resonance** (`veiled_resonance`)
+- **Potion of Honeyed Guard** (`honeyed_guard`) *or* **Potion of Tempered Rush** (`tempered_rush`) + `HONEY_BLOCK` ➜ **Potion of Amber Bulwark** (`amber_bulwark`)
+- **Potion of Glow Warmth** (`glow_warmth`) *or* **Potion of Tempered Rush** (`tempered_rush`) + `GLOWSTONE` ➜ **Potion of Radiant Warmth** (`radiant_warmth`)
+- **Potion of Deep Breath** (`deep_breath`) *or* **Potion of Amber Bulwark** (`amber_bulwark`) *or* **Potion of Radiant Warmth** (`radiant_warmth`) + `HEART_OF_THE_SEA` ➜ **Potion of Abyssal Breath** (`abyssal_breath`)
+- **Potion of Tidal Step** (`tidal_step`) *or* **Potion of Veiled Resonance** (`veiled_resonance`) *or* **Potion of Radiant Warmth** (`radiant_warmth`) *or* **Potion of Abyssal Breath** (`abyssal_breath`) + `SEA_LANTERN` ➜ **Potion of Maelstrom Stride** (`maelstrom_stride`)
+- **Potion of Forager's Edge** (`forager_edge`) *or* **Potion of Abyssal Breath** (`abyssal_breath`) *or* **Potion of Maelstrom Stride** (`maelstrom_stride`) + `MOSS_BLOCK` ➜ **Potion of Harvester's Edge** (`harvester_edge`)
+- **Potion of Crimson Guard** (`crimson_guard`) *or* **Potion of Amber Bulwark** (`amber_bulwark`) *or* **Potion of Harvester's Edge** (`harvester_edge`) + `MAGMA_CREAM` ➜ **Potion of Soulflame Guard** (`soulflame_guard`)
+- **Potion of Warped Focus** (`warped_focus`) *or* **Potion of Veiled Resonance** (`veiled_resonance`) *or* **Potion of Maelstrom Stride** (`maelstrom_stride`) *or* **Potion of Harvester's Edge** (`harvester_edge`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) + `ENDER_EYE` ➜ **Potion of Void Focus** (`void_focus`)
+
 ## Branch map
 Use the following map to see which potion can be upgraded into another potion by adding the ingredient:
 

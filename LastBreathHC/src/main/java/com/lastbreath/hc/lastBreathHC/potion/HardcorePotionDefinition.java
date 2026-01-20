@@ -21,6 +21,7 @@ public class HardcorePotionDefinition {
     private final List<EffectDefinition> afterEffects;
     private final List<CustomEffectDefinition> customEffects;
     private final List<String> branches;
+    private final List<String> branchBrews;
 
     public HardcorePotionDefinition(String id,
                                     String displayName,
@@ -31,7 +32,8 @@ public class HardcorePotionDefinition {
                                     List<EffectDefinition> drawbacks,
                                     List<EffectDefinition> afterEffects,
                                     List<CustomEffectDefinition> customEffects,
-                                    List<String> branches) {
+                                    List<String> branches,
+                                    List<String> branchBrews) {
         this.id = Objects.requireNonNull(id, "id");
         this.displayName = Objects.requireNonNull(displayName, "displayName");
         this.craftingIngredient = Objects.requireNonNull(craftingIngredient, "craftingIngredient");
@@ -42,6 +44,7 @@ public class HardcorePotionDefinition {
         this.afterEffects = List.copyOf(afterEffects);
         this.customEffects = List.copyOf(customEffects);
         this.branches = List.copyOf(branches);
+        this.branchBrews = List.copyOf(branchBrews);
     }
 
     public String id() {
@@ -82,6 +85,10 @@ public class HardcorePotionDefinition {
 
     public List<String> branches() {
         return branches;
+    }
+
+    public List<String> branchBrews() {
+        return branchBrews;
     }
 
     public List<PotionEffect> toPotionEffectsForCrafting() {
