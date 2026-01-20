@@ -139,6 +139,126 @@ effects:
     displayName: "Deep Breathing"
     category: POSITIVE
     description: "Extended underwater sprinting endurance."
+  - id: crystal_focus
+    displayName: "Crystal Focus"
+    category: POSITIVE
+    description: "Boosts awareness of nearby resources."
+  - id: razor_thoughts
+    displayName: "Razor Thoughts"
+    category: POSITIVE
+    description: "Improves reaction time for brief bursts."
+  - id: overclocked_tools
+    displayName: "Overclocked Tools"
+    category: POSITIVE
+    description: "Tools feel lighter and break blocks faster."
+  - id: ore_pulse
+    displayName: "Ore Pulse"
+    category: POSITIVE
+    description: "Occasional pulse reveals nearby ore."
+  - id: hush_aura
+    displayName: "Hush Aura"
+    category: POSITIVE
+    description: "Dampens movement sounds around you."
+  - id: echo_sense
+    displayName: "Echo Sense"
+    category: POSITIVE
+    description: "Sharpens detection of nearby motion."
+  - id: sticky_shell
+    displayName: "Sticky Shell"
+    category: POSITIVE
+    description: "Slight chance to cling and reduce knockback."
+  - id: rebound_guard
+    displayName: "Rebound Guard"
+    category: POSITIVE
+    description: "Occasionally rebounds melee attackers."
+  - id: sunflare
+    displayName: "Sunflare"
+    category: POSITIVE
+    description: "Brief glow that bolsters regeneration."
+  - id: warm_resilience
+    displayName: "Warm Resilience"
+    category: POSITIVE
+    description: "Softens incoming damage while warmed."
+  - id: abyssal_lungs
+    displayName: "Abyssal Lungs"
+    category: POSITIVE
+    description: "Deepens air reserves underwater."
+  - id: pressure_sense
+    displayName: "Pressure Sense"
+    category: POSITIVE
+    description: "Improves navigation in deep water."
+  - id: surge_stride
+    displayName: "Surge Stride"
+    category: POSITIVE
+    description: "Riding currents gives extra speed."
+  - id: current_dancer
+    displayName: "Current Dancer"
+    category: POSITIVE
+    description: "Smooth movement through water flows."
+  - id: bounty_call
+    displayName: "Bounty Call"
+    category: POSITIVE
+    description: "Increases odds of extra forage drops."
+  - id: forest_stride
+    displayName: "Forest Stride"
+    category: POSITIVE
+    description: "Moves faster through foliage."
+  - id: soulfire_blood
+    displayName: "Soulfire Blood"
+    category: POSITIVE
+    description: "Attacks may ignite with soulfire."
+  - id: searing_aura
+    displayName: "Searing Aura"
+    category: POSITIVE
+    description: "Heat radiates to nearby foes."
+  - id: rift_step
+    displayName: "Rift Step"
+    category: POSITIVE
+    description: "Short bursts of momentum when jumping."
+  - id: void_sight
+    displayName: "Void Sight"
+    category: POSITIVE
+    description: "Sharpens vision in dark places."
+  - id: mind_fog
+    displayName: "Mind Fog"
+    category: NEGATIVE
+    description: "Occasional confusion dulls senses."
+  - id: strained_muscles
+    displayName: "Strained Muscles"
+    category: NEGATIVE
+    description: "Minor fatigue after bursts of speed."
+  - id: ringing_head
+    displayName: "Ringing Head"
+    category: NEGATIVE
+    description: "Headaches slow perception briefly."
+  - id: sapped_steps
+    displayName: "Sapped Steps"
+    category: NEGATIVE
+    description: "Movement feels heavier than normal."
+  - id: fevered_blood
+    displayName: "Fevered Blood"
+    category: NEGATIVE
+    description: "Overheating makes you feel weaker."
+  - id: undertow
+    displayName: "Undertow"
+    category: NEGATIVE
+    description: "Pulls you slightly downward in water."
+  - id: sea_sickness
+    displayName: "Sea Sickness"
+    category: NEGATIVE
+    description: "Nausea after quick swimming bursts."
+  - id: overgrowth
+    displayName: "Overgrowth"
+    category: NEGATIVE
+    description: "Thick foliage slows your pace."
+  - id: ashen_heart
+    displayName: "Ashen Heart"
+    category: NEGATIVE
+    description: "Heat drains stamina over time."
+  - id: reality_fray
+    displayName: "Reality Fray"
+    category: NEGATIVE
+    description: "Brief disorientation after rapid jumps."
   - id: restless_spirits
     displayName: "Restless Spirits"
     category: NEGATIVE

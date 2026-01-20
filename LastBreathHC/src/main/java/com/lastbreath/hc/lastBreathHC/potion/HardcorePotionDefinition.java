@@ -15,6 +15,7 @@ public class HardcorePotionDefinition {
     private final String displayName;
     private final Material craftingIngredient;
     private final boolean scaryToDrink;
+    private final boolean allowFromAwkward;
     private final List<EffectDefinition> baseEffects;
     private final List<EffectDefinition> drawbacks;
     private final List<EffectDefinition> afterEffects;
@@ -25,6 +26,7 @@ public class HardcorePotionDefinition {
                                     String displayName,
                                     Material craftingIngredient,
                                     boolean scaryToDrink,
+                                    boolean allowFromAwkward,
                                     List<EffectDefinition> baseEffects,
                                     List<EffectDefinition> drawbacks,
                                     List<EffectDefinition> afterEffects,
@@ -34,6 +36,7 @@ public class HardcorePotionDefinition {
         this.displayName = Objects.requireNonNull(displayName, "displayName");
         this.craftingIngredient = Objects.requireNonNull(craftingIngredient, "craftingIngredient");
         this.scaryToDrink = scaryToDrink;
+        this.allowFromAwkward = allowFromAwkward;
         this.baseEffects = List.copyOf(baseEffects);
         this.drawbacks = List.copyOf(drawbacks);
         this.afterEffects = List.copyOf(afterEffects);
@@ -55,6 +58,10 @@ public class HardcorePotionDefinition {
 
     public boolean scaryToDrink() {
         return scaryToDrink;
+    }
+
+    public boolean allowFromAwkward() {
+        return allowFromAwkward;
     }
 
     public List<EffectDefinition> baseEffects() {

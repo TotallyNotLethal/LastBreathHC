@@ -32,6 +32,7 @@ potions:
     branches:
       - copper_rush
       - echoed_veil
+      - lucid_mind
   - id: copper_rush
     displayName: "§rPotion of Copper Rush"
     craftingIngredient: COPPER_INGOT
@@ -65,6 +66,7 @@ potions:
     branches:
       - honeyed_guard
       - glow_warmth
+      - tempered_rush
   - id: echoed_veil
     displayName: "§rPotion of Echoed Veil"
     craftingIngredient: ECHO_SHARD
@@ -98,6 +100,7 @@ potions:
     branches:
       - warped_focus
       - tidal_step
+      - veiled_resonance
   - id: honeyed_guard
     displayName: "§rPotion of Honeyed Guard"
     craftingIngredient: HONEYCOMB
@@ -131,6 +134,7 @@ potions:
     branches:
       - crimson_guard
       - deep_breath
+      - amber_bulwark
   - id: glow_warmth
     displayName: "§rPotion of Glow Warmth"
     craftingIngredient: GLOW_BERRIES
@@ -164,6 +168,7 @@ potions:
     branches:
       - deep_breath
       - tidal_step
+      - radiant_warmth
   - id: deep_breath
     displayName: "§rPotion of Deep Breath"
     craftingIngredient: PRISMARINE_CRYSTALS
@@ -197,6 +202,7 @@ potions:
     branches:
       - tidal_step
       - forager_edge
+      - abyssal_breath
   - id: tidal_step
     displayName: "§rPotion of Tidal Step"
     craftingIngredient: NAUTILUS_SHELL
@@ -230,6 +236,7 @@ potions:
     branches:
       - forager_edge
       - warped_focus
+      - maelstrom_stride
   - id: forager_edge
     displayName: "§rPotion of Forager's Edge"
     craftingIngredient: SWEET_BERRIES
@@ -263,6 +270,7 @@ potions:
     branches:
       - crimson_guard
       - warped_focus
+      - harvester_edge
   - id: crimson_guard
     displayName: "§rPotion of Crimson Guard"
     craftingIngredient: CRIMSON_FUNGUS
@@ -296,6 +304,7 @@ potions:
     branches:
       - warped_focus
       - clear_mind
+      - soulflame_guard
   - id: warped_focus
     displayName: "§rPotion of Warped Focus"
     craftingIngredient: WARPED_FUNGUS
@@ -329,3 +338,359 @@ potions:
     branches:
       - clear_mind
       - copper_rush
+      - void_focus
+  - id: lucid_mind
+    displayName: "§rElixir of Lucid Mind"
+    craftingIngredient: AMETHYST_CLUSTER
+    allowFromAwkward: false
+    scaryToDrink: false
+    baseEffects:
+      - type: NIGHT_VISION
+        durationTicks: 4800
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: LUCK
+        durationTicks: 800
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 600
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: crystal_focus
+        durationTicks: 4800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: razor_thoughts
+        durationTicks: 2400
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: mind_fog
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - tempered_rush
+      - veiled_resonance
+  - id: tempered_rush
+    displayName: "§rPotion of Tempered Rush"
+    craftingIngredient: COPPER_BLOCK
+    allowFromAwkward: false
+    scaryToDrink: false
+    baseEffects:
+      - type: HASTE
+        durationTicks: 1600
+        amplifier: 1
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: SLOWNESS
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: overclocked_tools
+        durationTicks: 1600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: ore_pulse
+        durationTicks: 1600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: strained_muscles
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - amber_bulwark
+      - radiant_warmth
+  - id: veiled_resonance
+    displayName: "§rPotion of Veiled Resonance"
+    craftingIngredient: SCULK_CATALYST
+    allowFromAwkward: false
+    scaryToDrink: true
+    baseEffects:
+      - type: INVISIBILITY
+        durationTicks: 1200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: MINING_FATIGUE
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: hush_aura
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: echo_sense
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: ringing_head
+        durationTicks: 800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - void_focus
+      - maelstrom_stride
+  - id: amber_bulwark
+    displayName: "§rPotion of Amber Bulwark"
+    craftingIngredient: HONEY_BLOCK
+    allowFromAwkward: false
+    scaryToDrink: false
+    baseEffects:
+      - type: RESISTANCE
+        durationTicks: 900
+        amplifier: 1
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: SLOWNESS
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: sticky_shell
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: rebound_guard
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: sapped_steps
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - soulflame_guard
+      - abyssal_breath
+  - id: radiant_warmth
+    displayName: "§rPotion of Radiant Warmth"
+    craftingIngredient: GLOWSTONE
+    allowFromAwkward: false
+    scaryToDrink: false
+    baseEffects:
+      - type: REGENERATION
+        durationTicks: 400
+        amplifier: 1
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: HUNGER
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: sunflare
+        durationTicks: 800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: warm_resilience
+        durationTicks: 800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: fevered_blood
+        durationTicks: 800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - abyssal_breath
+      - maelstrom_stride
+  - id: abyssal_breath
+    displayName: "§rPotion of Abyssal Breath"
+    craftingIngredient: HEART_OF_THE_SEA
+    allowFromAwkward: false
+    scaryToDrink: false
+    baseEffects:
+      - type: WATER_BREATHING
+        durationTicks: 3600
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: DOLPHINS_GRACE
+        durationTicks: 800
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: abyssal_lungs
+        durationTicks: 3600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: pressure_sense
+        durationTicks: 2400
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: undertow
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - maelstrom_stride
+      - harvester_edge
+  - id: maelstrom_stride
+    displayName: "§rPotion of Maelstrom Stride"
+    craftingIngredient: SEA_LANTERN
+    allowFromAwkward: false
+    scaryToDrink: false
+    baseEffects:
+      - type: DOLPHINS_GRACE
+        durationTicks: 1600
+        amplifier: 1
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: SLOWNESS
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: surge_stride
+        durationTicks: 1600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: current_dancer
+        durationTicks: 1600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: sea_sickness
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - harvester_edge
+      - void_focus
+  - id: harvester_edge
+    displayName: "§rPotion of Harvester's Edge"
+    craftingIngredient: MOSS_BLOCK
+    allowFromAwkward: false
+    scaryToDrink: false
+    baseEffects:
+      - type: SPEED
+        durationTicks: 1200
+        amplifier: 1
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: HUNGER
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: bounty_call
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: forest_stride
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: overgrowth
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - soulflame_guard
+      - void_focus
+  - id: soulflame_guard
+    displayName: "§rPotion of Soulflame Guard"
+    craftingIngredient: MAGMA_CREAM
+    allowFromAwkward: false
+    scaryToDrink: false
+    baseEffects:
+      - type: FIRE_RESISTANCE
+        durationTicks: 1600
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: RESISTANCE
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: soulfire_blood
+        durationTicks: 1600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: searing_aura
+        durationTicks: 1600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: ashen_heart
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - void_focus
+      - lucid_mind
+  - id: void_focus
+    displayName: "§rPotion of Void Focus"
+    craftingIngredient: ENDER_EYE
+    allowFromAwkward: false
+    scaryToDrink: true
+    baseEffects:
+      - type: JUMP_BOOST
+        durationTicks: 1600
+        amplifier: 1
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: NAUSEA
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: rift_step
+        durationTicks: 1600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: void_sight
+        durationTicks: 1600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: reality_fray
+        durationTicks: 1000
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - lucid_mind
+      - tempered_rush

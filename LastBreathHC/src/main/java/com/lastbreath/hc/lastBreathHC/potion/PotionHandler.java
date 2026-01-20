@@ -181,7 +181,7 @@ public class PotionHandler implements Listener {
 
     private boolean canApplyDefinition(PotionMeta meta, HardcorePotionDefinition targetDefinition) {
         if (isAwkwardPotion(meta) && meta.getPersistentDataContainer().get(customIdKey, PersistentDataType.STRING) == null) {
-            return true;
+            return targetDefinition.allowFromAwkward();
         }
         String currentId = meta.getPersistentDataContainer().get(customIdKey, PersistentDataType.STRING);
         if (currentId == null) {

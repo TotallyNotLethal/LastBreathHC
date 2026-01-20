@@ -48,6 +48,7 @@ public class PotionDefinitionRegistry {
             String displayName = getString(entry, "displayName");
             String ingredientName = getString(entry, "craftingIngredient");
             boolean scaryToDrink = getBoolean(entry, "scaryToDrink");
+            boolean allowFromAwkward = getBooleanOrDefault(entry, "allowFromAwkward", true);
 
             if (id == null || displayName == null || ingredientName == null) {
                 logger.warning("Skipping potion definition with missing id/displayName/craftingIngredient.");
@@ -71,6 +72,7 @@ public class PotionDefinitionRegistry {
                     displayName,
                     ingredient,
                     scaryToDrink,
+                    allowFromAwkward,
                     baseEffects,
                     drawbacks,
                     afterEffects,
@@ -176,6 +178,10 @@ public class PotionDefinitionRegistry {
     }
 
     private static boolean getBoolean(Map<?, ?> entry, String key) {
+        return getBooleanOrDefault(entry, key, false);
+    }
+
+    private static boolean getBooleanOrDefault(Map<?, ?> entry, String key, boolean defaultValue) {
         Object value = entry.get(key);
         if (value instanceof Boolean bool) {
             return bool;
@@ -183,7 +189,7 @@ public class PotionDefinitionRegistry {
         if (value instanceof String text) {
             return Boolean.parseBoolean(text);
         }
-        return false;
+        return defaultValue;
     }
 
     private static int getInt(Map<?, ?> entry, String key) {
