@@ -1,0 +1,55 @@
+package com.lastbreath.hc.lastBreathHC.death;
+
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import org.bukkit.GameMode;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerGameModeChangeEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.scheduler.BukkitRunnable;
+
+public class DeathRejoinListener implements Listener {
+
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        forceSurvival(player);
+        if (!player.isDead()) {
+            return;
+        }
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (player.isDead()) {
+                    player.spigot().respawn();
+                }
+                forceSurvival(player);
+            }
+        }.runTaskLater(LastBreathHC.getInstance(), 1L);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onRespawn(PlayerRespawnEvent event) {
+        forceSurvival(event.getPlayer());
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onGameModeChange(PlayerGameModeChangeEvent event) {
+        if (event.getNewGameMode() != GameMode.SPECTATOR) {
+            return;
+        }
+
+        event.setCancelled(true);
+        forceSurvival(event.getPlayer());
+    }
+
+    private void forceSurvival(Player player) {
+        if (player.getGameMode() != GameMode.SURVIVAL) {
+            player.setGameMode(GameMode.SURVIVAL);
+        }
+    }
+}

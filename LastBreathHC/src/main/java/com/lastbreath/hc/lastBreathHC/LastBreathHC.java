@@ -31,6 +31,7 @@ import com.lastbreath.hc.lastBreathHC.token.ReviveGuiTokenRecipe;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveNameGUI;
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
+import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
@@ -71,6 +72,9 @@ public final class LastBreathHC extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(
                 new DeathListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new DeathRejoinListener(), this
         );
         getServer().getPluginManager().registerEvents(
                 new HeadListener(), this
