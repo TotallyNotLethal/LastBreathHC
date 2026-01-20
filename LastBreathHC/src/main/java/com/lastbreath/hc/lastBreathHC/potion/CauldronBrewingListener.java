@@ -22,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionType;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Comparator;
 import java.util.List;
@@ -34,6 +35,7 @@ public class CauldronBrewingListener implements Listener {
     private static final double CAULDRON_RADIUS_XZ = 1.2;
     private static final double CAULDRON_RADIUS_Y = 1.0;
     private static final int BREW_PARTICLE_COUNT = 20;
+    private static final int BREW_CHECK_DURATION_TICKS = 40;
 
     private final JavaPlugin plugin;
     private final PotionHandler potionHandler;
@@ -48,7 +50,10 @@ public class CauldronBrewingListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onItemSpawn(ItemSpawnEvent event) {
         Item item = event.getEntity();
-        Bukkit.getScheduler().runTask(plugin, () -> tryCauldronBrew(item));
+        if (isPotion(item.getItemStack()) || isIngredient(item.getItemStack())) {
+            sendDebug(item, "Brew candidate spawned. Scheduling cauldron checks.");
+        }
+        scheduleBrewCheck(item);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -57,6 +62,7 @@ public class CauldronBrewingListener implements Listener {
         if (block.getType() != Material.CAULDRON && block.getType() != Material.WATER_CAULDRON) {
             return;
         }
+        sendDebug(event.getPlayer(), "Cauldron placement detected at " + describeLocation(block.getLocation()) + ".");
         Block below = block.getRelative(BlockFace.DOWN);
         if (below.getType() != Material.SOUL_CAMPFIRE) {
             sendDebug(event.getPlayer(), "Cauldron placed, but the block below is not a soul campfire.");
@@ -80,19 +86,43 @@ public class CauldronBrewingListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerDrop(PlayerDropItemEvent event) {
-        Bukkit.getScheduler().runTask(plugin, () ->
-                tryCauldronBrew(event.getItemDrop())
-        );
+        Item item = event.getItemDrop();
+        if (isPotion(item.getItemStack()) || isIngredient(item.getItemStack())) {
+            sendDebug(item, "Brew candidate dropped. Scheduling cauldron checks.");
+        }
+        scheduleBrewCheck(item);
     }
 
-    private void tryCauldronBrew(Item item) {
+    private void scheduleBrewCheck(Item item) {
+        new BukkitRunnable() {
+            private int ticks;
+
+            @Override
+            public void run() {
+                if (!item.isValid()) {
+                    cancel();
+                    return;
+                }
+                if (tryCauldronBrew(item)) {
+                    cancel();
+                    return;
+                }
+                ticks++;
+                if (ticks >= BREW_CHECK_DURATION_TICKS) {
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
+    }
+
+    private boolean tryCauldronBrew(Item item) {
         if (!item.isValid()) {
-            return;
+            return false;
         }
         Block cauldron = getBrewingCauldron(item.getLocation());
         if (cauldron == null) {
             debugMissingCauldron(item);
-            return;
+            return false;
         }
 
         sendDebug(item, "Detected valid brewing cauldron (water cauldron on lit soul campfire).");
@@ -115,10 +145,11 @@ public class CauldronBrewingListener implements Listener {
                 sendDebug(item, "Ingredient detected in cauldron. Waiting for water bottle/potion.");
             }
             sendDebug(item, "Valid ingredients: " + listValidIngredients());
-            return;
+            return false;
         }
 
         brewOne(cauldron, potionEntity.get(), ingredientEntity.get());
+        return true;
     }
 
     private void brewOne(Block cauldron, Item potionEntity, Item ingredientEntity) {
@@ -310,6 +341,13 @@ public class CauldronBrewingListener implements Listener {
         String baseName = base != null ? base.name() : "UNKNOWN";
 
         return name + " (base=" + baseName + ", type=" + potion.getType().name() + ")";
+    }
+
+    private String describeLocation(Location location) {
+        return "x=" + location.getBlockX()
+                + ", y=" + location.getBlockY()
+                + ", z=" + location.getBlockZ()
+                + ", world=" + location.getWorld().getName();
     }
 
     private String expectedResultDescription(Material ingredient) {
