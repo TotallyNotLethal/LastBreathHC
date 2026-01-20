@@ -4,27 +4,38 @@ import java.util.Arrays;
 import java.util.Locale;
 
 public enum Title {
-    WANDERER("Wanderer"),
-    THE_FALLEN("The Fallen"),
-    SOUL_RECLAIMER("Soul Reclaimer"),
-    LAST_SURVIVOR("Last Survivor"),
-    REVIVED("Revived"),
-    ASTEROID_HUNTER("Asteroid Hunter"),
-    STAR_FORGER("Star Forger"),
-    VOID_WALKER("Void Walker"),
-    IRON_WILL("Iron Will"),
-    DEATH_DEFIER("Death Defier"),
-    TIME_TOUCHED("Time Touched"),
-    RELIC_SEEKER("Relic Seeker");
+    WANDERER("Wanderer", "Wand"),
+    THE_FALLEN("The Fallen", "Fall"),
+    SOUL_RECLAIMER("Soul Reclaimer", "Soul"),
+    LAST_SURVIVOR("Last Survivor", "Last"),
+    REVIVED("Revived", "Rev"),
+    ASTEROID_HUNTER("Asteroid Hunter", "Astro"),
+    STAR_FORGER("Star Forger", "Forge"),
+    VOID_WALKER("Void Walker", "Void"),
+    IRON_WILL("Iron Will", "Will"),
+    DEATH_DEFIER("Death Defier", "Defy"),
+    TIME_TOUCHED("Time Touched", "Time"),
+    RELIC_SEEKER("Relic Seeker", "Relic"),
+    MONSTER_HUNTER("Monster Hunter", "Hunt"),
+    SOUL_REAPER("Soul Reaper", "Reap"),
+    DOOMBRINGER("Doombringer", "Doom"),
+    STARFORGED("Starforged", "Star"),
+    AGELESS("Ageless", "Ages");
 
     private final String displayName;
+    private final String tabTag;
 
-    Title(String displayName) {
+    Title(String displayName, String tabTag) {
         this.displayName = displayName;
+        this.tabTag = tabTag;
     }
 
     public String displayName() {
         return displayName;
+    }
+
+    public String tabTag() {
+        return tabTag;
     }
 
     public static Title fromInput(String input) {

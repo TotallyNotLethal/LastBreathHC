@@ -106,6 +106,8 @@ public class AsteroidListener implements Listener {
                             "You have mastered asteroid hunting."
                     );
                 }
+
+                TitleManager.checkProgressTitles(player);
             }
 
             AsteroidManager.remove(asteroidLoc);

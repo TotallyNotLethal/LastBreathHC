@@ -13,6 +13,9 @@ public class TitleListener implements Listener {
         PlayerStats stats = StatsManager.get(event.getPlayer().getUniqueId());
         TitleManager.initialize(stats);
         TitleManager.checkTimeBasedTitles(event.getPlayer());
+        TitleManager.checkProgressTitles(event.getPlayer());
+        TitleManager.applyEquippedTitleEffects(event.getPlayer(), stats.equippedTitle);
+        TitleManager.refreshPlayerTabTitle(event.getPlayer());
         event.getPlayer().sendMessage("§7Current title: §b" + stats.equippedTitle.displayName());
     }
 }
