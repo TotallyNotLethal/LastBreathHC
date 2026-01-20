@@ -216,9 +216,9 @@ public final class LastBreathHC extends JavaPlugin {
                     return;
                 }
 
-                if (remainingSeconds <= countdownSeconds) {
+                /*if (remainingSeconds <= countdownSeconds) {
                     Bukkit.broadcastMessage("☄ Asteroid in " + remainingSeconds + " seconds!");
-                }
+                }*/
 
                 remainingSeconds--;
             }

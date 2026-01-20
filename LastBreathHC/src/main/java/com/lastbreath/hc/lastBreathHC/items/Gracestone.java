@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.items;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -18,7 +19,7 @@ public class Gracestone {
             new NamespacedKey(LastBreathHC.getInstance(), "gracestone_active");
 
     public static ItemStack create() {
-        ItemStack item = new ItemStack(Material.END_STONE);
+        ItemStack item = new ItemStack(Material.HEART_OF_THE_SEA);
         ItemMeta meta = item.getItemMeta();
 
         meta.setDisplayName("§fGracestone");
@@ -26,6 +27,9 @@ public class Gracestone {
                 "§7Grants a single normal life.",
                 "§7Hardcore rules return on death."
         ));
+
+        meta.addEnchant(Enchantment.MENDING, 1, true);
+        meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
 
         meta.getPersistentDataContainer().set(
                 KEY,

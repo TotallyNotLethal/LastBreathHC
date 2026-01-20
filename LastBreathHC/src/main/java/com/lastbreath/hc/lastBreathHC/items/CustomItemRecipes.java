@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.RecipeChoice;
 import org.bukkit.inventory.ShapelessRecipe;
 
 public class CustomItemRecipes {
@@ -20,11 +21,17 @@ public class CustomItemRecipes {
         NamespacedKey key = new NamespacedKey(
                 LastBreathHC.getInstance(), "enhanced_grindstone"
         );
-        ShapelessRecipe recipe = new ShapelessRecipe(key, EnhancedGrindstone.create());
-        recipe.addIngredient(Material.NETHER_STAR);
-        recipe.addIngredient(Material.DRAGON_EGG);
-        recipe.addIngredient(Material.GRINDSTONE);
-        recipe.addIngredient(Material.NETHERITE_BLOCK);
+        ShapedRecipe recipe = new ShapedRecipe(key, EnhancedGrindstone.create());
+        recipe.shape(
+                "SES",
+                "EGE",
+                "SBS"
+        );
+
+        recipe.setIngredient('S', Material.NETHER_STAR);
+        recipe.setIngredient('E', Material.DRAGON_EGG);
+        recipe.setIngredient('G', Material.GRINDSTONE);
+        recipe.setIngredient('B', Material.NETHERITE_BLOCK);
         Bukkit.addRecipe(recipe);
     }
 
@@ -34,12 +41,12 @@ public class CustomItemRecipes {
         );
         ShapedRecipe recipe = new ShapedRecipe(key, TotemOfLife.create());
         recipe.shape(
-                "GHG",
-                "HTH",
-                "GHG"
+                "GTG",
+                "TTT",
+                "HTH"
         );
-        recipe.setIngredient('G', Material.GOLDEN_APPLE);
-        recipe.setIngredient('H', Material.HEART_OF_THE_SEA);
+        recipe.setIngredient('G', Material.NETHER_STAR);
+        recipe.setIngredient('H', Material.DRAGON_BREATH);
         recipe.setIngredient('T', Material.TOTEM_OF_UNDYING);
         Bukkit.addRecipe(recipe);
     }
@@ -54,9 +61,9 @@ public class CustomItemRecipes {
                 "SWS",
                 "NSN"
         );
-        recipe.setIngredient('N', Material.NETHERITE_INGOT);
-        recipe.setIngredient('S', Material.SOUL_SAND);
-        recipe.setIngredient('W', Material.WITHER_SKELETON_SKULL);
+        recipe.setIngredient('N', Material.END_CRYSTAL);
+        recipe.setIngredient('S', Material.NETHER_STAR);
+        recipe.setIngredient('W', Material.DRAGON_EGG);
         Bukkit.addRecipe(recipe);
     }
 
@@ -64,14 +71,29 @@ public class CustomItemRecipes {
         NamespacedKey key = new NamespacedKey(
                 LastBreathHC.getInstance(), "gracestone"
         );
+
         ShapedRecipe recipe = new ShapedRecipe(key, Gracestone.create());
+
         recipe.shape(
-                "EEE",
-                "ETE",
-                "EEE"
+                "ABA",
+                "ACA",
+                "DED"
         );
-        recipe.setIngredient('E', Material.END_STONE);
-        recipe.setIngredient('T', Material.TOTEM_OF_UNDYING);
+
+        recipe.setIngredient('A', Material.HEAVY_CORE);
+        recipe.setIngredient('B', Material.ELYTRA);
+
+        // ✅ REQUIRE Totem of Life
+        recipe.setIngredient('C',
+                new RecipeChoice.ExactChoice(TotemOfLife.create()));
+
+        recipe.setIngredient('D', Material.NETHER_STAR);
+
+        // ✅ REQUIRE Reaper Stone
+        recipe.setIngredient('E',
+                new RecipeChoice.ExactChoice(ReaperStone.create()));
+
         Bukkit.addRecipe(recipe);
     }
+
 }

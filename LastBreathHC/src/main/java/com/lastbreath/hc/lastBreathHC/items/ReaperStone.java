@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.items;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -23,6 +24,9 @@ public class ReaperStone {
                 "§7A chilling shard tied to death.",
                 "§7Used in forbidden crafting."
         ));
+
+        meta.addEnchant(Enchantment.MENDING, 1, true);
+        meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
 
         meta.getPersistentDataContainer().set(
                 KEY,
