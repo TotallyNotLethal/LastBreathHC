@@ -4,7 +4,7 @@
 debug: false
 
 arrowAggro:
-  radius: 16.0
+  radius: 3.0
 
 asteroid:
   spawn:
@@ -95,4 +95,5 @@ environment:
         - DEEP_COLD_OCEAN
         - DEEP_FROZEN_OCEAN
         - DEEP_LUKEWARM_OCEAN
+
 
