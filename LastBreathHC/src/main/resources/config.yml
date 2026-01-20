@@ -18,8 +18,8 @@ asteroid:
     tier3MinDistance: 100000
     effects:
       tier1:
-        mobType: NONE
-        mobCount: 0
+        mobType: ZOMBIE
+        mobCount: 4
         aoe:
           enabled: false
           particle: DRAGON_BREATH
@@ -31,7 +31,7 @@ asteroid:
           - BLAZE
           - MAGMA_CUBE
         mobType: BLAZE
-        mobCount: 2
+        mobCount: 6
         aoe:
           enabled: true
           particle: DRAGON_BREATH
@@ -44,7 +44,7 @@ asteroid:
           - VEX
           - PIGLIN_BRUTE
         mobType: WITHER_SKELETON
-        mobCount: 3
+        mobCount: 8
         aoe:
           enabled: true
           particle: DRAGON_BREATH
@@ -95,3 +95,4 @@ environment:
         - DEEP_COLD_OCEAN
         - DEEP_FROZEN_OCEAN
         - DEEP_LUKEWARM_OCEAN
+
