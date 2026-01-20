@@ -1,6 +1,5 @@
 package com.lastbreath.hc.lastBreathHC.items;
 
-import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -25,17 +24,10 @@ public class GracestoneListener implements Listener {
 
         event.setCancelled(true);
         Player player = event.getPlayer();
-        if (Gracestone.isGraceActive(player)) {
-            player.sendMessage("§cYour Gracestone grace is already active.");
-            return;
-        }
 
-        Gracestone.activateGrace(player);
+        Gracestone.addLives(player, 1);
         consumeInHand(event.getHand(), player, item);
-        if (player.getGameMode() != GameMode.SURVIVAL) {
-            player.setGameMode(GameMode.SURVIVAL);
-        }
-        player.sendMessage("§aGracestone activated. Your next death will be normal survival.");
+        player.sendMessage("§aGracestone empowered. Lives: " + Gracestone.getLives(player));
     }
 
     private void consumeInHand(EquipmentSlot hand, Player player, ItemStack item) {
