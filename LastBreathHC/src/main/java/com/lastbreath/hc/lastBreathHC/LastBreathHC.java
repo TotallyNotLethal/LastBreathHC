@@ -27,6 +27,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
+import org.bukkit.command.BlockCommandSender;
+import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 import com.lastbreath.hc.lastBreathHC.token.TokenRecipe;
 import com.lastbreath.hc.lastBreathHC.token.ReviveGuiTokenRecipe;
@@ -369,6 +371,13 @@ public final class LastBreathHC extends JavaPlugin {
         }
 
         return null;
+    }
+
+    public World resolveAsteroidCommandWorld(CommandSender sender) {
+        if (sender instanceof BlockCommandSender blockSender) {
+            return blockSender.getBlock().getWorld();
+        }
+        return pickAsteroidWorld();
     }
 
     private int pickWeightedAsteroidTier() {
