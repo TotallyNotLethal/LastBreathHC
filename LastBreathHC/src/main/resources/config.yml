@@ -1,5 +1,6 @@
 # LastBreathHC Configuration
 
+
 debug: false
 
 arrowAggro:
@@ -7,8 +8,8 @@ arrowAggro:
 
 asteroid:
   spawn:
-    minSeconds: 300
-    maxSeconds: 600
+    minSeconds: 1800
+    maxSeconds: 14400
   countdownSeconds: 10
   worlds:
     - world
