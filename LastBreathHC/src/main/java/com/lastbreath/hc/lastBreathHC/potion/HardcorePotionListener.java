@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.potion;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -17,10 +18,16 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.entity.*;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityPotionEffectEvent;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.EntityTameEvent;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -35,20 +42,10 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
- * Effect ID mapping table (event -> handler):
- * <ul>
- *     <li>Movement/ambient: ember_aura, lava_walker, clear_sight, silent_steps, steadfast, night_echo,
- *     water_affinity, stone_sense, windstep, shadow_veil, sun_blessed, echo_step, deep_breathing,
- *     restless_spirits, cursed_steps, noisy_presence, shadow_curse, heavy_lungs, gloom.</li>
- *     <li>Block damage/break: swift_miner, clumsy_hands, extra_ore_chance, keen_harvest, crystal_luck.</li>
- *     <li>Combat/impact: hardy_skin, steady_guard, frost_resist, nimble_feet, blaze_blood, hunter_focus,
- *     quick_reflexes, shielded_heart, thunder_guard, root_grip, quake_guard, brittle_bones, frail_skin,
- *     cold_sweat, burning_blood.</li>
- *     <li>Resource/utility: sturdy_tools, lucky_loot, lucky_salvage, exp_drain, hungry_mind, quick_heal,
- *     mana_leak, iron_stomach, poison_resist, shaky_aim, beast_tamer.</li>
- * </ul>
+ * Dedicated listener for custom potion effects activated via potion IDs stored in item PDC.
+ * Effect IDs are activated by {@link CustomPotionEffectManager} when custom potions are consumed.
  */
-public class CustomPotionEffectApplier implements Listener {
+public class HardcorePotionListener implements Listener {
 
     private static final int TICKS_PER_SECOND = 20;
 
@@ -58,10 +55,11 @@ public class CustomPotionEffectApplier implements Listener {
     private final Map<UUID, Map<String, Long>> effectCooldowns = new HashMap<>();
     private final Map<String, Consumer<Player>> movementHandlers = new HashMap<>();
 
-    public CustomPotionEffectApplier(LastBreathHC plugin, CustomPotionEffectManager effectManager) {
+    public HardcorePotionListener(LastBreathHC plugin, CustomPotionEffectManager effectManager) {
         this.plugin = plugin;
         this.effectManager = effectManager;
         registerMovementHandlers();
+        startAmbientEffectTask();
     }
 
     private void registerMovementHandlers() {
@@ -86,19 +84,19 @@ public class CustomPotionEffectApplier implements Listener {
         movementHandlers.put("gloom", this::applyGloom);
     }
 
-    @EventHandler(ignoreCancelled = true)
-    public void onPlayerMove(PlayerMoveEvent event) {
-        if (event.getTo() == null || event.getFrom().getBlockX() == event.getTo().getBlockX()
-                && event.getFrom().getBlockY() == event.getTo().getBlockY()
-                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
-            return;
-        }
-        Player player = event.getPlayer();
-        for (Map.Entry<String, Consumer<Player>> entry : movementHandlers.entrySet()) {
-            if (hasEffect(player, entry.getKey())) {
-                entry.getValue().accept(player);
+    private void startAmbientEffectTask() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    for (Map.Entry<String, Consumer<Player>> entry : movementHandlers.entrySet()) {
+                        if (hasEffect(player, entry.getKey())) {
+                            entry.getValue().accept(player);
+                        }
+                    }
+                }
             }
-        }
+        }.runTaskTimer(plugin, 0L, 10L);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -301,7 +299,6 @@ public class CustomPotionEffectApplier implements Listener {
         );
     }
 
-
     private void applyHardySkin(Player player, EntityDamageEvent event) {
         if (!triggerWithCooldown(player, "hardy_skin", 3 * TICKS_PER_SECOND, 0.35)) {
             return;
@@ -440,7 +437,7 @@ public class CustomPotionEffectApplier implements Listener {
                     Block block = player.getLocation().getBlock().getRelative(x, y, z);
                     Material type = block.getType();
                     if (type.name().endsWith("_ORE") || type == Material.ANCIENT_DEBRIS) {
-                        player.getWorld().spawnParticle(Particle.END_ROD, block.getLocation().add(0.5, 0.5, 0.5), 3, 0.2, 0.2, 0.2, 0.01);
+                        player.spawnParticle(Particle.BLOCK_MARKER, block.getLocation().add(0.5, 0.5, 0.5), 1, 0, 0, 0, 0, block.getBlockData());
                     }
                 }
             }
@@ -549,7 +546,7 @@ public class CustomPotionEffectApplier implements Listener {
                 for (int z = -radius; z <= radius; z++) {
                     Block block = player.getLocation().getBlock().getRelative(x, y, z);
                     if (block.getType() == Material.AIR && block.getRelative(0, -1, 0).getType().isSolid()) {
-                        player.getWorld().spawnParticle(Particle.SCULK_SOUL, block.getLocation().add(0.5, 0.5, 0.5), 1, 0.2, 0.2, 0.2, 0.01);
+                        player.spawnParticle(Particle.SCULK_SOUL, block.getLocation().add(0.5, 0.5, 0.5), 1, 0.2, 0.2, 0.2, 0.01);
                     }
                 }
             }

@@ -41,7 +41,7 @@ import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneLifeListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneListener;
 import com.lastbreath.hc.lastBreathHC.mobs.ArrowAggroListener;
-import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectApplier;
+import com.lastbreath.hc.lastBreathHC.potion.HardcorePotionListener;
 import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectManager;
 import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectRegistry;
 import com.lastbreath.hc.lastBreathHC.potion.CauldronBrewingListener;
@@ -154,7 +154,7 @@ public final class LastBreathHC extends JavaPlugin {
                 customPotionEffectManager, this
         );
         getServer().getPluginManager().registerEvents(
-                new CustomPotionEffectApplier(this, customPotionEffectManager), this
+                new HardcorePotionListener(this, customPotionEffectManager), this
         );
         getServer().getPluginManager().registerEvents(
                 effectsStatusGUI, this
