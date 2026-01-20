@@ -1,5 +1,6 @@
 package com.lastbreath.hc.lastBreathHC.potion;
 
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -16,6 +17,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -74,6 +76,13 @@ public class CauldronBrewingListener implements Listener {
             sendDebug(event.getPlayer(), "Cauldron placed on a lit soul campfire. Fill it with water to brew.");
         }
         sendDebug(event.getPlayer(), "Valid ingredients: " + listValidIngredients());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerDrop(PlayerDropItemEvent event) {
+        Bukkit.getScheduler().runTask(plugin, () ->
+                tryCauldronBrew(event.getItemDrop())
+        );
     }
 
     private void tryCauldronBrew(Item item) {
@@ -225,8 +234,8 @@ public class CauldronBrewingListener implements Listener {
     private void playBrewEffects(Block cauldron) {
         World world = cauldron.getWorld();
         Location center = cauldron.getLocation().add(0.5, 0.85, 0.5);
-        world.spawnParticle(Particle.SPELL_WITCH, center, BREW_PARTICLE_COUNT, 0.35, 0.25, 0.35, 0.01);
-        world.spawnParticle(Particle.SPELL, center, BREW_PARTICLE_COUNT, 0.35, 0.2, 0.35, 0.01);
+        world.spawnParticle(Particle.WITCH, center, BREW_PARTICLE_COUNT, 0.35, 0.25, 0.35, 0.01);
+        world.spawnParticle(Particle.TOTEM_OF_UNDYING, center, BREW_PARTICLE_COUNT, 0.35, 0.2, 0.35, 0.01);
         world.playSound(center, Sound.BLOCK_BREWING_STAND_BREW, 0.9f, 1.1f);
     }
 
@@ -271,13 +280,16 @@ public class CauldronBrewingListener implements Listener {
 
     private String listValidIngredients() {
         String custom = definitionRegistry.getAll().stream()
-                .sorted(Comparator.comparing(definition -> definition.ingredient().name()))
-                .map(definition -> definition.ingredient() + " -> " + definition.displayName())
+                .sorted(Comparator.comparing(def -> def.craftingIngredient().name()))
+                .map(def -> def.craftingIngredient().name() + " -> " + def.displayName())
                 .collect(Collectors.joining(", "));
+
         String defaults = "REDSTONE -> extend duration, GLOWSTONE_DUST -> concentrate, NETHER_STAR -> purify";
+
         if (custom.isBlank()) {
             return defaults;
         }
+
         return defaults + ", " + custom;
     }
 
@@ -285,12 +297,18 @@ public class CauldronBrewingListener implements Listener {
         if (potion == null) {
             return "none";
         }
+
         if (!(potion.getItemMeta() instanceof PotionMeta meta)) {
             return potion.getType().name();
         }
-        String name = meta.hasDisplayName() ? meta.getDisplayName() : potion.getType().name();
+
+        String name = meta.hasDisplayName()
+                ? PlainTextComponentSerializer.plainText().serialize(meta.displayName())
+                : potion.getType().name();
+
         PotionType base = meta.getBasePotionType();
         String baseName = base != null ? base.name() : "UNKNOWN";
+
         return name + " (base=" + baseName + ", type=" + potion.getType().name() + ")";
     }
 
@@ -324,18 +342,10 @@ public class CauldronBrewingListener implements Listener {
     }
 
     private void sendDebug(Player player, String message) {
-        player.sendMessage(ChatColor.DARK_GRAY + "[Cauldron Debug] " + ChatColor.GRAY + message);
+        plugin.getLogger().info("[Cauldron] " + message);
     }
 
     private void sendDebug(Location location, String message) {
-        World world = location.getWorld();
-        if (world == null) {
-            return;
-        }
-        for (Player player : world.getPlayers()) {
-            if (player.getLocation().distanceSquared(location) <= 64) {
-                sendDebug(player, message);
-            }
-        }
+        plugin.getLogger().info("[Cauldron] " + message);
     }
 }
