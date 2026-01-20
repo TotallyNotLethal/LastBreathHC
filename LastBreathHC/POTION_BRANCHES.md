@@ -19,17 +19,17 @@ These are the entry points for the potion tree:
 - **Potion of Warped Focus** (`warped_focus`) + `WARPED_FUNGUS`
 
 ## Stronger variants (require previous potion + ingredient)
-These potions **must** be brewed by re-adding the listed potion to the cauldron (or brewing stand) and then adding the ingredient:
-- **Elixir of Lucid Mind** (`lucid_mind`) + `AMETHYST_CLUSTER`
-- **Potion of Tempered Rush** (`tempered_rush`) + `COPPER_BLOCK`
-- **Potion of Veiled Resonance** (`veiled_resonance`) + `SCULK_CATALYST`
-- **Potion of Amber Bulwark** (`amber_bulwark`) + `HONEY_BLOCK`
-- **Potion of Radiant Warmth** (`radiant_warmth`) + `GLOWSTONE`
-- **Potion of Abyssal Breath** (`abyssal_breath`) + `HEART_OF_THE_SEA`
-- **Potion of Maelstrom Stride** (`maelstrom_stride`) + `SEA_LANTERN`
-- **Potion of Harvester's Edge** (`harvester_edge`) + `MOSS_BLOCK`
-- **Potion of Soulflame Guard** (`soulflame_guard`) + `MAGMA_CREAM`
-- **Potion of Void Focus** (`void_focus`) + `ENDER_EYE`
+These potions **must** be brewed by re-adding the listed **previous custom potion** to the cauldron (or brewing stand) and then adding the ingredient. The ingredient **alone** (with Awkward or Water) will not work for these:
+- **Elixir of Lucid Mind** (`lucid_mind`) requires: **Potion of Clear Mind** (`clear_mind`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) *or* **Potion of Void Focus** (`void_focus`) + `AMETHYST_CLUSTER`
+- **Potion of Tempered Rush** (`tempered_rush`) requires: **Potion of Copper Rush** (`copper_rush`) *or* **Elixir of Lucid Mind** (`lucid_mind`) *or* **Potion of Void Focus** (`void_focus`) + `COPPER_BLOCK`
+- **Potion of Veiled Resonance** (`veiled_resonance`) requires: **Potion of Echoed Veil** (`echoed_veil`) *or* **Elixir of Lucid Mind** (`lucid_mind`) + `SCULK_CATALYST`
+- **Potion of Amber Bulwark** (`amber_bulwark`) requires: **Potion of Honeyed Guard** (`honeyed_guard`) *or* **Potion of Tempered Rush** (`tempered_rush`) + `HONEY_BLOCK`
+- **Potion of Radiant Warmth** (`radiant_warmth`) requires: **Potion of Glow Warmth** (`glow_warmth`) *or* **Potion of Tempered Rush** (`tempered_rush`) + `GLOWSTONE`
+- **Potion of Abyssal Breath** (`abyssal_breath`) requires: **Potion of Deep Breath** (`deep_breath`) *or* **Potion of Amber Bulwark** (`amber_bulwark`) *or* **Potion of Radiant Warmth** (`radiant_warmth`) + `HEART_OF_THE_SEA`
+- **Potion of Maelstrom Stride** (`maelstrom_stride`) requires: **Potion of Tidal Step** (`tidal_step`) *or* **Potion of Veiled Resonance** (`veiled_resonance`) *or* **Potion of Radiant Warmth** (`radiant_warmth`) *or* **Potion of Abyssal Breath** (`abyssal_breath`) + `SEA_LANTERN`
+- **Potion of Harvester's Edge** (`harvester_edge`) requires: **Potion of Forager's Edge** (`forager_edge`) *or* **Potion of Abyssal Breath** (`abyssal_breath`) *or* **Potion of Maelstrom Stride** (`maelstrom_stride`) + `MOSS_BLOCK`
+- **Potion of Soulflame Guard** (`soulflame_guard`) requires: **Potion of Crimson Guard** (`crimson_guard`) *or* **Potion of Amber Bulwark** (`amber_bulwark`) *or* **Potion of Harvester's Edge** (`harvester_edge`) + `MAGMA_CREAM`
+- **Potion of Void Focus** (`void_focus`) requires: **Potion of Warped Focus** (`warped_focus`) *or* **Potion of Veiled Resonance** (`veiled_resonance`) *or* **Potion of Maelstrom Stride** (`maelstrom_stride`) *or* **Potion of Harvester's Edge** (`harvester_edge`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) + `ENDER_EYE`
 
 ## Branch map
 Use the following map to see which potion can be upgraded into another potion by adding the ingredient:

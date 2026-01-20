@@ -142,11 +142,11 @@ effects:
   - id: crystal_focus
     displayName: "Crystal Focus"
     category: POSITIVE
-    description: "Boosts awareness of nearby resources."
+    description: "Lucid Mind sharpens awareness of nearby resources."
   - id: razor_thoughts
     displayName: "Razor Thoughts"
     category: POSITIVE
-    description: "Improves reaction time for brief bursts."
+    description: "Lucid Mind improves reaction time for brief bursts."
   - id: overclocked_tools
     displayName: "Overclocked Tools"
     category: POSITIVE
@@ -222,7 +222,7 @@ effects:
   - id: mind_fog
     displayName: "Mind Fog"
     category: NEGATIVE
-    description: "Occasional confusion dulls senses."
+    description: "Lucid Mind carries occasional confusion that dulls senses."
   - id: strained_muscles
     displayName: "Strained Muscles"
     category: NEGATIVE

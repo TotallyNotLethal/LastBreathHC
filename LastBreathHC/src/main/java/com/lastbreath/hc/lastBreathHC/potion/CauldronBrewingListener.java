@@ -95,6 +95,7 @@ public class CauldronBrewingListener implements Listener {
     private void scheduleBrewCheck(Item item) {
         new BukkitRunnable() {
             private int ticks;
+            private boolean loggedFailures;
 
             @Override
             public void run() {
@@ -102,10 +103,13 @@ public class CauldronBrewingListener implements Listener {
                     cancel();
                     return;
                 }
-                boolean logFailures = ticks >= BREW_CHECK_DURATION_TICKS;
-                if (tryCauldronBrew(item, logFailures) || logFailures) {
+                boolean logFailures = ticks >= BREW_CHECK_DURATION_TICKS && !loggedFailures;
+                if (tryCauldronBrew(item, logFailures)) {
                     cancel();
                     return;
+                }
+                if (logFailures) {
+                    loggedFailures = true;
                 }
                 ticks++;
             }
@@ -133,7 +137,13 @@ public class CauldronBrewingListener implements Listener {
         ).stream().map(entity -> (Item) entity).toList();
         Optional<Item> potionEntity = contents.stream()
                 .filter(entity -> isPotion(entity.getItemStack()))
+                .filter(entity -> potionHandler.getCustomPotionId(entity.getItemStack()).isPresent())
                 .findFirst();
+        if (potionEntity.isEmpty()) {
+            potionEntity = contents.stream()
+                    .filter(entity -> isPotion(entity.getItemStack()))
+                    .findFirst();
+        }
         Optional<Item> ingredientEntity = contents.stream()
                 .filter(entity -> isIngredient(entity.getItemStack()))
                 .findFirst();

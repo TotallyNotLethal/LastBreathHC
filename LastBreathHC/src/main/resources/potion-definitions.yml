@@ -2,6 +2,7 @@ potions:
   - id: clear_mind
     displayName: "§rPotion of Clear Mind"
     craftingIngredient: AMETHYST_SHARD
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: NIGHT_VISION
@@ -36,6 +37,7 @@ potions:
   - id: copper_rush
     displayName: "§rPotion of Copper Rush"
     craftingIngredient: COPPER_INGOT
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: HASTE
@@ -70,6 +72,7 @@ potions:
   - id: echoed_veil
     displayName: "§rPotion of Echoed Veil"
     craftingIngredient: ECHO_SHARD
+    allowFromAwkward: true
     scaryToDrink: true
     baseEffects:
       - type: INVISIBILITY
@@ -104,6 +107,7 @@ potions:
   - id: honeyed_guard
     displayName: "§rPotion of Honeyed Guard"
     craftingIngredient: HONEYCOMB
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: RESISTANCE
@@ -138,6 +142,7 @@ potions:
   - id: glow_warmth
     displayName: "§rPotion of Glow Warmth"
     craftingIngredient: GLOW_BERRIES
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: REGENERATION
@@ -172,6 +177,7 @@ potions:
   - id: deep_breath
     displayName: "§rPotion of Deep Breath"
     craftingIngredient: PRISMARINE_CRYSTALS
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: WATER_BREATHING
@@ -206,6 +212,7 @@ potions:
   - id: tidal_step
     displayName: "§rPotion of Tidal Step"
     craftingIngredient: NAUTILUS_SHELL
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: DOLPHINS_GRACE
@@ -240,6 +247,7 @@ potions:
   - id: forager_edge
     displayName: "§rPotion of Forager's Edge"
     craftingIngredient: SWEET_BERRIES
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: SPEED
@@ -274,6 +282,7 @@ potions:
   - id: crimson_guard
     displayName: "§rPotion of Crimson Guard"
     craftingIngredient: CRIMSON_FUNGUS
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: FIRE_RESISTANCE
@@ -308,6 +317,7 @@ potions:
   - id: warped_focus
     displayName: "§rPotion of Warped Focus"
     craftingIngredient: WARPED_FUNGUS
+    allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
       - type: JUMP_BOOST
