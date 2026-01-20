@@ -55,7 +55,7 @@ public class BrewingStandGuiListener implements Listener {
         openBrewingStandGui(event.getPlayer(), brewingStand);
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         BrewingSession session = getSession(event.getWhoClicked().getUniqueId());
         if (session == null) {
@@ -67,12 +67,15 @@ public class BrewingStandGuiListener implements Listener {
         if (event.getClickedInventory() == event.getView().getTopInventory() && event.getSlot() == INGREDIENT_SLOT) {
             event.setCancelled(true);
             swapIngredientSlot(event);
+        } else if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
+                && event.getClickedInventory() == event.getView().getBottomInventory()) {
+            moveToIngredientSlot(event);
         }
 
         Bukkit.getScheduler().runTask(plugin, () -> syncToBrewer(session));
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
         BrewingSession session = getSession(event.getWhoClicked().getUniqueId());
         if (session == null) {
@@ -83,6 +86,9 @@ public class BrewingStandGuiListener implements Listener {
         }
         if (event.getRawSlots().contains(INGREDIENT_SLOT)) {
             event.setCancelled(true);
+            if (event.getRawSlots().size() == 1) {
+                applySingleSlotIngredientDrag(event);
+            }
             return;
         }
 
@@ -212,6 +218,54 @@ public class BrewingStandGuiListener implements Listener {
         ItemStack current = cloneOrNull(event.getCurrentItem());
         event.setCursor(current);
         event.getClickedInventory().setItem(INGREDIENT_SLOT, cursor);
+    }
+
+    private void moveToIngredientSlot(InventoryClickEvent event) {
+        ItemStack moving = event.getCurrentItem();
+        if (moving == null) {
+            return;
+        }
+        ItemStack ingredient = event.getView().getTopInventory().getItem(INGREDIENT_SLOT);
+        if (!canStack(moving, ingredient)) {
+            return;
+        }
+        int existingAmount = ingredient == null ? 0 : ingredient.getAmount();
+        int maxStack = moving.getMaxStackSize();
+        if (existingAmount >= maxStack) {
+            return;
+        }
+        int moveAmount = Math.min(moving.getAmount(), maxStack - existingAmount);
+        ItemStack updatedIngredient = moving.clone();
+        updatedIngredient.setAmount(existingAmount + moveAmount);
+        event.getView().getTopInventory().setItem(INGREDIENT_SLOT, updatedIngredient);
+        int remaining = moving.getAmount() - moveAmount;
+        if (remaining <= 0) {
+            event.getClickedInventory().setItem(event.getSlot(), null);
+        } else {
+            moving.setAmount(remaining);
+        }
+        event.setCancelled(true);
+    }
+
+    private void applySingleSlotIngredientDrag(InventoryDragEvent event) {
+        ItemStack newIngredient = event.getNewItems().get(INGREDIENT_SLOT);
+        ItemStack oldCursor = event.getOldCursor();
+        if (newIngredient == null || oldCursor == null) {
+            return;
+        }
+        event.getView().getTopInventory().setItem(INGREDIENT_SLOT, cloneOrNull(newIngredient));
+        int remaining = Math.max(0, oldCursor.getAmount() - newIngredient.getAmount());
+        if (remaining == 0) {
+            event.getWhoClicked().setItemOnCursor(null);
+        } else {
+            ItemStack updatedCursor = oldCursor.clone();
+            updatedCursor.setAmount(remaining);
+            event.getWhoClicked().setItemOnCursor(updatedCursor);
+        }
+    }
+
+    private boolean canStack(ItemStack moving, ItemStack ingredient) {
+        return ingredient == null || moving.isSimilar(ingredient);
     }
 
     private static final class BrewingStandGuiHolder implements InventoryHolder {
