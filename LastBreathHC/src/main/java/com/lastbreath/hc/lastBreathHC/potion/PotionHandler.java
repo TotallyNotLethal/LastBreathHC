@@ -18,9 +18,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -49,14 +47,18 @@ public class PotionHandler implements Listener {
     private final NamespacedKey concentrationKey;
     private final NamespacedKey purifiedKey;
     private final NamespacedKey customIdKey;
-    private final Map<Material, CustomPotionRecipe> customRecipes;
+    private final NamespacedKey customEffectsKey;
+    private final NamespacedKey scaryToDrinkKey;
+    private final PotionDefinitionRegistry definitionRegistry;
 
-    public PotionHandler(LastBreathHC plugin) {
+    public PotionHandler(LastBreathHC plugin, PotionDefinitionRegistry definitionRegistry) {
         this.redstoneKey = new NamespacedKey(plugin, "potion_redstone_apps");
         this.concentrationKey = new NamespacedKey(plugin, "potion_concentration");
         this.purifiedKey = new NamespacedKey(plugin, "potion_purified");
         this.customIdKey = new NamespacedKey(plugin, "potion_custom_id");
-        this.customRecipes = buildCustomRecipes();
+        this.customEffectsKey = new NamespacedKey(plugin, "potion_custom_effects");
+        this.scaryToDrinkKey = new NamespacedKey(plugin, "potion_scary_to_drink");
+        this.definitionRegistry = definitionRegistry;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -134,33 +136,58 @@ public class PotionHandler implements Listener {
         if (ingredient == Material.NETHER_STAR) {
             return applyPurification(potion);
         }
-        CustomPotionRecipe recipe = customRecipes.get(ingredient);
-        if (recipe != null) {
-            return applyCustomPotion(potion, recipe);
+        HardcorePotionDefinition definition = definitionRegistry.getByIngredient(ingredient);
+        if (definition != null) {
+            return applyCustomPotion(potion, definition);
         }
         return null;
     }
 
-    private ItemStack applyCustomPotion(ItemStack potion, CustomPotionRecipe recipe) {
+    private ItemStack applyCustomPotion(ItemStack potion, HardcorePotionDefinition definition) {
         PotionMeta meta = (PotionMeta) potion.getItemMeta();
-        if (meta == null || !isAwkwardPotion(meta)) {
+        if (meta == null || !canApplyDefinition(meta, definition)) {
             return null;
         }
 
         PotionMeta updatedMeta = (PotionMeta) meta.clone();
         updatedMeta.setBasePotionType(PotionType.AWKWARD);
         updatedMeta.clearCustomEffects();
-        for (PotionEffect effect : recipe.effects()) {
+        for (PotionEffect effect : definition.toPotionEffectsForCrafting()) {
             updatedMeta.addCustomEffect(effect, true);
         }
-        updatedMeta.setDisplayName(recipe.displayName());
+        updatedMeta.setDisplayName(definition.displayName());
 
         PersistentDataContainer container = updatedMeta.getPersistentDataContainer();
-        container.set(customIdKey, PersistentDataType.STRING, recipe.id());
+        container.set(customIdKey, PersistentDataType.STRING, definition.id());
+        if (!definition.customEffects().isEmpty()) {
+            container.set(customEffectsKey, PersistentDataType.INTEGER, definition.customEffects().size());
+        } else {
+            container.remove(customEffectsKey);
+        }
+        if (definition.scaryToDrink()) {
+            container.set(scaryToDrinkKey, PersistentDataType.BYTE, (byte) 1);
+        } else {
+            container.remove(scaryToDrinkKey);
+        }
         updateLore(updatedMeta);
 
         potion.setItemMeta(updatedMeta);
         return potion;
+    }
+
+    private boolean canApplyDefinition(PotionMeta meta, HardcorePotionDefinition targetDefinition) {
+        if (isAwkwardPotion(meta) && meta.getPersistentDataContainer().get(customIdKey, PersistentDataType.STRING) == null) {
+            return true;
+        }
+        String currentId = meta.getPersistentDataContainer().get(customIdKey, PersistentDataType.STRING);
+        if (currentId == null) {
+            return false;
+        }
+        HardcorePotionDefinition current = definitionRegistry.getById(currentId);
+        if (current == null) {
+            return false;
+        }
+        return current.branches().contains(targetDefinition.id());
     }
 
     private ItemStack applyRedstone(ItemStack potion) {
@@ -277,10 +304,18 @@ public class PotionHandler implements Listener {
         int concentration = container.getOrDefault(concentrationKey, PersistentDataType.INTEGER, 0);
         boolean purified = container.has(purifiedKey, PersistentDataType.BYTE);
         String customId = container.get(customIdKey, PersistentDataType.STRING);
+        boolean scaryToDrink = container.has(scaryToDrinkKey, PersistentDataType.BYTE);
+        int customEffectsCount = container.getOrDefault(customEffectsKey, PersistentDataType.INTEGER, 0);
 
         List<String> lore = new ArrayList<>();
         if (customId != null) {
             lore.add("§8Custom Brew");
+        }
+        if (customEffectsCount > 0) {
+            lore.add("§8Custom Effects: " + customEffectsCount);
+        }
+        if (scaryToDrink) {
+            lore.add("§4Scary to Drink");
         }
         if (redstoneApps > 0 || concentration > 0 || purified) {
             lore.add("§8Modifiers");
@@ -321,104 +356,6 @@ public class PotionHandler implements Listener {
 
     private boolean isAwkwardPotion(PotionMeta meta) {
         return meta.getBasePotionType() == PotionType.AWKWARD;
-    }
-
-    private Map<Material, CustomPotionRecipe> buildCustomRecipes() {
-        return Map.of(
-                Material.AMETHYST_SHARD,
-                new CustomPotionRecipe(
-                        "clear_mind",
-                        "§rPotion of Clear Mind",
-                        List.of(
-                                new PotionEffect(PotionEffectType.NIGHT_VISION, 3 * 60 * 20, 0),
-                                new PotionEffect(PotionEffectType.WEAKNESS, 20 * 20, 0)
-                        )
-                ),
-                Material.COPPER_INGOT,
-                new CustomPotionRecipe(
-                        "copper_rush",
-                        "§rPotion of Copper Rush",
-                        List.of(
-                                new PotionEffect(PotionEffectType.HASTE, 60 * 20, 0),
-                                new PotionEffect(PotionEffectType.SLOWNESS, 10 * 20, 0)
-                        )
-                ),
-                Material.ECHO_SHARD,
-                new CustomPotionRecipe(
-                        "echoed_veil",
-                        "§rPotion of Echoed Veil",
-                        List.of(
-                                new PotionEffect(PotionEffectType.INVISIBILITY, 45 * 20, 0),
-                                new PotionEffect(PotionEffectType.MINING_FATIGUE, 15 * 20, 0)
-                        )
-                ),
-                Material.HONEYCOMB,
-                new CustomPotionRecipe(
-                        "honeyed_guard",
-                        "§rPotion of Honeyed Guard",
-                        List.of(
-                                new PotionEffect(PotionEffectType.RESISTANCE, 35 * 20, 0),
-                                new PotionEffect(PotionEffectType.SLOWNESS, 20 * 20, 0)
-                        )
-                ),
-                Material.GLOW_BERRIES,
-                new CustomPotionRecipe(
-                        "glow_warmth",
-                        "§rPotion of Glow Warmth",
-                        List.of(
-                                new PotionEffect(PotionEffectType.REGENERATION, 15 * 20, 0),
-                                new PotionEffect(PotionEffectType.HUNGER, 15 * 20, 0)
-                        )
-                ),
-                Material.PRISMARINE_CRYSTALS,
-                new CustomPotionRecipe(
-                        "deep_breath",
-                        "§rPotion of Deep Breath",
-                        List.of(
-                                new PotionEffect(PotionEffectType.WATER_BREATHING, 2 * 60 * 20, 0),
-                                new PotionEffect(PotionEffectType.WEAKNESS, 20 * 20, 0)
-                        )
-                ),
-                Material.NAUTILUS_SHELL,
-                new CustomPotionRecipe(
-                        "tidal_step",
-                        "§rPotion of Tidal Step",
-                        List.of(
-                                new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 60 * 20, 0),
-                                new PotionEffect(PotionEffectType.SLOWNESS, 10 * 20, 0)
-                        )
-                ),
-                Material.SWEET_BERRIES,
-                new CustomPotionRecipe(
-                        "forager_edge",
-                        "§rPotion of Forager's Edge",
-                        List.of(
-                                new PotionEffect(PotionEffectType.SPEED, 45 * 20, 0),
-                                new PotionEffect(PotionEffectType.HUNGER, 20 * 20, 0)
-                        )
-                ),
-                Material.CRIMSON_FUNGUS,
-                new CustomPotionRecipe(
-                        "crimson_guard",
-                        "§rPotion of Crimson Guard",
-                        List.of(
-                                new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 60 * 20, 0),
-                                new PotionEffect(PotionEffectType.WEAKNESS, 15 * 20, 0)
-                        )
-                ),
-                Material.WARPED_FUNGUS,
-                new CustomPotionRecipe(
-                        "warped_focus",
-                        "§rPotion of Warped Focus",
-                        List.of(
-                                new PotionEffect(PotionEffectType.JUMP_BOOST, 60 * 20, 0),
-                                new PotionEffect(PotionEffectType.NAUSEA, 10 * 20, 0)
-                        )
-                )
-        );
-    }
-
-    private record CustomPotionRecipe(String id, String displayName, List<PotionEffect> effects) {
     }
 
     private record CustomCraftingMatch(ItemStack potion, Material ingredient) {

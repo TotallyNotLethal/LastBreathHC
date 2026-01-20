@@ -1,0 +1,201 @@
+effects:
+  - id: extra_ore_chance
+    displayName: "Extra Ore Veins"
+    category: POSITIVE
+    description: "Occasionally doubles ore drops while mining."
+  - id: hardy_skin
+    displayName: "Hardy Skin"
+    category: POSITIVE
+    description: "Chance to reduce incoming damage by half a heart."
+  - id: ember_aura
+    displayName: "Ember Aura"
+    category: POSITIVE
+    description: "Nearby hostile mobs may catch fire."
+  - id: swift_miner
+    displayName: "Swift Miner"
+    category: POSITIVE
+    description: "Small chance to instantly break common stone blocks."
+  - id: keen_harvest
+    displayName: "Keen Harvest"
+    category: POSITIVE
+    description: "Crops have a chance to drop extra produce."
+  - id: lucky_loot
+    displayName: "Lucky Loot"
+    category: POSITIVE
+    description: "Increase odds of rare drops from mobs."
+  - id: steady_guard
+    displayName: "Steady Guard"
+    category: POSITIVE
+    description: "Occasionally blocks knockback."
+  - id: frost_resist
+    displayName: "Frost Resistance"
+    category: POSITIVE
+    description: "Reduce damage from powdered snow and freeze effects."
+  - id: lava_walker
+    displayName: "Lava Walker"
+    category: POSITIVE
+    description: "Briefly solidifies lava beneath you."
+  - id: nimble_feet
+    displayName: "Nimble Feet"
+    category: POSITIVE
+    description: "Short burst of speed after taking damage."
+  - id: sturdy_tools
+    displayName: "Sturdy Tools"
+    category: POSITIVE
+    description: "Tools sometimes take no durability damage."
+  - id: hunter_focus
+    displayName: "Hunter Focus"
+    category: POSITIVE
+    description: "Ranged attacks briefly slow targets."
+  - id: clear_sight
+    displayName: "Clear Sight"
+    category: POSITIVE
+    description: "Highlight nearby ores for a moment."
+  - id: iron_stomach
+    displayName: "Iron Stomach"
+    category: POSITIVE
+    description: "Negative food effects last shorter."
+  - id: quick_reflexes
+    displayName: "Quick Reflexes"
+    category: POSITIVE
+    description: "Small chance to dodge projectile damage."
+  - id: silent_steps
+    displayName: "Silent Steps"
+    category: POSITIVE
+    description: "Reduce vibration-based detection range."
+  - id: steadfast
+    displayName: "Steadfast"
+    category: POSITIVE
+    description: "Gain brief resistance when below half health."
+  - id: night_echo
+    displayName: "Night Echo"
+    category: POSITIVE
+    description: "Small buff at night to stealth and movement."
+  - id: water_affinity
+    displayName: "Water Affinity"
+    category: POSITIVE
+    description: "Swim faster and mine slightly quicker underwater."
+  - id: blaze_blood
+    displayName: "Blaze Blood"
+    category: POSITIVE
+    description: "Chance to ignite attackers."
+  - id: shielded_heart
+    displayName: "Shielded Heart"
+    category: POSITIVE
+    description: "Briefly reduces damage after blocking."
+  - id: stone_sense
+    displayName: "Stone Sense"
+    category: POSITIVE
+    description: "Occasionally reveals nearby caves."
+  - id: beast_tamer
+    displayName: "Beast Tamer"
+    category: POSITIVE
+    description: "Tamed mobs gain temporary health."
+  - id: lucky_salvage
+    displayName: "Lucky Salvage"
+    category: POSITIVE
+    description: "Chance to salvage extra materials from smelting."
+  - id: thunder_guard
+    displayName: "Thunder Guard"
+    category: POSITIVE
+    description: "Reduced lightning damage and stun."
+  - id: root_grip
+    displayName: "Root Grip"
+    category: POSITIVE
+    description: "Less knockback when standing on dirt or stone."
+  - id: windstep
+    displayName: "Windstep"
+    category: POSITIVE
+    description: "Occasional short leap while sprinting."
+  - id: quick_heal
+    displayName: "Quick Heal"
+    category: POSITIVE
+    description: "Healing sources are slightly more effective."
+  - id: shadow_veil
+    displayName: "Shadow Veil"
+    category: POSITIVE
+    description: "Dim light briefly hides you from mobs."
+  - id: sun_blessed
+    displayName: "Sun Blessed"
+    category: POSITIVE
+    description: "Daylight grants a mild regeneration pulse."
+  - id: poison_resist
+    displayName: "Poison Resistance"
+    category: POSITIVE
+    description: "Reduce poison duration."
+  - id: quake_guard
+    displayName: "Quake Guard"
+    category: POSITIVE
+    description: "Reduced fall damage from short drops."
+  - id: echo_step
+    displayName: "Echo Step"
+    category: POSITIVE
+    description: "Occasionally silence nearby footsteps."
+  - id: crystal_luck
+    displayName: "Crystal Luck"
+    category: POSITIVE
+    description: "Higher chance to find crystals while mining."
+  - id: deep_breathing
+    displayName: "Deep Breathing"
+    category: POSITIVE
+    description: "Extended underwater sprinting endurance."
+  - id: restless_spirits
+    displayName: "Restless Spirits"
+    category: NEGATIVE
+    description: "Hostile mobs spawn slightly more often nearby."
+  - id: brittle_bones
+    displayName: "Brittle Bones"
+    category: NEGATIVE
+    description: "Take extra damage from falls."
+  - id: exp_drain
+    displayName: "Experience Drain"
+    category: NEGATIVE
+    description: "Mobs drop less experience."
+  - id: hungry_mind
+    displayName: "Hungry Mind"
+    category: NEGATIVE
+    description: "Hunger drains faster."
+  - id: clumsy_hands
+    displayName: "Clumsy Hands"
+    category: NEGATIVE
+    description: "Mining speed occasionally slows."
+  - id: cursed_steps
+    displayName: "Cursed Steps"
+    category: NEGATIVE
+    description: "Intermittent slowness."
+  - id: frail_skin
+    displayName: "Frail Skin"
+    category: NEGATIVE
+    description: "Armor effectiveness reduced briefly."
+  - id: noisy_presence
+    displayName: "Noisy Presence"
+    category: NEGATIVE
+    description: "Mobs detect you from farther away."
+  - id: cold_sweat
+    displayName: "Cold Sweat"
+    category: NEGATIVE
+    description: "Fire resistance is less effective."
+  - id: mana_leak
+    displayName: "Mana Leak"
+    category: NEGATIVE
+    description: "Natural regeneration slows."
+  - id: shadow_curse
+    displayName: "Shadow Curse"
+    category: NEGATIVE
+    description: "Short bursts of darkness."
+  - id: heavy_lungs
+    displayName: "Heavy Lungs"
+    category: NEGATIVE
+    description: "Reduced swim speed."
+  - id: burning_blood
+    displayName: "Burning Blood"
+    category: NEGATIVE
+    description: "Chance to ignite when hit."
+  - id: shaky_aim
+    displayName: "Shaky Aim"
+    category: NEGATIVE
+    description: "Ranged accuracy slightly worse."
+  - id: gloom
+    displayName: "Gloom"
+    category: NEGATIVE
+    description: "Luck is reduced while active."
