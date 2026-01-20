@@ -17,15 +17,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.entity.EntityPotionEffectEvent;
-import org.bukkit.event.entity.EntityRegainHealthEvent;
-import org.bukkit.event.entity.EntityShootBowEvent;
-import org.bukkit.event.entity.EntityTameEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
-import org.bukkit.event.player.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.ItemStack;
@@ -283,17 +276,31 @@ public class CustomPotionEffectApplier implements Listener {
     }
 
     private void applyExtraOreChance(Player player, BlockBreakEvent event) {
-        if (!Tag.ORES.isTagged(event.getBlock().getType())) {
+        Material type = event.getBlock().getType();
+
+        if (!type.name().endsWith("_ORE") && type != Material.ANCIENT_DEBRIS) {
             return;
         }
+
         if (!triggerWithCooldown(player, "extra_ore_chance", 2 * TICKS_PER_SECOND, 0.2)) {
             return;
         }
+
         for (ItemStack drop : event.getBlock().getDrops(player.getInventory().getItemInMainHand(), player)) {
-            event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), drop);
+            event.getBlock().getWorld().dropItemNaturally(
+                    event.getBlock().getLocation(),
+                    drop
+            );
         }
-        event.getPlayer().playSound(event.getBlock().getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.6f, 1.2f);
+
+        player.playSound(
+                event.getBlock().getLocation(),
+                Sound.BLOCK_AMETHYST_BLOCK_CHIME,
+                0.6f,
+                1.2f
+        );
     }
+
 
     private void applyHardySkin(Player player, EntityDamageEvent event) {
         if (!triggerWithCooldown(player, "hardy_skin", 3 * TICKS_PER_SECOND, 0.35)) {
@@ -370,8 +377,7 @@ public class CustomPotionEffectApplier implements Listener {
     }
 
     private void applyFrostResist(Player player, EntityDamageEvent event) {
-        if (!(event.getCause() == EntityDamageEvent.DamageCause.FREEZE
-                || event.getCause() == EntityDamageEvent.DamageCause.POWDER_SNOW)) {
+        if (!(event.getCause() == EntityDamageEvent.DamageCause.FREEZE)) {
             return;
         }
         if (!triggerWithCooldown(player, "frost_resist", 2 * TICKS_PER_SECOND, 0.6)) {
@@ -419,7 +425,7 @@ public class CustomPotionEffectApplier implements Listener {
             return;
         }
         if (event.getEntity() instanceof LivingEntity target) {
-            target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 2 * TICKS_PER_SECOND, 0, true, true, true));
+            target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 2 * TICKS_PER_SECOND, 0, true, true, true));
         }
     }
 
@@ -432,7 +438,8 @@ public class CustomPotionEffectApplier implements Listener {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
                     Block block = player.getLocation().getBlock().getRelative(x, y, z);
-                    if (Tag.ORES.isTagged(block.getType())) {
+                    Material type = block.getType();
+                    if (type.name().endsWith("_ORE") || type == Material.ANCIENT_DEBRIS) {
                         player.getWorld().spawnParticle(Particle.END_ROD, block.getLocation().add(0.5, 0.5, 0.5), 3, 0.2, 0.2, 0.2, 0.01);
                     }
                 }
@@ -487,7 +494,7 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "steadfast", 8 * TICKS_PER_SECOND, 0.5)) {
             return;
         }
-        player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 3 * TICKS_PER_SECOND, 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 3 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
     private void applyNightEcho(Player player) {
@@ -510,7 +517,7 @@ public class CustomPotionEffectApplier implements Listener {
             return;
         }
         player.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE, 3 * TICKS_PER_SECOND, 0, true, true, true));
-        player.addPotionEffect(new PotionEffect(PotionEffectType.FAST_DIGGING, 3 * TICKS_PER_SECOND, 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 3 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
     private void applyBlazeBlood(Player player, EntityDamageByEntityEvent event) {
@@ -529,7 +536,7 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "shielded_heart", 4 * TICKS_PER_SECOND, 0.6)) {
             return;
         }
-        player.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 2 * TICKS_PER_SECOND, 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 2 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
     private void applyStoneSense(Player player) {
@@ -577,7 +584,7 @@ public class CustomPotionEffectApplier implements Listener {
             return;
         }
         event.setDamage(event.getDamage() * 0.5);
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 2 * TICKS_PER_SECOND, 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 2 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
     private void applyRootGrip(Player player) {
@@ -730,14 +737,14 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "clumsy_hands", 6 * TICKS_PER_SECOND, 0.25)) {
             return;
         }
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, 3 * TICKS_PER_SECOND, 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.MINING_FATIGUE, 3 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
     private void applyCursedSteps(Player player) {
         if (!triggerWithCooldown(player, "cursed_steps", 6 * TICKS_PER_SECOND, 0.3)) {
             return;
         }
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 3 * TICKS_PER_SECOND, 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 3 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
     private void applyFrailSkin(Player player, EntityDamageEvent event) {
@@ -795,7 +802,7 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "heavy_lungs", 5 * TICKS_PER_SECOND, 0.4)) {
             return;
         }
-        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 3 * TICKS_PER_SECOND, 0, true, true, true));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 3 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
     private void applyBurningBlood(Player player) {
