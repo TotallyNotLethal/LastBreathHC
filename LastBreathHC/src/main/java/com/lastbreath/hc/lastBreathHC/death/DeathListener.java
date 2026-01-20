@@ -38,14 +38,23 @@ public class DeathListener implements Listener {
             BountyManager.createBounty(killer.getUniqueId());
         }
 
+        boolean hasToken = hasReviveToken(player);
+
         // Stop vanilla behavior
         event.setDeathMessage(null);
-        event.getDrops().clear();
+        if (hasToken) {
+            event.getDrops().clear();
+            event.setKeepInventory(true);
+            event.setKeepLevel(true);
+        } else {
+            event.setKeepInventory(false);
+            event.setKeepLevel(false);
+        }
 
         new BukkitRunnable() {
             @Override
             public void run() {
-                if (hasReviveToken(player)) {
+                if (hasToken) {
                     triggerReviveFlow(player);
                 } else {
                     banPlayer(player, "You died with no revival token.");
