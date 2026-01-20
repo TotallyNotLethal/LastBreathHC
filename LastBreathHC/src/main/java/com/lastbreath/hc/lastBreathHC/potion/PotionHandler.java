@@ -147,6 +147,15 @@ public class PotionHandler implements Listener {
         return applyIngredient(potion, ingredient);
     }
 
+    public Optional<String> getCustomPotionId(ItemStack potion) {
+        if (potion == null || !(potion.getItemMeta() instanceof PotionMeta meta)) {
+            return Optional.empty();
+        }
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        String customId = container.get(customIdKey, PersistentDataType.STRING);
+        return Optional.ofNullable(customId);
+    }
+
     private ItemStack applyCustomPotion(ItemStack potion, HardcorePotionDefinition definition) {
         PotionMeta meta = (PotionMeta) potion.getItemMeta();
         if (meta == null || !canApplyDefinition(meta, definition)) {
