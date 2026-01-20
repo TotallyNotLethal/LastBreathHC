@@ -2,7 +2,6 @@ package com.lastbreath.hc.lastBreathHC.potion;
 
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -103,25 +102,25 @@ public class CauldronBrewingListener implements Listener {
                     cancel();
                     return;
                 }
-                if (tryCauldronBrew(item)) {
+                boolean logFailures = ticks >= BREW_CHECK_DURATION_TICKS;
+                if (tryCauldronBrew(item, logFailures) || logFailures) {
                     cancel();
                     return;
                 }
                 ticks++;
-                if (ticks >= BREW_CHECK_DURATION_TICKS) {
-                    cancel();
-                }
             }
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
-    private boolean tryCauldronBrew(Item item) {
+    private boolean tryCauldronBrew(Item item, boolean logFailures) {
         if (!item.isValid()) {
             return false;
         }
         Block cauldron = getBrewingCauldron(item.getLocation());
         if (cauldron == null) {
-            debugMissingCauldron(item);
+            if (logFailures) {
+                debugMissingCauldron(item);
+            }
             return false;
         }
 
@@ -139,12 +138,14 @@ public class CauldronBrewingListener implements Listener {
                 .filter(entity -> isIngredient(entity.getItemStack()))
                 .findFirst();
         if (potionEntity.isEmpty() || ingredientEntity.isEmpty()) {
-            if (isPotion(item.getItemStack())) {
-                sendDebug(item, "Water bottle/potion detected in cauldron. Waiting for ingredient.");
-            } else if (isIngredient(item.getItemStack())) {
-                sendDebug(item, "Ingredient detected in cauldron. Waiting for water bottle/potion.");
+            if (logFailures) {
+                if (isPotion(item.getItemStack())) {
+                    sendDebug(item, "Water bottle/potion detected in cauldron. Waiting for ingredient.");
+                } else if (isIngredient(item.getItemStack())) {
+                    sendDebug(item, "Ingredient detected in cauldron. Waiting for water bottle/potion.");
+                }
+                sendDebug(item, "Valid ingredients: " + listValidIngredients());
             }
-            sendDebug(item, "Valid ingredients: " + listValidIngredients());
             return false;
         }
 

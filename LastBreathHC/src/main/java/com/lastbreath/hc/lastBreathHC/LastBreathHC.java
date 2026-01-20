@@ -148,7 +148,8 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new CauldronBrewingListener(this, potionHandler, potionDefinitionRegistry), this
         );
-        CustomPotionEffectManager customPotionEffectManager = new CustomPotionEffectManager(this, potionDefinitionRegistry, customPotionEffectRegistry);
+        customPotionEffectManager = new CustomPotionEffectManager(this, potionDefinitionRegistry, customPotionEffectRegistry);
+        effectsStatusGUI = new EffectsStatusGUI(customPotionEffectManager, customPotionEffectRegistry);
         getServer().getPluginManager().registerEvents(
                 customPotionEffectManager, this
         );
