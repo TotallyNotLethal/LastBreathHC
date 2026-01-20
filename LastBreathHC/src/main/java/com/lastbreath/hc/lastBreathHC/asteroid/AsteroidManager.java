@@ -8,9 +8,11 @@ import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.EntityType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionType;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -191,7 +193,7 @@ public class AsteroidManager {
             for (int z = -1; z <= 1; z++) {
 
                 if (Math.random() < 0.6) { // random scatter
-                    Location ground = center.clone().add(x, -1, z);
+                    Location ground = center.clone().add(x, 0, z);
 
                     // Only replace solid ground
                     if (ground.getBlock().getType().isSolid()) {
@@ -299,6 +301,8 @@ public class AsteroidManager {
 
         Location aoeLocation = findSpawnLocation(center);
         AreaEffectCloud cloud = (AreaEffectCloud) world.spawnEntity(aoeLocation, EntityType.AREA_EFFECT_CLOUD);
+        cloud.setBasePotionType(PotionType.WATER);
+        cloud.clearCustomEffects();
         cloud.setParticle(particle);
         cloud.setRadius((float) radius);
         cloud.setDuration(durationTicks);
@@ -306,18 +310,39 @@ public class AsteroidManager {
     }
 
     private static Location findSpawnLocation(Location center) {
+        World world = center.getWorld();
         Location base = center.clone().add(0.5, 1.0, 0.5);
-        for (int attempt = 0; attempt < 6; attempt++) {
-            double offsetX = ThreadLocalRandom.current().nextDouble(-2.5, 2.5);
-            double offsetZ = ThreadLocalRandom.current().nextDouble(-2.5, 2.5);
-            Location candidate = base.clone().add(offsetX, 0.0, offsetZ);
-            for (int yOffset = 0; yOffset < 4; yOffset++) {
-                Location check = candidate.clone().add(0.0, yOffset, 0.0);
-                if (check.getBlock().isPassable()) {
-                    return check;
+        if (world == null) {
+            return base;
+        }
+
+        List<Location> candidates = new ArrayList<>();
+        int baseY = center.getBlockY();
+        for (int offsetX = -2; offsetX <= 2; offsetX++) {
+            for (int offsetZ = -2; offsetZ <= 2; offsetZ++) {
+                int blockX = center.getBlockX() + offsetX;
+                int blockZ = center.getBlockZ() + offsetZ;
+
+                for (int yOffset = 3; yOffset >= -3; yOffset--) {
+                    int blockY = baseY + yOffset;
+                    Location ground = new Location(world, blockX, blockY, blockZ);
+                    if (!ground.getBlock().getType().isSolid()) {
+                        continue;
+                    }
+
+                    Location spawn = ground.clone().add(0.5, 1.0, 0.5);
+                    if (spawn.getBlock().isPassable() && spawn.clone().add(0.0, 1.0, 0.0).getBlock().isPassable()) {
+                        candidates.add(spawn);
+                        break;
+                    }
                 }
             }
         }
+
+        if (!candidates.isEmpty()) {
+            return candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+        }
+
         return base;
     }
 
