@@ -22,6 +22,7 @@ import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
+import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -65,6 +66,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask bountyTimeTask;
     private BukkitTask bountyCleanupTask;
     private BukkitTask bloodMoonTask;
+    private BukkitTask titleEffectTask;
     private BloodMoonManager bloodMoonManager;
     private EnvironmentalEffectsManager environmentalEffectsManager;
     private PotionDefinitionRegistry potionDefinitionRegistry;
@@ -168,6 +170,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleNextAsteroid();
         scheduleBountyTimers();
         scheduleBloodMoonChecks();
+        scheduleTitleEffects();
 
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS,
@@ -198,6 +201,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (bloodMoonTask != null) {
             bloodMoonTask.cancel();
             bloodMoonTask = null;
+        }
+        if (titleEffectTask != null) {
+            titleEffectTask.cancel();
+            titleEffectTask = null;
         }
         if (environmentalEffectsManager != null) {
             environmentalEffectsManager.shutdown();
@@ -266,6 +273,18 @@ public final class LastBreathHC extends JavaPlugin {
                 remainingSeconds--;
             }
         }.runTaskTimer(this, 0L, 20L);
+    }
+
+    private void scheduleTitleEffects() {
+        if (titleEffectTask != null) {
+            titleEffectTask.cancel();
+        }
+        titleEffectTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                TitleManager.refreshEquippedTitleEffects();
+            }
+        }.runTaskTimer(this, 20L, TitleManager.getTitleEffectRefreshTicks());
     }
 
     private void spawnScheduledAsteroid() {
