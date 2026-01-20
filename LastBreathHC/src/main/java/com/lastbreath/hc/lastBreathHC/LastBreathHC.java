@@ -10,9 +10,11 @@ import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand;
 import com.lastbreath.hc.lastBreathHC.commands.BloodMoonCommand;
 import com.lastbreath.hc.lastBreathHC.commands.BountyCommand;
+import com.lastbreath.hc.lastBreathHC.commands.EffectsCommand;
 import com.lastbreath.hc.lastBreathHC.commands.TitlesCommand;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
+import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
@@ -39,6 +41,7 @@ import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneLifeListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneListener;
 import com.lastbreath.hc.lastBreathHC.mobs.ArrowAggroListener;
+import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectApplier;
 import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectManager;
 import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectRegistry;
 import com.lastbreath.hc.lastBreathHC.potion.PotionHandler;
@@ -63,6 +66,8 @@ public final class LastBreathHC extends JavaPlugin {
     private EnvironmentalEffectsManager environmentalEffectsManager;
     private PotionDefinitionRegistry potionDefinitionRegistry;
     private CustomPotionEffectRegistry customPotionEffectRegistry;
+    private CustomPotionEffectManager customPotionEffectManager;
+    private EffectsStatusGUI effectsStatusGUI;
 
     @Override
     public void onEnable() {
@@ -138,8 +143,16 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new PotionHandler(this, potionDefinitionRegistry), this
         );
+        customPotionEffectManager = new CustomPotionEffectManager(this, potionDefinitionRegistry, customPotionEffectRegistry);
+        effectsStatusGUI = new EffectsStatusGUI(customPotionEffectManager, customPotionEffectRegistry);
         getServer().getPluginManager().registerEvents(
-                new CustomPotionEffectManager(this, potionDefinitionRegistry, customPotionEffectRegistry), this
+                customPotionEffectManager, this
+        );
+        getServer().getPluginManager().registerEvents(
+                new CustomPotionEffectApplier(this, customPotionEffectManager), this
+        );
+        getServer().getPluginManager().registerEvents(
+                effectsStatusGUI, this
         );
 
         TokenRecipe.register();
@@ -156,6 +169,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("bloodmoon", new BloodMoonCommand());
                     event.registrar().register("titles", new TitlesCommand());
                     event.registrar().register("bounty", new BountyCommand());
+                    event.registrar().register("effects", new EffectsCommand(customPotionEffectManager, customPotionEffectRegistry, effectsStatusGUI));
                 }
         );
     }
@@ -191,6 +205,8 @@ public final class LastBreathHC extends JavaPlugin {
         StatsManager.saveAll();
         potionDefinitionRegistry = null;
         customPotionEffectRegistry = null;
+        customPotionEffectManager = null;
+        effectsStatusGUI = null;
         getLogger().info("LastBreathHC disabled.");
     }
 
