@@ -26,6 +26,9 @@ asteroid:
           durationTicks: 160
           waitTimeTicks: 0
       tier2:
+        mobTypes:
+          - BLAZE
+          - MAGMA_CUBE
         mobType: BLAZE
         mobCount: 2
         aoe:
@@ -35,8 +38,12 @@ asteroid:
           durationTicks: 200
           waitTimeTicks: 0
       tier3:
+        mobTypes:
+          - WITHER_SKELETON
+          - VEX
+          - PIGLIN_BRUTE
         mobType: WITHER_SKELETON
-        mobCount: 4
+        mobCount: 3
         aoe:
           enabled: true
           particle: DRAGON_BREATH

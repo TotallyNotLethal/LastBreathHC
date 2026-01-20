@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.commands;
 
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Location;
@@ -21,9 +22,8 @@ public class AsteroidCommand implements BasicCommand {
             return;
         }
 
-        Location loc;
-
         if (args.length == 3) {
+            Location loc;
             try {
                 double x = Double.parseDouble(args[0]);
                 double y = Double.parseDouble(args[1]);
@@ -33,10 +33,13 @@ public class AsteroidCommand implements BasicCommand {
                 player.sendMessage("§cUsage: /asteroid [x y z]");
                 return;
             }
-        } else {
-            loc = player.getLocation();
+            AsteroidManager.spawnAsteroid(player.getWorld(), loc);
+            return;
         }
 
-        AsteroidManager.spawnAsteroid(player.getWorld(), loc);
+        LastBreathHC plugin = LastBreathHC.getInstance();
+        if (plugin == null || !plugin.spawnRandomAsteroid()) {
+            player.sendMessage("§cUnable to find a valid asteroid spawn location.");
+        }
     }
 }
