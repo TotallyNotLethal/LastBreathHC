@@ -1,10 +1,10 @@
 package com.lastbreath.hc.lastBreathHC.items;
 
 import net.kyori.adventure.text.Component;
-import org.bukkit.Attribute;
 import org.bukkit.GameMode;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -36,7 +36,7 @@ public class GracestoneLifeListener implements Listener {
         }
 
         event.setCancelled(true);
-        double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+        double maxHealth = player.getAttribute(Attribute.MAX_HEALTH).getValue();
         player.setHealth(maxHealth);
         player.setFireTicks(0);
         player.setFallDistance(0);
