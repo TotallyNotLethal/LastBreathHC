@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class AsteroidManager {
 
@@ -254,22 +255,28 @@ public class AsteroidManager {
                 mobTypes = List.of(mobTypeName);
             }
         }
-        for (String mobTypeName : mobTypes) {
-            if (mobTypeName == null || mobTypeName.isBlank() || mobTypeName.equalsIgnoreCase("NONE")) {
-                continue;
-            }
-            EntityType mobType = EntityType.fromName(mobTypeName.toLowerCase());
-            if (mobType == null) {
-                try {
-                    mobType = EntityType.valueOf(mobTypeName.toUpperCase());
-                } catch (IllegalArgumentException ignored) {
-                    mobType = null;
-                }
-            }
-            if (mobType != null && mobType.isAlive()) {
-                for (int i = 0; i < mobCount; i++) {
-                    world.spawnEntity(center, mobType);
-                }
+        List<EntityType> resolvedTypes = mobTypes.stream()
+                .filter(mobTypeName -> mobTypeName != null && !mobTypeName.isBlank() && !mobTypeName.equalsIgnoreCase("NONE"))
+                .map(mobTypeName -> {
+                    EntityType mobType = EntityType.fromName(mobTypeName.toLowerCase());
+                    if (mobType == null) {
+                        try {
+                            mobType = EntityType.valueOf(mobTypeName.toUpperCase());
+                        } catch (IllegalArgumentException ignored) {
+                            return null;
+                        }
+                    }
+                    return mobType != null && mobType.isAlive() ? mobType : null;
+                })
+                .filter(mobType -> mobType != null)
+                .toList();
+
+        if (!resolvedTypes.isEmpty() && mobCount > 0) {
+            int maxIndex = resolvedTypes.size();
+            for (int i = 0; i < mobCount; i++) {
+                EntityType mobType = resolvedTypes.get(ThreadLocalRandom.current().nextInt(maxIndex));
+                Location spawnLocation = findSpawnLocation(center);
+                world.spawnEntity(spawnLocation, mobType);
             }
         }
 
@@ -290,11 +297,28 @@ public class AsteroidManager {
             particle = Particle.DRAGON_BREATH;
         }
 
-        AreaEffectCloud cloud = (AreaEffectCloud) world.spawnEntity(center, EntityType.AREA_EFFECT_CLOUD);
+        Location aoeLocation = findSpawnLocation(center);
+        AreaEffectCloud cloud = (AreaEffectCloud) world.spawnEntity(aoeLocation, EntityType.AREA_EFFECT_CLOUD);
         cloud.setParticle(particle);
         cloud.setRadius((float) radius);
         cloud.setDuration(durationTicks);
         cloud.setWaitTime(waitTimeTicks);
+    }
+
+    private static Location findSpawnLocation(Location center) {
+        Location base = center.clone().add(0.5, 1.0, 0.5);
+        for (int attempt = 0; attempt < 6; attempt++) {
+            double offsetX = ThreadLocalRandom.current().nextDouble(-2.5, 2.5);
+            double offsetZ = ThreadLocalRandom.current().nextDouble(-2.5, 2.5);
+            Location candidate = base.clone().add(offsetX, 0.0, offsetZ);
+            for (int yOffset = 0; yOffset < 4; yOffset++) {
+                Location check = candidate.clone().add(0.0, yOffset, 0.0);
+                if (check.getBlock().isPassable()) {
+                    return check;
+                }
+            }
+        }
+        return base;
     }
 
 }

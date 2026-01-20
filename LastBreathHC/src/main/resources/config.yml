@@ -18,6 +18,9 @@ asteroid:
     tier3MinDistance: 100000
     effects:
       tier1:
+        mobTypes:
+          - ZOMBIE
+          - SKELETON
         mobType: ZOMBIE
         mobCount: 4
         aoe:
@@ -28,6 +31,8 @@ asteroid:
           waitTimeTicks: 0
       tier2:
         mobTypes:
+          - ZOMBIE
+          - SKELETON
           - BLAZE
           - MAGMA_CUBE
         mobType: BLAZE
@@ -40,9 +45,12 @@ asteroid:
           waitTimeTicks: 0
       tier3:
         mobTypes:
+          - ZOMBIE
+          - SKELETON
           - WITHER_SKELETON
           - VEX
           - PIGLIN_BRUTE
+          - RAVAGER
         mobType: WITHER_SKELETON
         mobCount: 8
         aoe:
