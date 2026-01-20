@@ -14,6 +14,8 @@ import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Tameable;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -22,6 +24,7 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.EntityTameEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
@@ -40,7 +43,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-public class CustomPotionEffectApplier {
+public class CustomPotionEffectApplier implements Listener {
 
     private static final int TICKS_PER_SECOND = 20;
     private static final Set<Material> FORAGE_BLOCKS = Set.of(
@@ -58,9 +61,12 @@ public class CustomPotionEffectApplier {
     public CustomPotionEffectApplier(LastBreathHC plugin, CustomPotionEffectManager effectManager) {
         this.plugin = plugin;
         this.effectManager = effectManager;
+        startContinuousEffectTask();
     }
 
-    public void handleBlockDamage(Player player, BlockDamageEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockDamage(BlockDamageEvent event) {
+        Player player = event.getPlayer();
         if (hasEffect(player, "swift_miner")) {
             applySwiftMiner(player, event);
         }
@@ -72,7 +78,9 @@ public class CustomPotionEffectApplier {
         }
     }
 
-    public void handleBlockBreak(Player player, BlockBreakEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockBreak(BlockBreakEvent event) {
+        Player player = event.getPlayer();
         if (hasEffect(player, "extra_ore_chance")) {
             applyExtraOreChance(player, event);
         }
@@ -90,7 +98,11 @@ public class CustomPotionEffectApplier {
         }
     }
 
-    public void handleEntityDamage(Player player, EntityDamageEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityDamage(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
         if (hasEffect(player, "hardy_skin")) {
             applyHardySkin(player, event);
         }
@@ -123,30 +135,33 @@ public class CustomPotionEffectApplier {
         }
     }
 
-    public void handleEntityDamageByEntity(Player player, EntityDamageByEntityEvent event) {
-        if (hasEffect(player, "steady_guard")) {
-            applySteadyGuard(player);
-        }
-        if (hasEffect(player, "blaze_blood")) {
-            applyBlazeBlood(player, event);
-        }
-        if (hasEffect(player, "quick_reflexes")) {
-            applyQuickReflexes(player, event);
-        }
-        if (hasEffect(player, "shielded_heart")) {
-            applyShieldedHeart(player);
-        }
-        if (hasEffect(player, "root_grip")) {
-            applyRootGrip(player);
-        }
-        if (hasEffect(player, "sticky_shell")) {
-            applyStickyShell(player);
-        }
-        if (hasEffect(player, "rebound_guard")) {
-            applyReboundGuard(player, event);
-        }
-        if (hasEffect(player, "soulfire_blood")) {
-            applySoulfireBlood(player, event);
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            if (hasEffect(player, "steady_guard")) {
+                applySteadyGuard(player);
+            }
+            if (hasEffect(player, "blaze_blood")) {
+                applyBlazeBlood(player, event);
+            }
+            if (hasEffect(player, "quick_reflexes")) {
+                applyQuickReflexes(player, event);
+            }
+            if (hasEffect(player, "shielded_heart")) {
+                applyShieldedHeart(player);
+            }
+            if (hasEffect(player, "root_grip")) {
+                applyRootGrip(player);
+            }
+            if (hasEffect(player, "sticky_shell")) {
+                applyStickyShell(player);
+            }
+            if (hasEffect(player, "rebound_guard")) {
+                applyReboundGuard(player, event);
+            }
+            if (hasEffect(player, "soulfire_blood")) {
+                applySoulfireBlood(player, event);
+            }
         }
         if (event.getDamager() instanceof Projectile projectile) {
             if (projectile.getShooter() instanceof Player shooter && hasEffect(shooter, "hunter_focus")) {
@@ -155,7 +170,12 @@ public class CustomPotionEffectApplier {
         }
     }
 
-    public void handleEntityDeath(Player player, EntityDeathEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityDeath(EntityDeathEvent event) {
+        Player player = event.getEntity().getKiller();
+        if (player == null) {
+            return;
+        }
         if (hasEffect(player, "lucky_loot")) {
             applyLuckyLoot(player, event);
         }
@@ -164,19 +184,29 @@ public class CustomPotionEffectApplier {
         }
     }
 
-    public void handleItemDamage(Player player, PlayerItemDamageEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onItemDamage(PlayerItemDamageEvent event) {
+        Player player = event.getPlayer();
         if (hasEffect(player, "sturdy_tools")) {
             applySturdyTools(player, event);
         }
     }
 
-    public void handleFoodChange(Player player, FoodLevelChangeEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onFoodChange(FoodLevelChangeEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
         if (hasEffect(player, "hungry_mind")) {
             applyHungryMind(player, event);
         }
     }
 
-    public void handleRegainHealth(Player player, EntityRegainHealthEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onRegainHealth(EntityRegainHealthEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
         if (hasEffect(player, "quick_heal")) {
             applyQuickHeal(player, event);
         }
@@ -185,7 +215,11 @@ public class CustomPotionEffectApplier {
         }
     }
 
-    public void handlePotionEffect(Player player, EntityPotionEffectEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onPotionEffect(EntityPotionEffectEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
         if (event.getNewEffect() == null) {
             return;
         }
@@ -197,25 +231,40 @@ public class CustomPotionEffectApplier {
         }
     }
 
-    public void handleFurnaceExtract(Player player, FurnaceExtractEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onFurnaceExtract(FurnaceExtractEvent event) {
+        Player player = event.getPlayer();
         if (hasEffect(player, "lucky_salvage")) {
             applyLuckySalvage(player, event);
         }
     }
 
-    public void handleBowShoot(Player player, EntityShootBowEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onBowShoot(EntityShootBowEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
         if (hasEffect(player, "shaky_aim")) {
             applyShakyAim(player, event);
         }
     }
 
-    public void handleTame(Player player, EntityTameEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onTame(EntityTameEvent event) {
+        if (!(event.getOwner() instanceof Player player)) {
+            return;
+        }
         if (hasEffect(player, "beast_tamer")) {
             applyBeastTamer(player, event);
         }
     }
 
-    public void handlePlayerMove(Player player, PlayerMoveEvent event) {
+    @EventHandler(ignoreCancelled = true)
+    public void onPlayerMove(PlayerMoveEvent event) {
+        if (event.getTo() == null) {
+            return;
+        }
+        Player player = event.getPlayer();
         if (hasEffect(player, "lava_walker")) {
             applyLavaWalker(player);
         }
@@ -245,6 +294,16 @@ public class CustomPotionEffectApplier {
         }
         if (hasEffect(player, "pressure_sense")) {
             applyPressureSense(player);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityTarget(EntityTargetEvent event) {
+        if (!(event.getTarget() instanceof Player player)) {
+            return;
+        }
+        if (hasEffect(player, "shadow_veil")) {
+            applyShadowVeilTarget(player, event);
         }
     }
 
@@ -345,6 +404,17 @@ public class CustomPotionEffectApplier {
         if (hasEffect(player, "ashen_heart")) {
             applyAshenHeart(player);
         }
+    }
+
+    private void startContinuousEffectTask() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Player player : plugin.getServer().getOnlinePlayers()) {
+                    handlePlayerTick(player);
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 10L);
     }
 
     private void applyExtraOreChance(Player player, BlockBreakEvent event) {
@@ -671,6 +741,14 @@ public class CustomPotionEffectApplier {
             return;
         }
         player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 3 * TICKS_PER_SECOND, 0, true, true, true));
+    }
+
+    private void applyShadowVeilTarget(Player player, EntityTargetEvent event) {
+        if (player.getLocation().getBlock().getLightLevel() > 7) {
+            return;
+        }
+        event.setCancelled(true);
+        event.setTarget(null);
     }
 
     private void applySunBlessed(Player player) {
