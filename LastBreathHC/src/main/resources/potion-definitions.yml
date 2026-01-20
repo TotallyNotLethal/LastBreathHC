@@ -1,0 +1,331 @@
+potions:
+  - id: clear_mind
+    displayName: "§rPotion of Clear Mind"
+    craftingIngredient: AMETHYST_SHARD
+    scaryToDrink: false
+    baseEffects:
+      - type: NIGHT_VISION
+        durationTicks: 3600
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: clear_sight
+        durationTicks: 3600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: quick_reflexes
+        durationTicks: 3600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: hungry_mind
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - copper_rush
+      - echoed_veil
+  - id: copper_rush
+    displayName: "§rPotion of Copper Rush"
+    craftingIngredient: COPPER_INGOT
+    scaryToDrink: false
+    baseEffects:
+      - type: HASTE
+        durationTicks: 1200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: SLOWNESS
+        durationTicks: 200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: swift_miner
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: sturdy_tools
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: clumsy_hands
+        durationTicks: 600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - honeyed_guard
+      - glow_warmth
+  - id: echoed_veil
+    displayName: "§rPotion of Echoed Veil"
+    craftingIngredient: ECHO_SHARD
+    scaryToDrink: true
+    baseEffects:
+      - type: INVISIBILITY
+        durationTicks: 900
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: MINING_FATIGUE
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: shadow_veil
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: silent_steps
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: noisy_presence
+        durationTicks: 600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - warped_focus
+      - tidal_step
+  - id: honeyed_guard
+    displayName: "§rPotion of Honeyed Guard"
+    craftingIngredient: HONEYCOMB
+    scaryToDrink: false
+    baseEffects:
+      - type: RESISTANCE
+        durationTicks: 700
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: SLOWNESS
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: steady_guard
+        durationTicks: 700
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: hardy_skin
+        durationTicks: 700
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: brittle_bones
+        durationTicks: 400
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - crimson_guard
+      - deep_breath
+  - id: glow_warmth
+    displayName: "§rPotion of Glow Warmth"
+    craftingIngredient: GLOW_BERRIES
+    scaryToDrink: false
+    baseEffects:
+      - type: REGENERATION
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: HUNGER
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: sun_blessed
+        durationTicks: 600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: quick_heal
+        durationTicks: 600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: cold_sweat
+        durationTicks: 600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - deep_breath
+      - tidal_step
+  - id: deep_breath
+    displayName: "§rPotion of Deep Breath"
+    craftingIngredient: PRISMARINE_CRYSTALS
+    scaryToDrink: false
+    baseEffects:
+      - type: WATER_BREATHING
+        durationTicks: 2400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: water_affinity
+        durationTicks: 2400
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: deep_breathing
+        durationTicks: 2400
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: heavy_lungs
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - tidal_step
+      - forager_edge
+  - id: tidal_step
+    displayName: "§rPotion of Tidal Step"
+    craftingIngredient: NAUTILUS_SHELL
+    scaryToDrink: false
+    baseEffects:
+      - type: DOLPHINS_GRACE
+        durationTicks: 1200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: SLOWNESS
+        durationTicks: 200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: windstep
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: root_grip
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: exp_drain
+        durationTicks: 600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - forager_edge
+      - warped_focus
+  - id: forager_edge
+    displayName: "§rPotion of Forager's Edge"
+    craftingIngredient: SWEET_BERRIES
+    scaryToDrink: false
+    baseEffects:
+      - type: SPEED
+        durationTicks: 900
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: HUNGER
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: keen_harvest
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: lucky_loot
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: exp_drain
+        durationTicks: 400
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - crimson_guard
+      - warped_focus
+  - id: crimson_guard
+    displayName: "§rPotion of Crimson Guard"
+    craftingIngredient: CRIMSON_FUNGUS
+    scaryToDrink: false
+    baseEffects:
+      - type: FIRE_RESISTANCE
+        durationTicks: 1200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: blaze_blood
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: ember_aura
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: burning_blood
+        durationTicks: 600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - warped_focus
+      - clear_mind
+  - id: warped_focus
+    displayName: "§rPotion of Warped Focus"
+    craftingIngredient: WARPED_FUNGUS
+    scaryToDrink: false
+    baseEffects:
+      - type: JUMP_BOOST
+        durationTicks: 1200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: NAUSEA
+        durationTicks: 200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: night_echo
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: echo_step
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: shadow_curse
+        durationTicks: 600
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - clear_mind
+      - copper_rush

@@ -39,7 +39,10 @@ import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneLifeListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneListener;
 import com.lastbreath.hc.lastBreathHC.mobs.ArrowAggroListener;
+import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectManager;
+import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectRegistry;
 import com.lastbreath.hc.lastBreathHC.potion.PotionHandler;
+import com.lastbreath.hc.lastBreathHC.potion.PotionDefinitionRegistry;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -58,12 +61,16 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask bloodMoonTask;
     private BloodMoonManager bloodMoonManager;
     private EnvironmentalEffectsManager environmentalEffectsManager;
+    private PotionDefinitionRegistry potionDefinitionRegistry;
+    private CustomPotionEffectRegistry customPotionEffectRegistry;
 
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
         getLogger().info("LastBreathHC enabled.");
+        potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
+        customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");
         HeadManager.init();
         BountyManager.load();
         AsteroidManager.initialize(this);
@@ -129,7 +136,10 @@ public final class LastBreathHC extends JavaPlugin {
                 environmentalEffectsManager, this
         );
         getServer().getPluginManager().registerEvents(
-                new PotionHandler(this), this
+                new PotionHandler(this, potionDefinitionRegistry), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new CustomPotionEffectManager(this, potionDefinitionRegistry, customPotionEffectRegistry), this
         );
 
         TokenRecipe.register();
@@ -179,6 +189,8 @@ public final class LastBreathHC extends JavaPlugin {
         BountyManager.save();
         ReviveStateManager.save();
         StatsManager.saveAll();
+        potionDefinitionRegistry = null;
+        customPotionEffectRegistry = null;
         getLogger().info("LastBreathHC disabled.");
     }
 
