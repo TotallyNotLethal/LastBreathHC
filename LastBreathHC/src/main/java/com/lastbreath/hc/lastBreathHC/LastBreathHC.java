@@ -47,7 +47,6 @@ import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectRegistry;
 import com.lastbreath.hc.lastBreathHC.potion.CauldronBrewingListener;
 import com.lastbreath.hc.lastBreathHC.potion.PotionHandler;
 import com.lastbreath.hc.lastBreathHC.potion.PotionDefinitionRegistry;
-import com.lastbreath.hc.lastBreathHC.potion.BrewingStandGuiListener;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -145,9 +144,6 @@ public final class LastBreathHC extends JavaPlugin {
         PotionHandler potionHandler = new PotionHandler(this, potionDefinitionRegistry);
         getServer().getPluginManager().registerEvents(
                 potionHandler, this
-        );
-        getServer().getPluginManager().registerEvents(
-                new BrewingStandGuiListener(this), this
         );
         getServer().getPluginManager().registerEvents(
                 new CauldronBrewingListener(this, potionHandler, potionDefinitionRegistry), this
