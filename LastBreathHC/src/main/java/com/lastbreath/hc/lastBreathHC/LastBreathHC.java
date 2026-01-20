@@ -234,19 +234,9 @@ public final class LastBreathHC extends JavaPlugin {
     }
 
     private void spawnScheduledAsteroid() {
-        World world = pickAsteroidWorld();
-        if (world == null) {
-            getLogger().warning("No valid asteroid worlds configured. Skipping asteroid spawn.");
-            return;
+        if (!spawnRandomAsteroid()) {
+            getLogger().warning("Unable to find a valid asteroid spawn location.");
         }
-
-        Location location = pickAsteroidLocation(world);
-        if (location == null) {
-            getLogger().warning("Unable to find a valid asteroid location in world " + world.getName() + ".");
-            return;
-        }
-
-        AsteroidManager.spawnAsteroid(world, location);
     }
 
     private void scheduleBountyTimers() {
@@ -346,5 +336,34 @@ public final class LastBreathHC extends JavaPlugin {
         }
 
         return null;
+    }
+
+    private int pickWeightedAsteroidTier() {
+        int roll = random.nextInt(100);
+        if (roll < 75) {
+            return 1;
+        }
+        if (roll < 95) {
+            return 2;
+        }
+        return 3;
+    }
+
+    public boolean spawnRandomAsteroid() {
+        World world = pickAsteroidWorld();
+        if (world == null) {
+            getLogger().warning("No valid asteroid worlds configured. Skipping asteroid spawn.");
+            return false;
+        }
+
+        Location location = pickAsteroidLocation(world);
+        if (location == null) {
+            getLogger().warning("Unable to find a valid asteroid location in world " + world.getName() + ".");
+            return false;
+        }
+
+        int tier = pickWeightedAsteroidTier();
+        AsteroidManager.spawnAsteroid(world, location, tier);
+        return true;
     }
 }

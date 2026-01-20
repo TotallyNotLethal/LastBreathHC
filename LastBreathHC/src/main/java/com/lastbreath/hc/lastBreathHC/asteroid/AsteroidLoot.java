@@ -12,37 +12,46 @@ public class AsteroidLoot {
 
     private static final Random random = new Random();
 
-    public static Inventory createLoot() {
+    public static Inventory createLoot(int tier) {
+        int normalizedTier = Math.max(1, Math.min(3, tier));
         Inventory inv = Bukkit.createInventory(null, 27,
                 Component.text("☄ Asteroid Core"));
 
-        inv.addItem(new ItemStack(Material.IRON_INGOT, 6 + random.nextInt(14)));
-        inv.addItem(new ItemStack(Material.GOLD_INGOT, 4 + random.nextInt(6)));
-        inv.addItem(new ItemStack(Material.EMERALD, 2 + random.nextInt(6)));
-        inv.addItem(new ItemStack(Material.DIAMOND, 1 + random.nextInt(4)));
-        inv.addItem(new ItemStack(Material.NETHERITE_SCRAP));
+        inv.addItem(new ItemStack(Material.IRON_INGOT, 6 + random.nextInt(14) + (normalizedTier - 1) * 4));
+        inv.addItem(new ItemStack(Material.GOLD_INGOT, 4 + random.nextInt(6) + (normalizedTier - 1) * 2));
+        inv.addItem(new ItemStack(Material.EMERALD, 2 + random.nextInt(6) + (normalizedTier - 1) * 2));
+        inv.addItem(new ItemStack(Material.DIAMOND, 1 + random.nextInt(4) + (normalizedTier - 1)));
+        inv.addItem(new ItemStack(Material.NETHERITE_SCRAP, 1 + (normalizedTier >= 2 ? random.nextInt(2) : 0) + (normalizedTier == 3 ? 1 : 0)));
 
-        if (random.nextInt(100) < 50)
+        if (random.nextInt(100) < chanceForTier(normalizedTier, 50, 65, 80))
             inv.addItem(new ItemStack(Material.TOTEM_OF_UNDYING));
 
-        if (random.nextInt(100) < 20)
+        if (random.nextInt(100) < chanceForTier(normalizedTier, 20, 35, 50))
             inv.addItem(new ItemStack(Material.ENCHANTED_GOLDEN_APPLE));
 
-        if (random.nextInt(100) < 15)
+        if (random.nextInt(100) < chanceForTier(normalizedTier, 15, 30, 45))
             inv.addItem(new ItemStack(Material.NETHER_STAR));
 
-        if (random.nextInt(100) < 10)
+        if (random.nextInt(100) < chanceForTier(normalizedTier, 10, 25, 40))
             inv.addItem(new ItemStack(Material.ANCIENT_DEBRIS));
 
-        if (random.nextInt(100) < 10)
+        if (random.nextInt(100) < chanceForTier(normalizedTier, 10, 20, 30))
             inv.addItem(new ItemStack(Material.DRAGON_BREATH));
 
-        if (random.nextInt(100) < 5)
+        if (random.nextInt(100) < chanceForTier(normalizedTier, 5, 12, 20))
             inv.addItem(new ItemStack(Material.HEAVY_CORE));
 
-        if (random.nextInt(100) <= 1)
+        if (random.nextInt(100) < chanceForTier(normalizedTier, 1, 3, 5))
             inv.addItem(new ItemStack(Material.DRAGON_EGG));
 
         return inv;
+    }
+
+    private static int chanceForTier(int tier, int tier1, int tier2, int tier3) {
+        return switch (tier) {
+            case 3 -> tier3;
+            case 2 -> tier2;
+            default -> tier1;
+        };
     }
 }

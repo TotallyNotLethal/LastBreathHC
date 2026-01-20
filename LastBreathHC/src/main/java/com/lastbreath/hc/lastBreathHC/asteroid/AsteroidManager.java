@@ -65,7 +65,7 @@ public class AsteroidManager {
 
     public static void registerAsteroid(Location loc, int tier) {
         Location blockLoc = blockLocation(loc);
-        ASTEROIDS.put(blockLoc, new AsteroidEntry(AsteroidLoot.createLoot(), tier));
+        ASTEROIDS.put(blockLoc, new AsteroidEntry(AsteroidLoot.createLoot(tier), tier));
         PERSISTED_ASTEROIDS.add(toKey(blockLoc, tier));
         saveAsteroids();
     }
@@ -161,9 +161,14 @@ public class AsteroidManager {
     }
 
     public static void spawnAsteroid(World world, Location loc) {
-
         Location center = loc.getBlock().getLocation();
-        int tier = determineTier(world, center);
+        int tier = determineTierByDistance(world, center);
+        spawnAsteroid(world, center, tier);
+    }
+
+    public static void spawnAsteroid(World world, Location loc, int tier) {
+        Location center = loc.getBlock().getLocation();
+        int resolvedTier = Math.max(1, Math.min(3, tier));
 
         // 🔊 Explosion sound (no damage)
         world.playSound(
@@ -204,8 +209,8 @@ public class AsteroidManager {
         Location core = center.clone().add(0, 1, 0);
         core.getBlock().setType(Material.ANCIENT_DEBRIS);
 
-        AsteroidManager.registerAsteroid(core, tier);
-        spawnTierEffects(world, core, tier);
+        AsteroidManager.registerAsteroid(core, resolvedTier);
+        spawnTierEffects(world, core, resolvedTier);
 
         // 📢 Broadcast
         Bukkit.broadcast(
@@ -220,7 +225,7 @@ public class AsteroidManager {
         );
     }
 
-    private static int determineTier(World world, Location center) {
+    private static int determineTierByDistance(World world, Location center) {
         if (plugin == null) {
             return 1;
         }
@@ -230,7 +235,7 @@ public class AsteroidManager {
         if (distance >= tier3Min) {
             return 3;
         }
-        if (distance >= tier2Min) {
+        if (distance > tier2Min) {
             return 2;
         }
         return 1;
@@ -241,9 +246,18 @@ public class AsteroidManager {
             return;
         }
         String basePath = "asteroid.tiers.effects.tier" + tier;
-        String mobTypeName = plugin.getConfig().getString(basePath + ".mobType");
         int mobCount = plugin.getConfig().getInt(basePath + ".mobCount", 0);
-        if (mobTypeName != null && !mobTypeName.isBlank() && !mobTypeName.equalsIgnoreCase("NONE")) {
+        List<String> mobTypes = plugin.getConfig().getStringList(basePath + ".mobTypes");
+        if (mobTypes.isEmpty()) {
+            String mobTypeName = plugin.getConfig().getString(basePath + ".mobType");
+            if (mobTypeName != null && !mobTypeName.isBlank() && !mobTypeName.equalsIgnoreCase("NONE")) {
+                mobTypes = List.of(mobTypeName);
+            }
+        }
+        for (String mobTypeName : mobTypes) {
+            if (mobTypeName == null || mobTypeName.isBlank() || mobTypeName.equalsIgnoreCase("NONE")) {
+                continue;
+            }
             EntityType mobType = EntityType.fromName(mobTypeName.toLowerCase());
             if (mobType == null) {
                 try {
