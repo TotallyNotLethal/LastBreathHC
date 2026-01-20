@@ -6,6 +6,8 @@ import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
 
 import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class TitleManager {
@@ -15,6 +17,9 @@ public class TitleManager {
     private static final long TEN_HOURS_SECONDS = 10 * 60 * 60;
     private static final long TWENTY_FIVE_HOURS_SECONDS = 25 * 60 * 60;
     private static final long ONE_HUNDRED_HOURS_SECONDS = 100 * 60 * 60;
+    private static final Map<Title, List<String>> TITLE_EFFECTS = Map.of(
+            Title.WANDERER, List.of()
+    );
 
     private TitleManager() {
     }
@@ -57,6 +62,19 @@ public class TitleManager {
             return "";
         }
         return "§7[" + stats.equippedTitle.displayName() + "§7] ";
+    }
+
+    public static Title getEquippedTitle(Player player) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        initialize(stats);
+        return stats.equippedTitle;
+    }
+
+    public static List<String> getTitleEffects(Title title) {
+        if (title == null) {
+            return List.of();
+        }
+        return TITLE_EFFECTS.getOrDefault(title, List.of());
     }
 
     public static String formatTitleList(Player player) {

@@ -152,4 +152,42 @@ public class CustomPotionEffectManager implements Listener {
         }
         return active;
     }
+
+    public Map<String, Long> getActiveEffectRemainingMillis(Player player) {
+        Map<String, Long> effects = activeEffects.get(player.getUniqueId());
+        if (effects == null) {
+            return Map.of();
+        }
+        long now = System.currentTimeMillis();
+        Map<String, Long> remaining = new HashMap<>();
+        for (Map.Entry<String, Long> entry : effects.entrySet()) {
+            long remainingMillis = entry.getValue() - now;
+            if (remainingMillis > 0) {
+                remaining.put(entry.getKey(), remainingMillis);
+            }
+        }
+        return remaining;
+    }
+
+    public boolean activateEffect(Player player, String effectId, int durationTicks) {
+        if (effectRegistry.getById(effectId) == null) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        Map<String, Long> playerEffects = activeEffects.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>());
+        long expiresAt = now + ticksToMillis(durationTicks);
+        playerEffects.put(effectId, expiresAt);
+        if (durationTicks > 0) {
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    Map<String, Long> effects = activeEffects.get(player.getUniqueId());
+                    if (effects != null && effects.getOrDefault(effectId, 0L) <= System.currentTimeMillis()) {
+                        effects.remove(effectId);
+                    }
+                }
+            }.runTaskLater(plugin, durationTicks);
+        }
+        return true;
+    }
 }
