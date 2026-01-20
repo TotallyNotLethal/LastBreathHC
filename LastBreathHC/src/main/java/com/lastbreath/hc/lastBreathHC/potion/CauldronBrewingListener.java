@@ -3,6 +3,9 @@ package com.lastbreath.hc.lastBreathHC.potion;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Campfire;
@@ -19,6 +22,10 @@ import java.util.List;
 import java.util.Optional;
 
 public class CauldronBrewingListener implements Listener {
+
+    private static final double CAULDRON_RADIUS_XZ = 1.2;
+    private static final double CAULDRON_RADIUS_Y = 1.0;
+    private static final int BREW_PARTICLE_COUNT = 20;
 
     private final JavaPlugin plugin;
     private final PotionHandler potionHandler;
@@ -47,7 +54,7 @@ public class CauldronBrewingListener implements Listener {
 
         List<Item> contents = item.getWorld().getNearbyEntities(
                 cauldron.getLocation().add(0.5, 0.5, 0.5),
-                0.3, 0.4, 0.3,
+                CAULDRON_RADIUS_XZ, CAULDRON_RADIUS_Y, CAULDRON_RADIUS_XZ,
                 entity -> entity instanceof Item
         ).stream().map(entity -> (Item) entity).toList();
         Optional<Item> potionEntity = contents.stream()
@@ -86,21 +93,33 @@ public class CauldronBrewingListener implements Listener {
         ItemStack output = result.clone();
         output.setAmount(1);
         cauldron.getWorld().dropItemNaturally(cauldron.getLocation().add(0.5, 1.0, 0.5), output);
+        playBrewEffects(cauldron);
     }
 
     private Block getBrewingCauldron(Location location) {
         Block block = location.getBlock();
+        if (isBrewingCauldron(block)) {
+            return block;
+        }
+        Block below = block.getRelative(BlockFace.DOWN);
+        if (isBrewingCauldron(below)) {
+            return below;
+        }
+        return null;
+    }
+
+    private boolean isBrewingCauldron(Block block) {
         if (block.getType() != Material.WATER_CAULDRON) {
-            return null;
+            return false;
         }
         Block below = block.getRelative(BlockFace.DOWN);
         if (below.getType() != Material.SOUL_CAMPFIRE) {
-            return null;
+            return false;
         }
-        if (!(below.getBlockData() instanceof Campfire campfire) || !campfire.isLit()) {
-            return null;
+        if (!(below.getBlockData() instanceof Campfire campfire)) {
+            return false;
         }
-        return block;
+        return campfire.isLit();
     }
 
     private boolean isPotion(ItemStack item) {
@@ -149,6 +168,14 @@ public class CauldronBrewingListener implements Listener {
             return false;
         }
         return meta.getBasePotionType() == PotionType.WATER;
+    }
+
+    private void playBrewEffects(Block cauldron) {
+        World world = cauldron.getWorld();
+        Location center = cauldron.getLocation().add(0.5, 0.85, 0.5);
+        world.spawnParticle(Particle.SPELL_WITCH, center, BREW_PARTICLE_COUNT, 0.35, 0.25, 0.35, 0.01);
+        world.spawnParticle(Particle.SPELL, center, BREW_PARTICLE_COUNT, 0.35, 0.2, 0.35, 0.01);
+        world.playSound(center, Sound.BLOCK_BREWING_STAND_BREW, 0.9f, 1.1f);
     }
 
     private void consumeSingle(Item item) {
