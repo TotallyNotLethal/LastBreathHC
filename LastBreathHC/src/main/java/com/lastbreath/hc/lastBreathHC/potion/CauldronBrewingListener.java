@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.potion;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -10,16 +11,21 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Campfire;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.ItemSpawnEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionType;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class CauldronBrewingListener implements Listener {
 
@@ -43,14 +49,44 @@ public class CauldronBrewingListener implements Listener {
         Bukkit.getScheduler().runTask(plugin, () -> tryCauldronBrew(item));
     }
 
+    @EventHandler(ignoreCancelled = true)
+    public void onCauldronPlace(BlockPlaceEvent event) {
+        Block block = event.getBlockPlaced();
+        if (block.getType() != Material.CAULDRON && block.getType() != Material.WATER_CAULDRON) {
+            return;
+        }
+        Block below = block.getRelative(BlockFace.DOWN);
+        if (below.getType() != Material.SOUL_CAMPFIRE) {
+            sendDebug(event.getPlayer(), "Cauldron placed, but the block below is not a soul campfire.");
+            return;
+        }
+        if (!(below.getBlockData() instanceof Campfire campfire)) {
+            sendDebug(event.getPlayer(), "Cauldron placed on a soul campfire, but campfire data is missing.");
+            return;
+        }
+        if (!campfire.isLit()) {
+            sendDebug(event.getPlayer(), "Cauldron placed on a soul campfire, but it is not lit.");
+            return;
+        }
+        if (block.getType() == Material.WATER_CAULDRON) {
+            sendDebug(event.getPlayer(), "Valid brewing setup detected: water cauldron on a lit soul campfire.");
+        } else {
+            sendDebug(event.getPlayer(), "Cauldron placed on a lit soul campfire. Fill it with water to brew.");
+        }
+        sendDebug(event.getPlayer(), "Valid ingredients: " + listValidIngredients());
+    }
+
     private void tryCauldronBrew(Item item) {
         if (!item.isValid()) {
             return;
         }
         Block cauldron = getBrewingCauldron(item.getLocation());
         if (cauldron == null) {
+            debugMissingCauldron(item);
             return;
         }
+
+        sendDebug(item, "Detected valid brewing cauldron (water cauldron on lit soul campfire).");
 
         List<Item> contents = item.getWorld().getNearbyEntities(
                 cauldron.getLocation().add(0.5, 0.5, 0.5),
@@ -64,6 +100,12 @@ public class CauldronBrewingListener implements Listener {
                 .filter(entity -> isIngredient(entity.getItemStack()))
                 .findFirst();
         if (potionEntity.isEmpty() || ingredientEntity.isEmpty()) {
+            if (isPotion(item.getItemStack())) {
+                sendDebug(item, "Water bottle/potion detected in cauldron. Waiting for ingredient.");
+            } else if (isIngredient(item.getItemStack())) {
+                sendDebug(item, "Ingredient detected in cauldron. Waiting for water bottle/potion.");
+            }
+            sendDebug(item, "Valid ingredients: " + listValidIngredients());
             return;
         }
 
@@ -75,17 +117,27 @@ public class CauldronBrewingListener implements Listener {
         ItemStack ingredientStack = ingredientEntity.getItemStack();
         Material ingredient = ingredientStack.getType();
 
+        sendDebug(cauldron.getLocation(), "Brewing attempt: potion=" + describePotion(potionStack)
+                + ", ingredient=" + ingredient);
+
         ItemStack potionUnit = potionStack.clone();
         potionUnit.setAmount(1);
         ItemStack adjustedPotion = preparePotionForIngredient(potionUnit, ingredient);
         if (adjustedPotion == null) {
+            sendDebug(cauldron.getLocation(), "Failed to prepare potion for ingredient. Is this a valid potion item?");
             return;
         }
 
-        ItemStack result = potionHandler.applyIngredientForCauldron(adjustedPotion, ingredient);
+        ItemStack previewPotion = adjustedPotion.clone();
+        ItemStack result = potionHandler.applyIngredientForCauldron(previewPotion, ingredient);
         if (result == null) {
+            sendDebug(cauldron.getLocation(),
+                    "No valid recipe for potion=" + describePotion(adjustedPotion) + " with ingredient=" + ingredient
+                            + ". Expected result: " + expectedResultDescription(ingredient));
             return;
         }
+
+        sendDebug(cauldron.getLocation(), "Recipe matched. Result will be: " + describePotion(result));
 
         consumeSingle(potionEntity);
         consumeSingle(ingredientEntity);
@@ -187,5 +239,103 @@ public class CauldronBrewingListener implements Listener {
         }
         stack.setAmount(amount - 1);
         item.setItemStack(stack);
+    }
+
+    private void debugMissingCauldron(Item item) {
+        if (!isPotion(item.getItemStack()) && !isIngredient(item.getItemStack())) {
+            return;
+        }
+        Location location = item.getLocation();
+        Block block = location.getBlock();
+        Block below = block.getRelative(BlockFace.DOWN);
+        if (block.getType() == Material.CAULDRON || below.getType() == Material.CAULDRON) {
+            sendDebug(item, "Cauldron detected but it is not a water cauldron. Fill it with water to brew.");
+            return;
+        }
+        if (block.getType() == Material.WATER_CAULDRON || below.getType() == Material.WATER_CAULDRON) {
+            Block cauldron = block.getType() == Material.WATER_CAULDRON ? block : below;
+            Block campfire = cauldron.getRelative(BlockFace.DOWN);
+            if (campfire.getType() != Material.SOUL_CAMPFIRE) {
+                sendDebug(item, "Water cauldron detected but it is not on a soul campfire.");
+                return;
+            }
+            if (!(campfire.getBlockData() instanceof Campfire campfireData)) {
+                sendDebug(item, "Water cauldron on soul campfire, but campfire data is missing.");
+                return;
+            }
+            if (!campfireData.isLit()) {
+                sendDebug(item, "Water cauldron on soul campfire, but the campfire is not lit.");
+            }
+        }
+    }
+
+    private String listValidIngredients() {
+        String custom = definitionRegistry.getAll().stream()
+                .sorted(Comparator.comparing(definition -> definition.ingredient().name()))
+                .map(definition -> definition.ingredient() + " -> " + definition.displayName())
+                .collect(Collectors.joining(", "));
+        String defaults = "REDSTONE -> extend duration, GLOWSTONE_DUST -> concentrate, NETHER_STAR -> purify";
+        if (custom.isBlank()) {
+            return defaults;
+        }
+        return defaults + ", " + custom;
+    }
+
+    private String describePotion(ItemStack potion) {
+        if (potion == null) {
+            return "none";
+        }
+        if (!(potion.getItemMeta() instanceof PotionMeta meta)) {
+            return potion.getType().name();
+        }
+        String name = meta.hasDisplayName() ? meta.getDisplayName() : potion.getType().name();
+        PotionType base = meta.getBasePotionType();
+        String baseName = base != null ? base.name() : "UNKNOWN";
+        return name + " (base=" + baseName + ", type=" + potion.getType().name() + ")";
+    }
+
+    private String expectedResultDescription(Material ingredient) {
+        if (ingredient == Material.REDSTONE) {
+            return "extends existing potion effects";
+        }
+        if (ingredient == Material.GLOWSTONE_DUST) {
+            return "concentrates existing potion effects";
+        }
+        if (ingredient == Material.NETHER_STAR) {
+            return "purifies negative effects";
+        }
+        HardcorePotionDefinition definition = definitionRegistry.getByIngredient(ingredient);
+        if (definition == null) {
+            return "no custom potion mapping for ingredient";
+        }
+        return "custom potion: " + definition.displayName();
+    }
+
+    private void sendDebug(Item item, String message) {
+        UUID throwerId = item.getThrower();
+        if (throwerId != null) {
+            Player thrower = Bukkit.getPlayer(throwerId);
+            if (thrower != null) {
+                sendDebug(thrower, message);
+                return;
+            }
+        }
+        sendDebug(item.getLocation(), message);
+    }
+
+    private void sendDebug(Player player, String message) {
+        player.sendMessage(ChatColor.DARK_GRAY + "[Cauldron Debug] " + ChatColor.GRAY + message);
+    }
+
+    private void sendDebug(Location location, String message) {
+        World world = location.getWorld();
+        if (world == null) {
+            return;
+        }
+        for (Player player : world.getPlayers()) {
+            if (player.getLocation().distanceSquared(location) <= 64) {
+                sendDebug(player, message);
+            }
+        }
     }
 }
