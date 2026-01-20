@@ -143,6 +143,10 @@ public class PotionHandler implements Listener {
         return null;
     }
 
+    public ItemStack applyIngredientForCauldron(ItemStack potion, Material ingredient) {
+        return applyIngredient(potion, ingredient);
+    }
+
     private ItemStack applyCustomPotion(ItemStack potion, HardcorePotionDefinition definition) {
         PotionMeta meta = (PotionMeta) potion.getItemMeta();
         if (meta == null || !canApplyDefinition(meta, definition)) {
