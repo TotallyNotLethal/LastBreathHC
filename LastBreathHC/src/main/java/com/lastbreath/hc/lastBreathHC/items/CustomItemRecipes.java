@@ -13,7 +13,7 @@ public class CustomItemRecipes {
     public static void register() {
         registerEnhancedGrindstone();
         registerTotemOfLife();
-        registerReaperStone();
+        registerRebirthStone();
         registerGracestone();
     }
 
