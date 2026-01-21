@@ -37,6 +37,7 @@ import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveNameGUI;
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
 import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
+import com.lastbreath.hc.lastBreathHC.environment.AnvilCrushListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
@@ -140,6 +141,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new ArrowAggroListener(this), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new AnvilCrushListener(this), this
         );
         environmentalEffectsManager = new EnvironmentalEffectsManager(this);
         getServer().getPluginManager().registerEvents(
