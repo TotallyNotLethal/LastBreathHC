@@ -3,6 +3,8 @@ package com.lastbreath.hc.lastBreathHC.asteroid;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.AreaEffectCloud;
@@ -36,6 +38,7 @@ public class AsteroidManager {
     public static final Map<Location, AsteroidEntry> ASTEROIDS = new HashMap<>();
     public static final String ASTEROID_MOB_TAG = "asteroid_mob";
     public static final String ASTEROID_KEY_TAG_PREFIX = "asteroid_key:";
+    public static final String ASTEROID_SCALE_TAG_PREFIX = "asteroid_scale:";
     private static final Set<String> PERSISTED_ASTEROIDS = new HashSet<>();
     private static File dataFile;
     private static JavaPlugin plugin;
@@ -285,6 +288,30 @@ public class AsteroidManager {
         return 1;
     }
 
+    private static void applyAsteroidScale(LivingEntity livingEntity) {
+        boolean hasScaleTag = livingEntity.getScoreboardTags().stream()
+                .anyMatch(tag -> tag.startsWith(ASTEROID_SCALE_TAG_PREFIX));
+        if (hasScaleTag) {
+            return;
+        }
+        double scale = ThreadLocalRandom.current().nextDouble(1.0, 2.5);
+        AttributeInstance scaleAttribute = livingEntity.getAttribute(Attribute.GENERIC_SCALE);
+        if (scaleAttribute != null) {
+            scaleAttribute.setBaseValue(scale);
+        }
+        AttributeInstance maxHealthAttribute = livingEntity.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        if (maxHealthAttribute != null) {
+            double newMax = maxHealthAttribute.getBaseValue() * scale;
+            maxHealthAttribute.setBaseValue(newMax);
+            livingEntity.setHealth(newMax);
+        }
+        AttributeInstance attackAttribute = livingEntity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+        if (attackAttribute != null) {
+            attackAttribute.setBaseValue(attackAttribute.getBaseValue() * scale);
+        }
+        livingEntity.addScoreboardTag(ASTEROID_SCALE_TAG_PREFIX + scale);
+    }
+
     private static void spawnTierEffects(World world, Location center, int tier) {
         if (plugin == null) {
             return;
@@ -327,6 +354,7 @@ public class AsteroidManager {
                     livingEntity.setRemoveWhenFarAway(false);
                     livingEntity.addScoreboardTag(ASTEROID_MOB_TAG);
                     livingEntity.addScoreboardTag(keyTag);
+                    applyAsteroidScale(livingEntity);
                     livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
                     livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 72000, 0, true, true, true));
                     applyArmorProjectileProtection(livingEntity);
