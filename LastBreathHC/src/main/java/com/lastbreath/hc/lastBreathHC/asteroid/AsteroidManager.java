@@ -16,6 +16,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +39,7 @@ public class AsteroidManager {
     private static final Set<String> PERSISTED_ASTEROIDS = new HashSet<>();
     private static File dataFile;
     private static JavaPlugin plugin;
+    private static BukkitTask mobLeashTask;
 
     public static class AsteroidEntry {
         private final Inventory inventory;
@@ -114,6 +117,7 @@ public class AsteroidManager {
         AsteroidManager.plugin = plugin;
         dataFile = new File(plugin.getDataFolder(), "asteroids.yml");
         cleanupPersistedAsteroids();
+        startMobLeashTask();
     }
 
     public static void clearAllAsteroids() {
@@ -320,9 +324,11 @@ public class AsteroidManager {
                 EntityType mobType = resolvedTypes.get(ThreadLocalRandom.current().nextInt(maxIndex));
                 Location spawnLocation = findSpawnLocation(center);
                 if (world.spawnEntity(spawnLocation, mobType) instanceof LivingEntity livingEntity) {
+                    livingEntity.setRemoveWhenFarAway(false);
                     livingEntity.addScoreboardTag(ASTEROID_MOB_TAG);
                     livingEntity.addScoreboardTag(keyTag);
                     livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
+                    livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 72000, 0, true, true, true));
                     applyArmorProjectileProtection(livingEntity);
                     applyTierPotionEffects(livingEntity, tierPotionEffects);
                     if (entry != null) {
@@ -474,4 +480,33 @@ public class AsteroidManager {
         return base;
     }
 
+    private static void startMobLeashTask() {
+        if (plugin == null || mobLeashTask != null) {
+            return;
+        }
+        mobLeashTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                for (Map.Entry<Location, AsteroidEntry> entry : ASTEROIDS.entrySet()) {
+                    Location center = entry.getKey().clone().add(0.5, 1.0, 0.5);
+                    World world = center.getWorld();
+                    if (world == null) {
+                        continue;
+                    }
+                    entry.getValue().mobs().removeIf(mobId -> {
+                        org.bukkit.entity.Entity entity = world.getEntity(mobId);
+                        if (!(entity instanceof LivingEntity mob) || mob.isDead()) {
+                            return true;
+                        }
+                        Location mobLoc = mob.getLocation();
+                        if (Math.abs(mobLoc.getBlockX() - center.getBlockX()) > 2
+                                || Math.abs(mobLoc.getBlockZ() - center.getBlockZ()) > 2) {
+                            mob.teleport(center);
+                        }
+                        return false;
+                    });
+                }
+            }
+        }.runTaskTimer(plugin, 20L, 40L);
+    }
 }
