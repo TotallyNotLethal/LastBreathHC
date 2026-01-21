@@ -45,6 +45,7 @@ import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneLifeListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneListener;
 import com.lastbreath.hc.lastBreathHC.mobs.ArrowAggroListener;
+import com.lastbreath.hc.lastBreathHC.onboarding.CustomGuideBookListener;
 import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectApplier;
 import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectManager;
 import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectRegistry;
@@ -141,6 +142,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new ArrowAggroListener(this), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new CustomGuideBookListener(), this
         );
         getServer().getPluginManager().registerEvents(
                 new AnvilCrushListener(this), this
