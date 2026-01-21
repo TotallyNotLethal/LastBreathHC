@@ -6,6 +6,12 @@ debug: false
 arrowAggro:
   radius: 3.0
 
+anvilCrush:
+  radius: 0.75
+  mapping:
+    COBBLESTONE: GRAVEL
+    GRAVEL: SAND
+
 asteroid:
   spawn:
     minSeconds: 1800
