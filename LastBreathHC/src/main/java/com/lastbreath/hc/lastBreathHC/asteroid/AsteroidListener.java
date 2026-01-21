@@ -13,7 +13,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
@@ -151,6 +153,31 @@ public class AsteroidListener implements Listener {
         }
     }
 
+    @EventHandler
+    public void onAsteroidMobTarget(EntityTargetLivingEntityEvent event) {
+        LivingEntity attacker = event.getEntity();
+        LivingEntity target = event.getTarget();
+        if (target == null) {
+            return;
+        }
+        if (isAsteroidMob(attacker) && isAsteroidMob(target)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onAsteroidMobDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof LivingEntity attacker)) {
+            return;
+        }
+        if (!(event.getEntity() instanceof LivingEntity target)) {
+            return;
+        }
+        if (isAsteroidMob(attacker) && isAsteroidMob(target)) {
+            event.setCancelled(true);
+        }
+    }
+
     private boolean hasActiveAsteroidMobs(Location loc, AsteroidManager.AsteroidEntry entry) {
         Location blockLoc = loc.getBlock().getLocation();
         if (blockLoc.getWorld() == null) {
@@ -183,6 +210,10 @@ public class AsteroidListener implements Listener {
             }
         }
         return false;
+    }
+
+    private boolean isAsteroidMob(LivingEntity entity) {
+        return entity.getScoreboardTags().contains(AsteroidManager.ASTEROID_MOB_TAG);
     }
 
     private boolean isInRestrictedZone(Location location) {
