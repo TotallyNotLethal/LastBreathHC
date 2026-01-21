@@ -26,7 +26,7 @@ import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.EntityTameEvent;
-import org.bukkit.event.entity.EntityVelocityEvent;
+//import org.bukkit.event.entity.EntityVelocityEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
@@ -168,7 +168,7 @@ public class CustomPotionEffectApplier implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    /*@EventHandler(ignoreCancelled = true)
     public void onEntityVelocity(EntityVelocityEvent event) {
         if (!(event.getEntity() instanceof Player player)) {
             return;
@@ -176,7 +176,7 @@ public class CustomPotionEffectApplier implements Listener {
         if (hasEffect(player, "root_grip")) {
             applyRootGrip(player, event);
         }
-    }
+    }*/
 
     @EventHandler(ignoreCancelled = true)
     public void onEntityDeath(EntityDeathEvent event) {
@@ -716,7 +716,7 @@ public class CustomPotionEffectApplier implements Listener {
         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 2 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
-    private void applyRootGrip(Player player, EntityVelocityEvent event) {
+    private void applyRootGrip(Player player) {//, EntityVelocityEvent event) {
         Material ground = player.getLocation().clone().subtract(0, 1, 0).getBlock().getType();
         if (!(Tag.DIRT.isTagged(ground) || Tag.BASE_STONE_OVERWORLD.isTagged(ground))) {
             return;
@@ -724,11 +724,11 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "root_grip", 5 * TICKS_PER_SECOND, 0.6)) {
             return;
         }
-        Vector velocity = event.getVelocity();
+        /*Vector velocity = event.getVelocity();
         if (velocity.lengthSquared() <= 0.0) {
             return;
         }
-        event.setVelocity(velocity.multiply(0.2));
+        event.setVelocity(velocity.multiply(0.2));*/
     }
 
     private void applyWindstep(Player player) {
