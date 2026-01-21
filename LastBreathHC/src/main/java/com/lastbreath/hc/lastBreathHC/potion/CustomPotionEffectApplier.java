@@ -521,9 +521,6 @@ public class CustomPotionEffectApplier implements Listener {
         if (below.getType() != Material.LAVA) {
             return;
         }
-        if (!triggerWithCooldown(player, "lava_walker", TICKS_PER_SECOND, 1.0)) {
-            return;
-        }
         below.setType(Material.MAGMA_BLOCK);
         new BukkitRunnable() {
             @Override
