@@ -295,17 +295,17 @@ public class AsteroidManager {
             return;
         }
         double scale = ThreadLocalRandom.current().nextDouble(1.0, 2.5);
-        AttributeInstance scaleAttribute = livingEntity.getAttribute(Attribute.GENERIC_SCALE);
+        AttributeInstance scaleAttribute = livingEntity.getAttribute(Attribute.SCALE);
         if (scaleAttribute != null) {
             scaleAttribute.setBaseValue(scale);
         }
-        AttributeInstance maxHealthAttribute = livingEntity.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance maxHealthAttribute = livingEntity.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealthAttribute != null) {
             double newMax = maxHealthAttribute.getBaseValue() * scale;
             maxHealthAttribute.setBaseValue(newMax);
             livingEntity.setHealth(newMax);
         }
-        AttributeInstance attackAttribute = livingEntity.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+        AttributeInstance attackAttribute = livingEntity.getAttribute(Attribute.ATTACK_DAMAGE);
         if (attackAttribute != null) {
             attackAttribute.setBaseValue(attackAttribute.getBaseValue() * scale);
         }
