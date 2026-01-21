@@ -51,7 +51,7 @@ public class CustomItemRecipes {
         Bukkit.addRecipe(recipe);
     }
 
-    private static void registerReaperStone() {
+    private static void registerRebirthStone() {
         NamespacedKey key = new NamespacedKey(
                 LastBreathHC.getInstance(), "rebirth_stone"
         );
@@ -89,7 +89,7 @@ public class CustomItemRecipes {
 
         recipe.setIngredient('D', Material.NETHER_STAR);
 
-        // ✅ REQUIRE Reaper Stone
+        // ✅ REQUIRE Rebirth Stone
         recipe.setIngredient('E',
                 new RecipeChoice.ExactChoice(RebirthStone.create()));
 
