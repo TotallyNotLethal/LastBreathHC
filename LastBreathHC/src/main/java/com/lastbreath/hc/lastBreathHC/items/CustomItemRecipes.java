@@ -53,9 +53,9 @@ public class CustomItemRecipes {
 
     private static void registerReaperStone() {
         NamespacedKey key = new NamespacedKey(
-                LastBreathHC.getInstance(), "reaper_stone"
+                LastBreathHC.getInstance(), "rebirth_stone"
         );
-        ShapedRecipe recipe = new ShapedRecipe(key, ReaperStone.create());
+        ShapedRecipe recipe = new ShapedRecipe(key, RebirthStone.create());
         recipe.shape(
                 "NSN",
                 "SWS",
@@ -91,7 +91,7 @@ public class CustomItemRecipes {
 
         // ✅ REQUIRE Reaper Stone
         recipe.setIngredient('E',
-                new RecipeChoice.ExactChoice(ReaperStone.create()));
+                new RecipeChoice.ExactChoice(RebirthStone.create()));
 
         Bukkit.addRecipe(recipe);
     }
