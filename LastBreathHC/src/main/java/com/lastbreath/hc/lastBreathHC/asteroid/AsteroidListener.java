@@ -6,15 +6,22 @@ import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 public class AsteroidListener implements Listener {
 
@@ -28,10 +35,16 @@ public class AsteroidListener implements Listener {
 
         e.setCancelled(true);
 
-        Inventory inv = AsteroidManager.getInventory(loc);
-        if (inv != null) {
-            e.getPlayer().openInventory(inv);
+        AsteroidManager.AsteroidEntry entry = AsteroidManager.getEntry(loc);
+        if (entry == null) return;
+
+        if (hasActiveAsteroidMobs(loc, entry)) {
+            e.getPlayer().sendMessage("§cDefeat the asteroid mobs before looting this crash site.");
+            return;
         }
+
+        Inventory inv = entry.inventory();
+        e.getPlayer().openInventory(inv);
     }
 
     @EventHandler
@@ -112,6 +125,64 @@ public class AsteroidListener implements Listener {
 
             AsteroidManager.remove(asteroidLoc);
         }
+    }
+
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent e) {
+        LivingEntity entity = e.getEntity();
+        if (!entity.getScoreboardTags().contains(AsteroidManager.ASTEROID_MOB_TAG)) {
+            return;
+        }
+
+        String asteroidKey = null;
+        for (String tag : entity.getScoreboardTags()) {
+            if (tag.startsWith(AsteroidManager.ASTEROID_KEY_TAG_PREFIX)) {
+                asteroidKey = tag.substring(AsteroidManager.ASTEROID_KEY_TAG_PREFIX.length());
+                break;
+            }
+        }
+        if (asteroidKey == null || asteroidKey.isBlank()) {
+            return;
+        }
+
+        AsteroidManager.AsteroidEntry entry = AsteroidManager.getEntryByKey(asteroidKey);
+        if (entry != null) {
+            entry.mobs().remove(entity.getUniqueId());
+        }
+    }
+
+    private boolean hasActiveAsteroidMobs(Location loc, AsteroidManager.AsteroidEntry entry) {
+        Location blockLoc = loc.getBlock().getLocation();
+        if (blockLoc.getWorld() == null) {
+            return false;
+        }
+        Set<UUID> tracked = entry.mobs();
+        if (!tracked.isEmpty()) {
+            Set<UUID> toRemove = new HashSet<>();
+            for (UUID uuid : tracked) {
+                Entity entity = blockLoc.getWorld().getEntity(uuid);
+                if (!(entity instanceof LivingEntity livingEntity) || livingEntity.isDead()) {
+                    toRemove.add(uuid);
+                    continue;
+                }
+                return true;
+            }
+            tracked.removeAll(toRemove);
+        }
+
+        String keyTag = AsteroidManager.ASTEROID_KEY_TAG_PREFIX + AsteroidManager.asteroidKey(blockLoc);
+        int radius = 16;
+        for (Entity entity : blockLoc.getWorld().getNearbyEntities(blockLoc, radius, radius, radius)) {
+            if (!(entity instanceof LivingEntity livingEntity)) {
+                continue;
+            }
+            if (livingEntity.getScoreboardTags().contains(AsteroidManager.ASTEROID_MOB_TAG)
+                    && livingEntity.getScoreboardTags().contains(keyTag)) {
+                tracked.add(livingEntity.getUniqueId());
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isInRestrictedZone(Location location) {

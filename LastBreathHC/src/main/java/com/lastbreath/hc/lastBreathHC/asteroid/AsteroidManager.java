@@ -6,6 +6,7 @@ import org.bukkit.*;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionType;
@@ -18,11 +19,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class AsteroidManager {
 
     public static final Map<Location, AsteroidEntry> ASTEROIDS = new HashMap<>();
+    public static final String ASTEROID_MOB_TAG = "asteroid_mob";
+    public static final String ASTEROID_KEY_TAG_PREFIX = "asteroid_key:";
     private static final Set<String> PERSISTED_ASTEROIDS = new HashSet<>();
     private static File dataFile;
     private static JavaPlugin plugin;
@@ -30,10 +34,12 @@ public class AsteroidManager {
     public static class AsteroidEntry {
         private final Inventory inventory;
         private final int tier;
+        private final Set<UUID> mobs;
 
         private AsteroidEntry(Inventory inventory, int tier) {
             this.inventory = inventory;
             this.tier = tier;
+            this.mobs = new HashSet<>();
         }
 
         public Inventory inventory() {
@@ -42,6 +48,10 @@ public class AsteroidManager {
 
         public int tier() {
             return tier;
+        }
+
+        public Set<UUID> mobs() {
+            return mobs;
         }
     }
 
@@ -52,6 +62,26 @@ public class AsteroidManager {
     public static Inventory getInventory(Location loc) {
         AsteroidEntry entry = ASTEROIDS.get(blockLocation(loc));
         return entry == null ? null : entry.inventory();
+    }
+
+    public static AsteroidEntry getEntry(Location loc) {
+        return ASTEROIDS.get(blockLocation(loc));
+    }
+
+    public static AsteroidEntry getEntryByKey(String asteroidKey) {
+        if (asteroidKey == null || asteroidKey.isBlank()) {
+            return null;
+        }
+        for (Map.Entry<Location, AsteroidEntry> entry : ASTEROIDS.entrySet()) {
+            if (asteroidKey.equals(asteroidKey(entry.getKey()))) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    public static String asteroidKey(Location loc) {
+        return toKey(blockLocation(loc));
     }
 
     public static void remove(Location loc) {
@@ -275,10 +305,19 @@ public class AsteroidManager {
 
         if (!resolvedTypes.isEmpty() && mobCount > 0) {
             int maxIndex = resolvedTypes.size();
+            AsteroidEntry entry = ASTEROIDS.get(blockLocation(center));
+            String asteroidKey = asteroidKey(center);
+            String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey;
             for (int i = 0; i < mobCount; i++) {
                 EntityType mobType = resolvedTypes.get(ThreadLocalRandom.current().nextInt(maxIndex));
                 Location spawnLocation = findSpawnLocation(center);
-                world.spawnEntity(spawnLocation, mobType);
+                if (world.spawnEntity(spawnLocation, mobType) instanceof LivingEntity livingEntity) {
+                    livingEntity.addScoreboardTag(ASTEROID_MOB_TAG);
+                    livingEntity.addScoreboardTag(keyTag);
+                    if (entry != null) {
+                        entry.mobs().add(livingEntity.getUniqueId());
+                    }
+                }
             }
         }
 
