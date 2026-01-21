@@ -7,7 +7,9 @@ import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.PiglinBrute;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,6 +17,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -174,6 +177,15 @@ public class AsteroidListener implements Listener {
             return;
         }
         if (isAsteroidMob(attacker) && isAsteroidMob(target)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onEntityTransform(EntityTransformEvent event) {
+        Entity entity = event.getEntity();
+        if (entity.getScoreboardTags().contains(AsteroidManager.ASTEROID_MOB_TAG)
+                && (entity instanceof PiglinBrute || entity.getType() == EntityType.PIGLIN_BRUTE)) {
             event.setCancelled(true);
         }
     }
