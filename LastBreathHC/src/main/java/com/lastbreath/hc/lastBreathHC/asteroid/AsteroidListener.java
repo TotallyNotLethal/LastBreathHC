@@ -117,6 +117,7 @@ public class AsteroidListener implements Listener {
                     );
                 }
 
+
                 if (stats.asteroidLoots >= 100) {
                     TitleManager.unlockTitle(
                             player,
@@ -158,7 +159,7 @@ public class AsteroidListener implements Listener {
 
     @EventHandler
     public void onAsteroidMobTarget(EntityTargetLivingEntityEvent event) {
-        LivingEntity attacker = event.getEntity();
+        LivingEntity attacker = (LivingEntity) event.getEntity();
         LivingEntity target = event.getTarget();
         if (target == null) {
             return;
