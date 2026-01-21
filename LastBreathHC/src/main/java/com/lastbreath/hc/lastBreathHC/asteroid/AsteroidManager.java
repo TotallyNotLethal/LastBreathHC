@@ -4,11 +4,17 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 
 import java.io.File;
@@ -21,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 public class AsteroidManager {
 
@@ -303,6 +310,7 @@ public class AsteroidManager {
                 .filter(mobType -> mobType != null)
                 .toList();
 
+        List<PotionEffect> tierPotionEffects = resolveTierPotionEffects(basePath);
         if (!resolvedTypes.isEmpty() && mobCount > 0) {
             int maxIndex = resolvedTypes.size();
             AsteroidEntry entry = ASTEROIDS.get(blockLocation(center));
@@ -314,6 +322,9 @@ public class AsteroidManager {
                 if (world.spawnEntity(spawnLocation, mobType) instanceof LivingEntity livingEntity) {
                     livingEntity.addScoreboardTag(ASTEROID_MOB_TAG);
                     livingEntity.addScoreboardTag(keyTag);
+                    livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
+                    applyArmorProjectileProtection(livingEntity);
+                    applyTierPotionEffects(livingEntity, tierPotionEffects);
                     if (entry != null) {
                         entry.mobs().add(livingEntity.getUniqueId());
                     }
@@ -346,6 +357,84 @@ public class AsteroidManager {
         cloud.setRadius((float) radius);
         cloud.setDuration(durationTicks);
         cloud.setWaitTime(waitTimeTicks);
+    }
+
+    private static List<PotionEffect> resolveTierPotionEffects(String basePath) {
+        if (plugin == null) {
+            return List.of();
+        }
+        List<String> effectEntries = plugin.getConfig().getStringList(basePath + ".potionEffects");
+        if (effectEntries == null || effectEntries.isEmpty()) {
+            return List.of();
+        }
+        List<PotionEffect> effects = new ArrayList<>();
+        for (String entry : effectEntries) {
+            if (entry == null || entry.isBlank()) {
+                continue;
+            }
+            String[] parts = entry.split(":");
+            PotionEffectType type = PotionEffectType.getByName(parts[0].trim().toUpperCase());
+            if (type == null) {
+                continue;
+            }
+            int duration = 200;
+            int amplifier = 0;
+            if (parts.length > 1) {
+                try {
+                    duration = Integer.parseInt(parts[1].trim());
+                } catch (NumberFormatException ignored) {
+                    duration = 200;
+                }
+            }
+            if (parts.length > 2) {
+                try {
+                    amplifier = Integer.parseInt(parts[2].trim());
+                } catch (NumberFormatException ignored) {
+                    amplifier = 0;
+                }
+            }
+            if (duration <= 0) {
+                continue;
+            }
+            effects.add(new PotionEffect(type, duration, amplifier));
+        }
+        return effects;
+    }
+
+    private static void applyTierPotionEffects(LivingEntity livingEntity, List<PotionEffect> effects) {
+        if (effects == null || effects.isEmpty()) {
+            return;
+        }
+        for (PotionEffect effect : effects) {
+            if (effect != null) {
+                livingEntity.addPotionEffect(effect);
+            }
+        }
+    }
+
+    private static void applyArmorProjectileProtection(LivingEntity livingEntity) {
+        EntityEquipment equipment = livingEntity.getEquipment();
+        if (equipment == null) {
+            return;
+        }
+        applyProjectileProtectionIfRolled(equipment.getHelmet(), equipment::setHelmet);
+        applyProjectileProtectionIfRolled(equipment.getChestplate(), equipment::setChestplate);
+        applyProjectileProtectionIfRolled(equipment.getLeggings(), equipment::setLeggings);
+        applyProjectileProtectionIfRolled(equipment.getBoots(), equipment::setBoots);
+    }
+
+    private static void applyProjectileProtectionIfRolled(ItemStack itemStack, Consumer<ItemStack> setter) {
+        if (itemStack == null || itemStack.getType() == Material.AIR) {
+            return;
+        }
+        if (ThreadLocalRandom.current().nextBoolean()) {
+            ItemMeta meta = itemStack.getItemMeta();
+            if (meta != null) {
+                meta.addEnchant(Enchantment.PROJECTILE_PROTECTION, 4, true);
+                itemStack.setItemMeta(meta);
+                setter.accept(itemStack);
+            }
+        }
     }
 
     private static Location findSpawnLocation(Location center) {

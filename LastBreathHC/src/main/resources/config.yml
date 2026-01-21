@@ -29,6 +29,8 @@ asteroid:
           - SKELETON
         mobType: ZOMBIE
         mobCount: 4
+        potionEffects:
+          - SPEED:200:0
         aoe:
           enabled: false
           particle: DRAGON_BREATH
@@ -43,6 +45,8 @@ asteroid:
           - MAGMA_CUBE
         mobType: BLAZE
         mobCount: 6
+        potionEffects:
+          - DAMAGE_RESISTANCE:200:0
         aoe:
           enabled: true
           particle: DRAGON_BREATH
@@ -59,6 +63,8 @@ asteroid:
           - RAVAGER
         mobType: WITHER_SKELETON
         mobCount: 8
+        potionEffects:
+          - INCREASE_DAMAGE:200:0
         aoe:
           enabled: true
           particle: DRAGON_BREATH
