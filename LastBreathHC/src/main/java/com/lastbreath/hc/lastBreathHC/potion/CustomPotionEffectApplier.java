@@ -684,11 +684,17 @@ public class CustomPotionEffectApplier implements Listener {
     }
 
     private void applyLuckySalvage(Player player, FurnaceExtractEvent event) {
-        if (!triggerWithCooldown(player, "lucky_salvage", 6 * TICKS_PER_SECOND, 0.25)) {
+        int itemAmount = event.getItemAmount();
+        if (itemAmount <= 0) {
             return;
         }
-        ItemStack extra = new ItemStack(event.getItemType(), 1);
-        event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), extra);
+        for (int i = 0; i < itemAmount; i++) {
+            if (random.nextDouble() > 0.25) {
+                continue;
+            }
+            ItemStack extra = new ItemStack(event.getItemType(), 1);
+            event.getBlock().getWorld().dropItemNaturally(event.getBlock().getLocation(), extra);
+        }
     }
 
     private void applyThunderGuard(Player player, EntityDamageEvent event) {
