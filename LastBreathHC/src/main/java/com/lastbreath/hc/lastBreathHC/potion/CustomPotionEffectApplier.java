@@ -26,6 +26,7 @@ import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.EntityTameEvent;
+import org.bukkit.event.entity.EntityVelocityEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
@@ -150,9 +151,6 @@ public class CustomPotionEffectApplier implements Listener {
             if (hasEffect(player, "shielded_heart")) {
                 applyShieldedHeart(player);
             }
-            if (hasEffect(player, "root_grip")) {
-                applyRootGrip(player);
-            }
             if (hasEffect(player, "sticky_shell")) {
                 applyStickyShell(player);
             }
@@ -167,6 +165,16 @@ public class CustomPotionEffectApplier implements Listener {
             if (projectile.getShooter() instanceof Player shooter && hasEffect(shooter, "hunter_focus")) {
                 applyHunterFocus(shooter, event);
             }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityVelocity(EntityVelocityEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        if (hasEffect(player, "root_grip")) {
+            applyRootGrip(player, event);
         }
     }
 
@@ -708,7 +716,7 @@ public class CustomPotionEffectApplier implements Listener {
         player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 2 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
-    private void applyRootGrip(Player player) {
+    private void applyRootGrip(Player player, EntityVelocityEvent event) {
         Material ground = player.getLocation().clone().subtract(0, 1, 0).getBlock().getType();
         if (!(Tag.DIRT.isTagged(ground) || Tag.BASE_STONE_OVERWORLD.isTagged(ground))) {
             return;
@@ -716,7 +724,11 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "root_grip", 5 * TICKS_PER_SECOND, 0.6)) {
             return;
         }
-        player.setVelocity(player.getVelocity().multiply(0.2));
+        Vector velocity = event.getVelocity();
+        if (velocity.lengthSquared() <= 0.0) {
+            return;
+        }
+        event.setVelocity(velocity.multiply(0.2));
     }
 
     private void applyWindstep(Player player) {
@@ -782,9 +794,6 @@ public class CustomPotionEffectApplier implements Listener {
             return;
         }
         if (event.getDamage() > 4.0) {
-            return;
-        }
-        if (!triggerWithCooldown(player, "quake_guard", 4 * TICKS_PER_SECOND, 0.7)) {
             return;
         }
         event.setDamage(event.getDamage() * 0.5);
