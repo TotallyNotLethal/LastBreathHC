@@ -45,25 +45,59 @@ public class CustomGuideBookListener implements Listener {
         ));
         meta.addEnchant(Enchantment.LUCK, 1, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
-        meta.setPages(
-                ChatColor.DARK_PURPLE + "" + ChatColor.BOLD + "Welcome, survivor!" + ChatColor.RESET + "\n"
-                        + ChatColor.GRAY + "This realm is forged with custom systems.\n\n"
-                        + ChatColor.LIGHT_PURPLE + "• " + ChatColor.WHITE + "Hardcore balance tweaks\n"
-                        + ChatColor.LIGHT_PURPLE + "• " + ChatColor.WHITE + "Unique mobs & scaling\n"
-                        + ChatColor.LIGHT_PURPLE + "• " + ChatColor.WHITE + "World events & hazards\n\n"
-                        + ChatColor.AQUA + "Study this guide to stay alive.",
-                ChatColor.DARK_AQUA + "" + ChatColor.BOLD + "Custom Items" + ChatColor.RESET + "\n"
-                        + ChatColor.GRAY + "Craft or discover powerful artifacts:\n\n"
-                        + ChatColor.AQUA + "• " + ChatColor.WHITE + "Revive tokens restore allies\n"
-                        + ChatColor.AQUA + "• " + ChatColor.WHITE + "Gracestones preserve gear\n"
-                        + ChatColor.AQUA + "• " + ChatColor.WHITE + "Enhanced grindstones refine loot\n\n"
-                        + ChatColor.DARK_GRAY + "Treat them with respect.",
-                ChatColor.DARK_GREEN + "" + ChatColor.BOLD + "Events & Threats" + ChatColor.RESET + "\n"
-                        + ChatColor.GRAY + "Stay alert for escalating dangers:\n\n"
-                        + ChatColor.GREEN + "• " + ChatColor.WHITE + "Blood Moons intensify mobs\n"
-                        + ChatColor.GREEN + "• " + ChatColor.WHITE + "Asteroids reshape terrain\n"
-                        + ChatColor.GREEN + "• " + ChatColor.WHITE + "Environmental hazards strike\n\n"
-                        + ChatColor.YELLOW + "Prepare, adapt, survive."
+        meta.addPages(
+                "§6§lLastBreathHC Guide§r\n"
+                        + "§7Welcome to a harsher world.\n"
+                        + "§7Each page maps the lore.\n\n"
+                        + "§eRead on to survive.",
+                "§6§lAsteroid Events§r\n"
+                        + "§7Celestial impacts crash\n"
+                        + "§7into marked worlds.\n\n"
+                        + "§e• §fFight tagged mobs\n"
+                        + "§e• §fLoot the core\n"
+                        + "§e• §fLeashed elites linger",
+                "§6§lBlood Moon§r\n"
+                        + "§7Nightmares rise when\n"
+                        + "§7the moon turns red.\n\n"
+                        + "§e• §fMobs gain buffs\n"
+                        + "§e• §fScaling spikes\n"
+                        + "§e• §fSurvive the dawn",
+                "§6§lMob Scaling§r\n"
+                        + "§7Hardcore mobs adapt\n"
+                        + "§7to your progress.\n\n"
+                        + "§e• §fBonus stats\n"
+                        + "§e• §fDanger builds\n"
+                        + "§e• §fBlood Moon synergy",
+                "§6§lSoulbound Death§r\n"
+                        + "§7Fallen players drop\n"
+                        + "§7a head with soul data.\n\n"
+                        + "§e• §fEnder chest stored\n"
+                        + "§e• §fRevive via token\n"
+                        + "§e• §fOne soul per head",
+                "§6§lRevive Tokens§r\n"
+                        + "§7Tokens fuel revival\n"
+                        + "§7and name-based restores.\n\n"
+                        + "§e• §fConsume to revive\n"
+                        + "§e• §fGUI prompts a name\n"
+                        + "§e• §fFailure bans remain",
+                "§6§lBounties§r\n"
+                        + "§7Wanted souls appear\n"
+                        + "§7on the bounty board.\n\n"
+                        + "§e• §fTimed contracts\n"
+                        + "§e• §fClaims on death\n"
+                        + "§e• §fBroadcast rewards",
+                "§6§lPotions & Brews§r\n"
+                        + "§7Soul fire cauldrons\n"
+                        + "§7brew custom effects.\n\n"
+                        + "§e• §fUnique buffs/debuffs\n"
+                        + "§e• §fEffect triggers\n"
+                        + "§e• §fPotion IDs tracked",
+                "§6§lEnvironment§r\n"
+                        + "§7The world bites back\n"
+                        + "§7with scaling hazards.\n\n"
+                        + "§e• §fDistance scaling\n"
+                        + "§e• §fFire & potion decay\n"
+                        + "§e• §fBiome tuning"
         );
         book.setItemMeta(meta);
         return book;
