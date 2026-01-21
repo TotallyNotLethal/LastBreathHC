@@ -487,6 +487,7 @@ public class AsteroidManager {
         mobLeashTask = new BukkitRunnable() {
             @Override
             public void run() {
+                int leashRadius = getMobLeashRadius();
                 for (Map.Entry<Location, AsteroidEntry> entry : ASTEROIDS.entrySet()) {
                     Location center = entry.getKey().clone().add(0.5, 1.0, 0.5);
                     World world = center.getWorld();
@@ -499,8 +500,8 @@ public class AsteroidManager {
                             return true;
                         }
                         Location mobLoc = mob.getLocation();
-                        if (Math.abs(mobLoc.getBlockX() - center.getBlockX()) > 2
-                                || Math.abs(mobLoc.getBlockZ() - center.getBlockZ()) > 2) {
+                        if (Math.abs(mobLoc.getBlockX() - center.getBlockX()) > leashRadius
+                                || Math.abs(mobLoc.getBlockZ() - center.getBlockZ()) > leashRadius) {
                             mob.teleport(center);
                         }
                         return false;
@@ -508,5 +509,12 @@ public class AsteroidManager {
                 }
             }
         }.runTaskTimer(plugin, 20L, 40L);
+    }
+
+    public static int getMobLeashRadius() {
+        if (plugin == null) {
+            return 16;
+        }
+        return plugin.getConfig().getInt("asteroid.mobLeashRadius", 16);
     }
 }

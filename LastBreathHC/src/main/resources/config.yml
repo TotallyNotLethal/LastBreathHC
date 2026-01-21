@@ -13,6 +13,7 @@ anvilCrush:
     GRAVEL: SAND
 
 asteroid:
+  mobLeashRadius: 16
   spawn:
     minSeconds: 1800
     maxSeconds: 14400

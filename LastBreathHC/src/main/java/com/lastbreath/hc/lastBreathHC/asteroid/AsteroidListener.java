@@ -187,7 +187,7 @@ public class AsteroidListener implements Listener {
 
     private boolean isInRestrictedZone(Location location) {
         Location blockLoc = location.getBlock().getLocation();
-        int radius = 16;
+        int radius = AsteroidManager.getMobLeashRadius();
         for (Location asteroidLoc : AsteroidManager.ASTEROIDS.keySet()) {
             if (!asteroidLoc.getWorld().equals(blockLoc.getWorld())) {
                 continue;
