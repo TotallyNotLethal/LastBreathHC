@@ -159,7 +159,9 @@ public class AsteroidListener implements Listener {
 
     @EventHandler
     public void onAsteroidMobTarget(EntityTargetLivingEntityEvent event) {
-        LivingEntity attacker = (LivingEntity) event.getEntity();
+        if (!(event.getEntity() instanceof LivingEntity attacker)) {
+            return;
+        }
         LivingEntity target = event.getTarget();
         if (target == null) {
             return;
