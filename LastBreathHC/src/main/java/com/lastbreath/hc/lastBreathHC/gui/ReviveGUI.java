@@ -70,7 +70,7 @@ public class ReviveGUI implements Listener {
 
             player.closeInventory();
         } else {
-            DeathListener.banPlayer(player, "Player declined revival.");
+            DeathListener.banPlayer(player, "Player declined revival.", null);
         }
     }
 
@@ -78,7 +78,7 @@ public class ReviveGUI implements Listener {
     public void onClose(InventoryCloseEvent e) {
         if (!(e.getPlayer() instanceof Player p)) return;
         if (e.getView().getTitle().equals("Use Revival Token?")) {
-            DeathListener.banPlayer(p, "Player closed revive menu.");
+            DeathListener.banPlayer(p, "Player closed revive menu.", null);
         }
     }
 
