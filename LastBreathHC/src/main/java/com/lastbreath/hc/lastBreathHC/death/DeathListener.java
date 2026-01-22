@@ -25,6 +25,7 @@ public class DeathListener implements Listener {
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
+        String deathMessage = event.getDeathMessage();
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.deaths++;
         TitleManager.unlockTitle(player, Title.THE_FALLEN, "You have tasted defeat.");
@@ -42,6 +43,7 @@ public class DeathListener implements Listener {
 
         // Stop vanilla behavior
         event.setDeathMessage(null);
+        playGlobalDeathSound();
         if (hasToken) {
             event.getDrops().clear();
             event.setKeepInventory(true);
@@ -55,9 +57,9 @@ public class DeathListener implements Listener {
             @Override
             public void run() {
                 if (hasToken) {
-                    triggerReviveFlow(player);
+                    triggerReviveFlow(player, deathMessage);
                 } else {
-                    banPlayer(player, "You died with no revival token.");
+                    banPlayer(player, "You died with no revival token.", deathMessage);
                 }
             }
         }.runTaskLater(LastBreathHC.getInstance(), 1L);
@@ -73,7 +75,7 @@ public class DeathListener implements Listener {
         return false;
     }
 
-    private void triggerReviveFlow(Player player) {
+    private void triggerReviveFlow(Player player, String deathMessage) {
         player.setHealth(1.0);
         player.setGameMode(GameMode.SPECTATOR);
 
@@ -86,15 +88,17 @@ public class DeathListener implements Listener {
         );
 
         Bukkit.broadcastMessage(
-                "§4☠ " + TitleManager.getTitleTag(player) + player.getName() + " has fallen..."
+                "§4☠ " + TitleManager.getTitleTag(player) + player.getName() + " has fallen... §7("
+                        + formatDeathReason(player, deathMessage) + ")"
         );
 
         ReviveGUI.open(player);
     }
 
-    public static void banPlayer(Player player, String reason) {
+    public static void banPlayer(Player player, String reason, String deathMessage) {
         Bukkit.broadcastMessage(
-                "§4☠ " + TitleManager.getTitleTag(player) + player.getName() + " has perished permanently."
+                "§4☠ " + TitleManager.getTitleTag(player) + player.getName()
+                        + " has perished permanently. §7(" + formatDeathReason(player, deathMessage) + ")"
         );
 
         Bukkit.getBanList(BanList.Type.NAME)
@@ -145,5 +149,22 @@ public class DeathListener implements Listener {
                     .append(' ');
         }
         return builder.toString().trim();
+    }
+
+    private void playGlobalDeathSound() {
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            online.playSound(online.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1.0f, 1.0f);
+        }
+    }
+
+    private static String formatDeathReason(Player player, String deathMessage) {
+        if (deathMessage == null || deathMessage.isBlank()) {
+            return "Unknown cause";
+        }
+        String prefix = player.getName() + " ";
+        if (deathMessage.startsWith(prefix)) {
+            return deathMessage.substring(prefix.length()).trim();
+        }
+        return deathMessage.trim();
     }
 }
