@@ -387,10 +387,27 @@ public class AsteroidManager {
         AreaEffectCloud cloud = (AreaEffectCloud) world.spawnEntity(aoeLocation, EntityType.AREA_EFFECT_CLOUD);
         cloud.setBasePotionType(PotionType.WATER);
         cloud.clearCustomEffects();
-        cloud.setParticle(particle);
+        setCloudParticle(cloud, particle);
         cloud.setRadius((float) radius);
         cloud.setDuration(durationTicks);
         cloud.setWaitTime(waitTimeTicks);
+    }
+
+    private static void setCloudParticle(AreaEffectCloud cloud, Particle particle) {
+        Class<?> dataType = particle.getDataType();
+        if (dataType == null || dataType == Void.class) {
+            cloud.setParticle(particle);
+            return;
+        }
+        if (dataType == Float.class || dataType == float.class) {
+            cloud.setParticle(particle, 1.0f);
+            return;
+        }
+        if (dataType == Particle.DustOptions.class) {
+            cloud.setParticle(particle, new Particle.DustOptions(Color.fromRGB(255, 85, 85), 1.0f));
+            return;
+        }
+        cloud.setParticle(Particle.DRAGON_BREATH);
     }
 
     private static List<PotionEffect> resolveTierPotionEffects(String basePath) {
