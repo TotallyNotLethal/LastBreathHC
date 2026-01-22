@@ -11,6 +11,8 @@ import com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand;
 import com.lastbreath.hc.lastBreathHC.commands.BloodMoonCommand;
 import com.lastbreath.hc.lastBreathHC.commands.BountyCommand;
 import com.lastbreath.hc.lastBreathHC.commands.EffectsCommand;
+import com.lastbreath.hc.lastBreathHC.commands.RtpCommand;
+import com.lastbreath.hc.lastBreathHC.commands.RtpUsageListener;
 import com.lastbreath.hc.lastBreathHC.commands.TitlesCommand;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
@@ -149,6 +151,9 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new AnvilCrushListener(this), this
         );
+        getServer().getPluginManager().registerEvents(
+                new RtpUsageListener(this), this
+        );
         environmentalEffectsManager = new EnvironmentalEffectsManager(this);
         getServer().getPluginManager().registerEvents(
                 environmentalEffectsManager, this
@@ -188,6 +193,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("titles", new TitlesCommand());
                     event.registrar().register("bounty", new BountyCommand());
                     event.registrar().register("effects", new EffectsCommand(customPotionEffectManager, customPotionEffectRegistry, effectsStatusGUI));
+                    event.registrar().register("rtp", new RtpCommand(this));
                 }
         );
     }
