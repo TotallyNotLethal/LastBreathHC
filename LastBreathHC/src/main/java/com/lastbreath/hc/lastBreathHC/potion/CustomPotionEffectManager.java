@@ -20,10 +20,14 @@ import java.util.UUID;
 
 public class CustomPotionEffectManager implements Listener {
 
+    private static final int MAX_DURATION_TICKS = 20 * 60 * 20;
+    private static final int REDSTONE_BONUS_TICKS = 2 * 60 * 20;
+
     private final LastBreathHC plugin;
     private final PotionDefinitionRegistry definitionRegistry;
     private final CustomPotionEffectRegistry effectRegistry;
     private final NamespacedKey customIdKey;
+    private final NamespacedKey redstoneKey;
     private final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
     private final Map<UUID, Map<String, Long>> activeEffects = new HashMap<>();
 
@@ -34,6 +38,7 @@ public class CustomPotionEffectManager implements Listener {
         this.definitionRegistry = definitionRegistry;
         this.effectRegistry = effectRegistry;
         this.customIdKey = new NamespacedKey(plugin, "potion_custom_id");
+        this.redstoneKey = new NamespacedKey(plugin, "potion_redstone_apps");
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -49,7 +54,8 @@ public class CustomPotionEffectManager implements Listener {
             if (definition == null) {
                 return;
             }
-            applyCustomEffects(event.getPlayer(), definition.customEffects(), definition);
+            int redstoneApps = container.getOrDefault(redstoneKey, PersistentDataType.INTEGER, 0);
+            applyCustomEffects(event.getPlayer(), definition.customEffects(), definition, redstoneApps);
         }
     }
 
@@ -62,26 +68,30 @@ public class CustomPotionEffectManager implements Listener {
 
     private void applyCustomEffects(Player player,
                                     List<HardcorePotionDefinition.CustomEffectDefinition> customEffects,
-                                    HardcorePotionDefinition definition) {
+                                    HardcorePotionDefinition definition,
+                                    int redstoneApps) {
         if (customEffects.isEmpty()) {
             return;
         }
-        int delayTicks = calculateAfterEffectDelay(definition);
+        int delayTicks = calculateAfterEffectDelay(definition, redstoneApps);
         for (HardcorePotionDefinition.CustomEffectDefinition customEffect : customEffects) {
+            int durationTicks = extendDuration(customEffect.durationTicks(), redstoneApps);
             if (customEffect.trigger() == EffectTrigger.AFTER_EFFECT && delayTicks > 0) {
                 new BukkitRunnable() {
                     @Override
                     public void run() {
-                        activateCustomEffect(player, customEffect);
+                        activateCustomEffect(player, customEffect, durationTicks);
                     }
                 }.runTaskLater(plugin, delayTicks);
             } else {
-                activateCustomEffect(player, customEffect);
+                activateCustomEffect(player, customEffect, durationTicks);
             }
         }
     }
 
-    private void activateCustomEffect(Player player, HardcorePotionDefinition.CustomEffectDefinition customEffect) {
+    private void activateCustomEffect(Player player,
+                                      HardcorePotionDefinition.CustomEffectDefinition customEffect,
+                                      int durationTicks) {
         String effectId = customEffect.id();
         if (effectRegistry.getById(effectId) == null) {
             return;
@@ -98,10 +108,10 @@ public class CustomPotionEffectManager implements Listener {
         }
 
         Map<String, Long> playerEffects = activeEffects.computeIfAbsent(player.getUniqueId(), key -> new HashMap<>());
-        long expiresAt = now + ticksToMillis(customEffect.durationTicks());
+        long expiresAt = now + ticksToMillis(durationTicks);
         playerEffects.put(effectId, expiresAt);
 
-        if (customEffect.durationTicks() > 0) {
+        if (durationTicks > 0) {
             new BukkitRunnable() {
                 @Override
                 public void run() {
@@ -110,19 +120,27 @@ public class CustomPotionEffectManager implements Listener {
                         effects.remove(effectId);
                     }
                 }
-            }.runTaskLater(plugin, customEffect.durationTicks());
+            }.runTaskLater(plugin, durationTicks);
         }
     }
 
-    private int calculateAfterEffectDelay(HardcorePotionDefinition definition) {
+    private int calculateAfterEffectDelay(HardcorePotionDefinition definition, int redstoneApps) {
         int maxDuration = 0;
         for (HardcorePotionDefinition.EffectDefinition effect : definition.baseEffects()) {
-            maxDuration = Math.max(maxDuration, effect.durationTicks());
+            maxDuration = Math.max(maxDuration, extendDuration(effect.durationTicks(), redstoneApps));
         }
         for (HardcorePotionDefinition.EffectDefinition effect : definition.drawbacks()) {
-            maxDuration = Math.max(maxDuration, effect.durationTicks());
+            maxDuration = Math.max(maxDuration, extendDuration(effect.durationTicks(), redstoneApps));
         }
         return maxDuration;
+    }
+
+    private int extendDuration(int durationTicks, int redstoneApps) {
+        if (durationTicks <= 0 || redstoneApps <= 0) {
+            return durationTicks;
+        }
+        long extended = (long) durationTicks + ((long) redstoneApps * REDSTONE_BONUS_TICKS);
+        return (int) Math.min(extended, MAX_DURATION_TICKS);
     }
 
     private long ticksToMillis(int ticks) {
