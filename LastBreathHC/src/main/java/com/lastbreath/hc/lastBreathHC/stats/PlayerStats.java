@@ -13,6 +13,9 @@ public class PlayerStats {
     public int revives;
     public int mobsKilled;
     public int asteroidLoots;
+    public int cropsHarvested;
+    public int blocksMined;
+    public int rareOresMined;
     public Set<Title> unlockedTitles = new HashSet<>();
     public Title equippedTitle;
 
