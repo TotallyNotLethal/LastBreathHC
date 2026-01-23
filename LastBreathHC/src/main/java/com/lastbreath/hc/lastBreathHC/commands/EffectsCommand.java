@@ -49,6 +49,7 @@ public class EffectsCommand implements BasicCommand {
             if (args.length == 3) {
                 return filterByPrefix(args[2], effectRegistry.getAll().stream()
                         .map(CustomPotionEffectRegistry.CustomPotionEffectDefinition::id)
+                        .map(id -> id.toLowerCase(Locale.ROOT))
                         .sorted(Comparator.naturalOrder())
                         .toList());
             }
