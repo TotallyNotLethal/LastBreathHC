@@ -14,6 +14,7 @@ import com.lastbreath.hc.lastBreathHC.commands.EffectsCommand;
 import com.lastbreath.hc.lastBreathHC.commands.RtpCommand;
 import com.lastbreath.hc.lastBreathHC.commands.RtpUsageListener;
 import com.lastbreath.hc.lastBreathHC.commands.TitlesCommand;
+import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
@@ -153,6 +154,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new RtpUsageListener(this), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new DispenserSwordListener(), this
         );
         environmentalEffectsManager = new EnvironmentalEffectsManager(this);
         getServer().getPluginManager().registerEvents(
