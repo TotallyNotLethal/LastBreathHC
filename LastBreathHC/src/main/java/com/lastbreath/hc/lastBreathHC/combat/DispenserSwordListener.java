@@ -1,6 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.combat;
 
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.Dispenser;
 import org.bukkit.block.data.Directional;
@@ -8,10 +10,13 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDispenseEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.BoundingBox;
 
 import java.util.List;
@@ -22,7 +27,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class DispenserSwordListener implements Listener {
 
     private static final long COOLDOWN_MS = 100L;
+    private static final long KILL_MARKER_TTL_MS = 10_000L;
     private final Map<Block, Long> dispenserCooldowns = new ConcurrentHashMap<>();
+    private final NamespacedKey dispenserSwordKillKey;
+    private final NamespacedKey dispenserSwordKillTimestampKey;
+
+    public DispenserSwordListener(LastBreathHC plugin) {
+        this.dispenserSwordKillKey = new NamespacedKey(plugin, "dispenser_sword_kill");
+        this.dispenserSwordKillTimestampKey = new NamespacedKey(plugin, "dispenser_sword_kill_ts");
+    }
 
     @EventHandler
     public void onBlockDispense(BlockDispenseEvent event) {
@@ -59,10 +72,32 @@ public class DispenserSwordListener implements Listener {
         LivingEntity target = targets.get(0);
         double damage = getSwordDamage(item.getType());
         target.damage(damage);
+        markDispenserSwordHit(target);
 
         if (block.getState() instanceof Dispenser dispenser) {
             reduceDurability(dispenser.getInventory(), item);
         }
+    }
+
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        LivingEntity entity = event.getEntity();
+        PersistentDataContainer container = entity.getPersistentDataContainer();
+        if (!container.has(dispenserSwordKillKey, PersistentDataType.BYTE)) {
+            return;
+        }
+
+        if (isMarkerStale(container)) {
+            clearMarker(container);
+            return;
+        }
+
+        int expToDrop = entity.getExpToDrop();
+        if (expToDrop <= 0) {
+            expToDrop = event.getDroppedExp();
+        }
+        event.setDroppedExp(expToDrop);
+        clearMarker(container);
     }
 
     private boolean isSword(Material material) {
@@ -116,5 +151,24 @@ public class DispenserSwordListener implements Listener {
             }
         }
         return Optional.empty();
+    }
+
+    private void markDispenserSwordHit(LivingEntity target) {
+        PersistentDataContainer container = target.getPersistentDataContainer();
+        container.set(dispenserSwordKillKey, PersistentDataType.BYTE, (byte) 1);
+        container.set(dispenserSwordKillTimestampKey, PersistentDataType.LONG, System.currentTimeMillis());
+    }
+
+    private boolean isMarkerStale(PersistentDataContainer container) {
+        Long timestamp = container.get(dispenserSwordKillTimestampKey, PersistentDataType.LONG);
+        if (timestamp == null) {
+            return false;
+        }
+        return System.currentTimeMillis() - timestamp > KILL_MARKER_TTL_MS;
+    }
+
+    private void clearMarker(PersistentDataContainer container) {
+        container.remove(dispenserSwordKillKey);
+        container.remove(dispenserSwordKillTimestampKey);
     }
 }
