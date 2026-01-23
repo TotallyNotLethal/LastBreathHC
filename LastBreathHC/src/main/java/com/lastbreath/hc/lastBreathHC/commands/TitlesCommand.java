@@ -2,14 +2,11 @@ package com.lastbreath.hc.lastBreathHC.commands;
 
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
-import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
-import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.entity.Player;
 
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
@@ -30,11 +27,8 @@ public class TitlesCommand implements BasicCommand {
         }
 
         if ("equip".equalsIgnoreCase(args[0])) {
-            PlayerStats stats = StatsManager.get(player.getUniqueId());
             String input = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-            return stats.unlockedTitles.stream()
-                    .sorted(Comparator.comparing(Title::displayName))
-                    .map(Title::displayName)
+            return TitleManager.getUnlockedTitleInputs(player).stream()
                     .filter(title -> title.toLowerCase(Locale.ROOT).startsWith(input.toLowerCase(Locale.ROOT)))
                     .toList();
         }

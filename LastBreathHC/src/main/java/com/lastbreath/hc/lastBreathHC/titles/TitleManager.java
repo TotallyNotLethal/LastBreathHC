@@ -130,6 +130,15 @@ public class TitleManager {
                 .collect(Collectors.joining("§7, "));
     }
 
+    public static List<String> getUnlockedTitleInputs(Player player) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        initialize(stats);
+        return stats.unlockedTitles.stream()
+                .sorted(Comparator.comparing(Title::displayName))
+                .map(Title::displayName)
+                .toList();
+    }
+
     public static void checkTimeBasedTitles(Player player) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.timeAlive = player.getStatistic(Statistic.PLAY_ONE_MINUTE);
