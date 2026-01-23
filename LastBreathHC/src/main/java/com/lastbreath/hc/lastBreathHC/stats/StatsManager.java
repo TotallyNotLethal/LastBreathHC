@@ -66,6 +66,9 @@ public class StatsManager {
             playerStats.timeAlive = config.getLong(base + ".timeAlive", 0L);
             playerStats.deaths = config.getInt(base + ".deaths", 0);
             playerStats.revives = config.getInt(base + ".revives", 0);
+            playerStats.cropsHarvested = config.getInt(base + ".cropsHarvested", 0);
+            playerStats.blocksMined = config.getInt(base + ".blocksMined", 0);
+            playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
 
             List<String> unlocked = config.getStringList(base + ".unlockedTitles");
             Set<Title> titles = new HashSet<>();
@@ -108,6 +111,9 @@ public class StatsManager {
         config.set(base + ".timeAlive", playerStats.timeAlive);
         config.set(base + ".deaths", playerStats.deaths);
         config.set(base + ".revives", playerStats.revives);
+        config.set(base + ".cropsHarvested", playerStats.cropsHarvested);
+        config.set(base + ".blocksMined", playerStats.blocksMined);
+        config.set(base + ".rareOresMined", playerStats.rareOresMined);
         config.set(base + ".unlockedTitles", playerStats.unlockedTitles.stream()
                 .map(Title::name)
                 .sorted()

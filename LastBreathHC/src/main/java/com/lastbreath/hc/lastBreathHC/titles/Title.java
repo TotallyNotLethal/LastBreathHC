@@ -19,6 +19,12 @@ public enum Title {
     MONSTER_HUNTER("Monster Hunter", "Hunt"),
     SOUL_REAPER("Soul Reaper", "Reap"),
     DOOMBRINGER("Doombringer", "Doom"),
+    TRAILBLAZER("Trailblazer", "Trail"),
+    HARVESTER("Harvester", "Harvest"),
+    DEEP_DELVER("Deep Delver", "Delve"),
+    PROSPECTOR("Prospector", "Pros"),
+    ANGLER("Angler", "Angl"),
+    SKYBOUND("Skybound", "Sky"),
     STARFORGED("Starforged", "Star"),
     AGELESS("Ageless", "Ages");
 
