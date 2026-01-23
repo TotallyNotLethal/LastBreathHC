@@ -8,8 +8,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -26,7 +24,6 @@ public class TitleManager {
     private static final long TEN_HOURS_SECONDS = 10 * 60 * 60;
     private static final long TWENTY_FIVE_HOURS_SECONDS = 25 * 60 * 60;
     private static final long ONE_HUNDRED_HOURS_SECONDS = 100 * 60 * 60;
-    private static final int TITLE_EFFECT_DURATION_TICKS = 8 * 20;
     private static final int TITLE_EFFECT_REFRESH_TICKS = 4 * 20;
     private static final int MONSTER_HUNTER_KILLS = 250;
     private static final int SOUL_REAPER_KILLS = 1000;
@@ -41,30 +38,86 @@ public class TitleManager {
     private static final long AGELESS_SECONDS = 250 * 60 * 60;
     private static final Map<Title, List<String>> TITLE_EFFECTS = Map.ofEntries(
             Map.entry(Title.WANDERER, List.of("No special effect")),
-            Map.entry(Title.THE_FALLEN, List.of("Brief resistance after respawn")),
-            Map.entry(Title.REVIVED, List.of("Short regeneration after revive")),
-            Map.entry(Title.SOUL_RECLAIMER, List.of("Minor luck pulse")),
-            Map.entry(Title.ASTEROID_HUNTER, List.of("Short haste near asteroids")),
-            Map.entry(Title.RELIC_SEEKER, List.of("Minor night vision pulse")),
-            Map.entry(Title.STAR_FORGER, List.of("Short fire resistance pulse")),
-            Map.entry(Title.IRON_WILL, List.of("Minor resistance pulse")),
-            Map.entry(Title.VOID_WALKER, List.of("Minor slow falling pulse")),
-            Map.entry(Title.DEATH_DEFIER, List.of("Minor absorption pulse")),
-            Map.entry(Title.TIME_TOUCHED, List.of("Minor speed pulse")),
-            Map.entry(Title.LAST_SURVIVOR, List.of("Minor strength pulse")),
-            Map.entry(Title.MONSTER_HUNTER, List.of("Minor haste pulse")),
-            Map.entry(Title.SOUL_REAPER, List.of("Minor saturation pulse")),
-            Map.entry(Title.DOOMBRINGER, List.of("Minor health boost pulse")),
-            Map.entry(Title.TRAILBLAZER, List.of("Minor jump boost pulse", "Custom: +3% movement speed")),
-            Map.entry(Title.HARVESTER, List.of("Minor hero of the village pulse", "Custom: +2 max health")),
-            Map.entry(Title.DEEP_DELVER, List.of("Minor haste pulse", "Custom: +1 armor toughness")),
-            Map.entry(Title.PROSPECTOR, List.of("Minor luck pulse", "Custom: +1 luck")),
-            Map.entry(Title.ANGLER, List.of("Minor water breathing pulse", "Custom: +2% movement speed")),
-            Map.entry(Title.SKYBOUND, List.of("Minor slow falling pulse", "Custom: +5% knockback resistance")),
-            Map.entry(Title.STARFORGED, List.of("Minor fire resistance pulse")),
-            Map.entry(Title.AGELESS, List.of("Minor night vision pulse"))
+            Map.entry(Title.THE_FALLEN, List.of("Custom: +2 armor")),
+            Map.entry(Title.REVIVED, List.of("Custom: +2 max health")),
+            Map.entry(Title.SOUL_RECLAIMER, List.of("Custom: +1 luck")),
+            Map.entry(Title.ASTEROID_HUNTER, List.of("Custom: +5% attack speed")),
+            Map.entry(Title.RELIC_SEEKER, List.of("Custom: +1 luck")),
+            Map.entry(Title.STAR_FORGER, List.of("Custom: +1 armor toughness")),
+            Map.entry(Title.IRON_WILL, List.of("Custom: +3 armor")),
+            Map.entry(Title.VOID_WALKER, List.of("Custom: +5% knockback resistance")),
+            Map.entry(Title.DEATH_DEFIER, List.of("Custom: +2 max health")),
+            Map.entry(Title.TIME_TOUCHED, List.of("Custom: +4% movement speed")),
+            Map.entry(Title.LAST_SURVIVOR, List.of("Custom: +1 attack damage")),
+            Map.entry(Title.MONSTER_HUNTER, List.of("Custom: +5% attack speed")),
+            Map.entry(Title.SOUL_REAPER, List.of("Custom: +2 max health")),
+            Map.entry(Title.DOOMBRINGER, List.of("Custom: +4 max health")),
+            Map.entry(Title.TRAILBLAZER, List.of("Custom: +3% movement speed")),
+            Map.entry(Title.HARVESTER, List.of("Custom: +2 max health")),
+            Map.entry(Title.DEEP_DELVER, List.of("Custom: +1 armor toughness")),
+            Map.entry(Title.PROSPECTOR, List.of("Custom: +1 luck")),
+            Map.entry(Title.ANGLER, List.of("Custom: +2% movement speed")),
+            Map.entry(Title.SKYBOUND, List.of("Custom: +5% knockback resistance")),
+            Map.entry(Title.STARFORGED, List.of("Custom: +2 armor")),
+            Map.entry(Title.AGELESS, List.of("Custom: +0.5 attack damage"))
     );
     private static final Map<Title, List<AttributeModifierSpec>> TITLE_ATTRIBUTE_MODIFIERS = Map.ofEntries(
+            Map.entry(Title.THE_FALLEN, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_ARMOR, UUID.fromString("0f35d15c-b287-42b9-9ae3-e92d5e3d67f6"),
+                            "title_the_fallen_armor", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.REVIVED, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_MAX_HEALTH, UUID.fromString("36d1f48b-5022-4c52-b5b9-6b35b25b095b"),
+                            "title_revived_health", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.SOUL_RECLAIMER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_LUCK, UUID.fromString("b7ce4a7c-0ec4-4a87-94de-9ab4a28f6d43"),
+                            "title_soul_reclaimer_luck", 1.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.ASTEROID_HUNTER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_ATTACK_SPEED, UUID.fromString("4a01a92f-bc0a-4d08-a2b4-700bb7d52f21"),
+                            "title_asteroid_hunter_speed", 0.05, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
+            )),
+            Map.entry(Title.RELIC_SEEKER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_LUCK, UUID.fromString("9cb6cc87-f56e-4a25-9b9b-0c9e3ca5ee32"),
+                            "title_relic_seeker_luck", 1.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.STAR_FORGER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_ARMOR_TOUGHNESS, UUID.fromString("f5aa8577-8c8b-4c5b-8f49-35b4c6b2c3ac"),
+                            "title_star_forger_toughness", 1.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.IRON_WILL, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_ARMOR, UUID.fromString("6d5bc46e-50d7-4b2b-a76c-7fef3e804494"),
+                            "title_iron_will_armor", 3.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.VOID_WALKER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_KNOCKBACK_RESISTANCE, UUID.fromString("3b58b11b-3b06-41b0-842a-69f8512c15bd"),
+                            "title_void_walker_knockback", 0.05, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.DEATH_DEFIER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_MAX_HEALTH, UUID.fromString("eb01c1ba-6759-4b7a-bc62-716100462095"),
+                            "title_death_defier_health", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.TIME_TOUCHED, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_MOVEMENT_SPEED, UUID.fromString("62f20387-a392-4b92-8c53-06fd2b9ea36f"),
+                            "title_time_touched_speed", 0.04, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
+            )),
+            Map.entry(Title.LAST_SURVIVOR, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_ATTACK_DAMAGE, UUID.fromString("f092d2dd-36b4-4ac5-88db-2f4f48bd32d4"),
+                            "title_last_survivor_damage", 1.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.MONSTER_HUNTER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_ATTACK_SPEED, UUID.fromString("3a5a805c-8231-4b54-9d4d-9a399e1c1bc2"),
+                            "title_monster_hunter_speed", 0.05, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
+            )),
+            Map.entry(Title.SOUL_REAPER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_MAX_HEALTH, UUID.fromString("9c196f0f-81a5-4d4b-8825-0e8c2ed6895c"),
+                            "title_soul_reaper_health", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.DOOMBRINGER, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_MAX_HEALTH, UUID.fromString("96f15874-e8f8-4a8d-a4ac-244c5df1cdd4"),
+                            "title_doombringer_health", 4.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
             Map.entry(Title.TRAILBLAZER, List.of(
                     new AttributeModifierSpec(Attribute.GENERIC_MOVEMENT_SPEED, UUID.fromString("9fcae80c-5a47-4dff-93a1-17c5317adf7b"),
                             "title_trailblazer_speed", 0.03, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
@@ -88,6 +141,14 @@ public class TitleManager {
             Map.entry(Title.SKYBOUND, List.of(
                     new AttributeModifierSpec(Attribute.GENERIC_KNOCKBACK_RESISTANCE, UUID.fromString("9a2c9a31-5f6a-42e3-9a27-2d9ce7f3a9e0"),
                             "title_skybound_knockback", 0.05, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.STARFORGED, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_ARMOR, UUID.fromString("a19d43b9-3d08-43ce-9c74-7c03bfa6c16e"),
+                            "title_starforged_armor", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.AGELESS, List.of(
+                    new AttributeModifierSpec(Attribute.GENERIC_ATTACK_DAMAGE, UUID.fromString("fb47bcb6-1d1b-4ff8-9b6e-32a9d2a44273"),
+                            "title_ageless_damage", 0.5, AttributeModifier.Operation.ADD_NUMBER)
             ))
     );
     private static final Set<UUID> TITLE_MODIFIER_IDS = collectModifierIds();
@@ -246,32 +307,6 @@ public class TitleManager {
         }
         clearTitleAttributeModifiers(player);
         applyTitleAttributeModifiers(player, title);
-        PotionEffect effect = switch (title) {
-            case THE_FALLEN -> new PotionEffect(PotionEffectType.RESISTANCE, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case REVIVED -> new PotionEffect(PotionEffectType.REGENERATION, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case SOUL_RECLAIMER -> new PotionEffect(PotionEffectType.LUCK, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case ASTEROID_HUNTER -> new PotionEffect(PotionEffectType.HASTE, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case RELIC_SEEKER, AGELESS -> new PotionEffect(PotionEffectType.NIGHT_VISION, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case STAR_FORGER, STARFORGED -> new PotionEffect(PotionEffectType.FIRE_RESISTANCE, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case IRON_WILL -> new PotionEffect(PotionEffectType.RESISTANCE, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case VOID_WALKER -> new PotionEffect(PotionEffectType.SLOW_FALLING, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case DEATH_DEFIER -> new PotionEffect(PotionEffectType.ABSORPTION, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case TIME_TOUCHED -> new PotionEffect(PotionEffectType.SPEED, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case LAST_SURVIVOR -> new PotionEffect(PotionEffectType.STRENGTH, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case MONSTER_HUNTER -> new PotionEffect(PotionEffectType.HASTE, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case SOUL_REAPER -> new PotionEffect(PotionEffectType.SATURATION, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case DOOMBRINGER -> new PotionEffect(PotionEffectType.HEALTH_BOOST, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case TRAILBLAZER -> new PotionEffect(PotionEffectType.JUMP, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case HARVESTER -> new PotionEffect(PotionEffectType.HERO_OF_THE_VILLAGE, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case DEEP_DELVER -> new PotionEffect(PotionEffectType.HASTE, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case PROSPECTOR -> new PotionEffect(PotionEffectType.LUCK, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case ANGLER -> new PotionEffect(PotionEffectType.WATER_BREATHING, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case SKYBOUND -> new PotionEffect(PotionEffectType.SLOW_FALLING, TITLE_EFFECT_DURATION_TICKS, 0, true, false, false);
-            case WANDERER -> null;
-        };
-        if (effect != null) {
-            player.addPotionEffect(effect);
-        }
     }
 
     private static long getTravelDistanceCm(Player player) {
