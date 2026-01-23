@@ -30,6 +30,37 @@ public class EffectsCommand implements BasicCommand {
     }
 
     @Override
+    public List<String> suggest(CommandSourceStack source, String[] args) {
+        List<String> rootOptions = List.of("gui", "list", "give");
+        if (args.length == 0) {
+            return rootOptions;
+        }
+        if (args.length == 1) {
+            return filterByPrefix(args[0], rootOptions);
+        }
+
+        if ("give".equalsIgnoreCase(args[0])) {
+            if (args.length == 2) {
+                return filterByPrefix(args[1], Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .sorted(Comparator.naturalOrder())
+                        .toList());
+            }
+            if (args.length == 3) {
+                return filterByPrefix(args[2], effectRegistry.getAll().stream()
+                        .map(CustomPotionEffectRegistry.CustomPotionEffectDefinition::id)
+                        .sorted(Comparator.naturalOrder())
+                        .toList());
+            }
+            if (args.length == 4) {
+                return filterByPrefix(args[3], List.of("60", "120", "300"));
+            }
+        }
+
+        return List.of();
+    }
+
+    @Override
     public void execute(CommandSourceStack source, String[] args) {
         if (args.length == 0 || args[0].equalsIgnoreCase("gui")) {
             Player target = resolveTarget(source, args.length > 1 ? args[1] : null);
@@ -90,5 +121,15 @@ public class EffectsCommand implements BasicCommand {
         } catch (NumberFormatException ex) {
             return DEFAULT_DURATION_SECONDS;
         }
+    }
+
+    private List<String> filterByPrefix(String input, List<String> options) {
+        if (input == null || input.isBlank()) {
+            return options;
+        }
+        String lowered = input.toLowerCase(Locale.ROOT);
+        return options.stream()
+                .filter(option -> option.toLowerCase(Locale.ROOT).startsWith(lowered))
+                .toList();
     }
 }
