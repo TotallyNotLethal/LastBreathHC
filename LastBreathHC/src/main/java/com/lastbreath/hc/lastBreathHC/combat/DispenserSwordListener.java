@@ -6,6 +6,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.Dispenser;
 import org.bukkit.block.data.Directional;
+import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,10 +15,8 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.util.BoundingBox;
 
 import java.util.List;
 import java.util.Map;
@@ -28,6 +27,7 @@ public class DispenserSwordListener implements Listener {
 
     private static final long COOLDOWN_MS = 100L;
     private static final long KILL_MARKER_TTL_MS = 10_000L;
+
     private final Map<Block, Long> dispenserCooldowns = new ConcurrentHashMap<>();
     private final NamespacedKey dispenserSwordKillKey;
     private final NamespacedKey dispenserSwordKillTimestampKey;
@@ -40,18 +40,14 @@ public class DispenserSwordListener implements Listener {
     @EventHandler
     public void onBlockDispense(BlockDispenseEvent event) {
         ItemStack item = event.getItem();
-        if (!isSword(item.getType())) {
-            return;
-        }
+        if (!isSword(item.getType())) return;
 
         Block block = event.getBlock();
-        if (!(block.getBlockData() instanceof Directional directional)) {
-            return;
-        }
+        if (!(block.getBlockData() instanceof Directional directional)) return;
 
         long now = System.currentTimeMillis();
-        Long lastFire = dispenserCooldowns.get(block);
-        if (lastFire != null && now - lastFire < COOLDOWN_MS) {
+        Long last = dispenserCooldowns.get(block);
+        if (last != null && now - last < COOLDOWN_MS) {
             event.setCancelled(true);
             return;
         }
@@ -60,44 +56,54 @@ public class DispenserSwordListener implements Listener {
         event.setCancelled(true);
 
         Block targetBlock = block.getRelative(directional.getFacing());
-        BoundingBox searchBox = targetBlock.getBoundingBox().expand(0.1);
-        List<LivingEntity> targets = targetBlock.getWorld().getNearbyLivingEntities(searchBox).stream()
-                .filter(entity -> !entity.isDead())
+
+        List<LivingEntity> targets = targetBlock.getWorld()
+                .getNearbyLivingEntities(
+                        targetBlock.getLocation().add(0.5, 0.5, 0.5),
+                        0.6, 0.6, 0.6
+                )
+                .stream()
+                .filter(e -> !e.isDead())
                 .toList();
 
-        if (targets.isEmpty()) {
-            return;
-        }
+        if (targets.isEmpty()) return;
 
         LivingEntity target = targets.get(0);
         double damage = getSwordDamage(item.getType());
+
+        // DAMAGE
         target.damage(damage);
+
+        // MARK FOR XP DROP
         markDispenserSwordHit(target);
 
+        // DAMAGE SWORD
         if (block.getState() instanceof Dispenser dispenser) {
-            reduceDurability(dispenser.getInventory(), item);
+            damageSword(dispenser);
         }
     }
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
-        PersistentDataContainer container = entity.getPersistentDataContainer();
-        if (!container.has(dispenserSwordKillKey, PersistentDataType.BYTE)) {
+        PersistentDataContainer data = entity.getPersistentDataContainer();
+
+        if (!data.has(dispenserSwordKillKey, PersistentDataType.BYTE)) return;
+
+        if (isMarkerStale(data)) {
+            clearMarker(data);
             return;
         }
 
-        if (isMarkerStale(container)) {
-            clearMarker(container);
-            return;
-        }
+        // FORCE XP DROP
+        int xp = event.getDroppedExp();
+        if (xp <= 0) xp = 5;
 
-        int expToDrop = entity.getExpToDrop();
-        if (expToDrop <= 0) {
-            expToDrop = event.getDroppedExp();
-        }
-        event.setDroppedExp(expToDrop);
-        clearMarker(container);
+        entity.getWorld().spawn(entity.getLocation(), ExperienceOrb.class)
+                .setExperience(xp);
+
+        event.setDroppedExp(0); // prevent double-drop
+        clearMarker(data);
     }
 
     private boolean isSword(Material material) {
@@ -115,60 +121,54 @@ public class DispenserSwordListener implements Listener {
         };
     }
 
-    private void reduceDurability(Inventory inventory, ItemStack template) {
-        Optional<Integer> slot = findMatchingSlot(inventory, template);
-        if (slot.isEmpty()) {
-            return;
-        }
+    private void damageSword(Dispenser dispenser) {
+        Inventory inv = dispenser.getInventory();
 
-        ItemStack stored = inventory.getItem(slot.get());
-        if (stored == null) {
-            return;
-        }
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack stack = inv.getItem(i);
 
-        ItemMeta meta = stored.getItemMeta();
-        if (!(meta instanceof Damageable damageable)) {
-            return;
-        }
+            if (stack == null) continue;
+            if (!isSword(stack.getType())) continue;
 
-        int newDamage = damageable.getDamage() + 1;
-        if (newDamage >= stored.getType().getMaxDurability()) {
-            inventory.setItem(slot.get(), null);
-            return;
-        }
+            if (!(stack.getItemMeta() instanceof Damageable dmg)) return;
 
-        damageable.setDamage(newDamage);
-        stored.setItemMeta(meta);
-        inventory.setItem(slot.get(), stored);
+            int newDamage = dmg.getDamage() + 1;
+
+            if (newDamage >= stack.getType().getMaxDurability()) {
+                inv.setItem(i, null); // break sword
+            } else {
+                dmg.setDamage(newDamage);
+                stack.setItemMeta(dmg);
+                inv.setItem(i, stack);
+            }
+            return; // only damage ONE sword
+        }
     }
 
-    private Optional<Integer> findMatchingSlot(Inventory inventory, ItemStack template) {
-        ItemStack[] contents = inventory.getContents();
-        for (int i = 0; i < contents.length; i++) {
-            ItemStack item = contents[i];
-            if (item != null && item.isSimilar(template)) {
+
+    private Optional<Integer> findSlot(Inventory inv, ItemStack match) {
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack item = inv.getItem(i);
+            if (item != null && item.getType() == match.getType()) {
                 return Optional.of(i);
             }
         }
         return Optional.empty();
     }
 
-    private void markDispenserSwordHit(LivingEntity target) {
-        PersistentDataContainer container = target.getPersistentDataContainer();
-        container.set(dispenserSwordKillKey, PersistentDataType.BYTE, (byte) 1);
-        container.set(dispenserSwordKillTimestampKey, PersistentDataType.LONG, System.currentTimeMillis());
+    private void markDispenserSwordHit(LivingEntity entity) {
+        PersistentDataContainer data = entity.getPersistentDataContainer();
+        data.set(dispenserSwordKillKey, PersistentDataType.BYTE, (byte) 1);
+        data.set(dispenserSwordKillTimestampKey, PersistentDataType.LONG, System.currentTimeMillis());
     }
 
-    private boolean isMarkerStale(PersistentDataContainer container) {
-        Long timestamp = container.get(dispenserSwordKillTimestampKey, PersistentDataType.LONG);
-        if (timestamp == null) {
-            return false;
-        }
-        return System.currentTimeMillis() - timestamp > KILL_MARKER_TTL_MS;
+    private boolean isMarkerStale(PersistentDataContainer data) {
+        Long ts = data.get(dispenserSwordKillTimestampKey, PersistentDataType.LONG);
+        return ts != null && System.currentTimeMillis() - ts > KILL_MARKER_TTL_MS;
     }
 
-    private void clearMarker(PersistentDataContainer container) {
-        container.remove(dispenserSwordKillKey);
-        container.remove(dispenserSwordKillTimestampKey);
+    private void clearMarker(PersistentDataContainer data) {
+        data.remove(dispenserSwordKillKey);
+        data.remove(dispenserSwordKillTimestampKey);
     }
 }
