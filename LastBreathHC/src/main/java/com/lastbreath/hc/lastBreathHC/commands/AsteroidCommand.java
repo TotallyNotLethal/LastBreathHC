@@ -9,7 +9,22 @@ import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.List;
+
 public class AsteroidCommand implements BasicCommand {
+
+    @Override
+    public List<String> suggest(CommandSourceStack source, String[] args) {
+        if (!source.getSender().isOp()) {
+            return List.of();
+        }
+
+        if (args.length == 0) {
+            return List.of("<x>", "<z>");
+        }
+
+        return List.of();
+    }
 
     @Override
     public void execute(CommandSourceStack source, String[] args) {

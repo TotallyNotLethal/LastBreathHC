@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.List;
 import java.util.Random;
 
 public class RtpCommand implements BasicCommand {
@@ -24,6 +25,11 @@ public class RtpCommand implements BasicCommand {
 
     public RtpCommand(LastBreathHC plugin) {
         this.rtpUsedKey = new NamespacedKey(plugin, "rtp_used");
+    }
+
+    @Override
+    public List<String> suggest(CommandSourceStack source, String[] args) {
+        return List.of();
     }
 
     @Override
