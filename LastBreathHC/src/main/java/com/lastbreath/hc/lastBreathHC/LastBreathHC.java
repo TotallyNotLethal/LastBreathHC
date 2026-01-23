@@ -156,7 +156,7 @@ public final class LastBreathHC extends JavaPlugin {
                 new RtpUsageListener(this), this
         );
         getServer().getPluginManager().registerEvents(
-                new DispenserSwordListener(), this
+                new DispenserSwordListener(this), this
         );
         environmentalEffectsManager = new EnvironmentalEffectsManager(this);
         getServer().getPluginManager().registerEvents(
