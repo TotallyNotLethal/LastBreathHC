@@ -31,9 +31,11 @@ public class CustomItemRecipes {
 
         recipe.setIngredient('S', Material.NETHER_STAR);
 
-        java.util.List<String> ids = LastBreathHC.getInstance()
-                .getConfig()
-                .getStringList("asteroid.loot.enchantPages.ids");
+        java.util.List<String> ids = CustomEnchant.filterAllowedIds(
+                LastBreathHC.getInstance()
+                        .getConfig()
+                        .getStringList("asteroid.loot.enchantPages.ids")
+        );
         java.util.List<org.bukkit.inventory.ItemStack> choices = new java.util.ArrayList<>();
         if (ids.isEmpty()) {
             choices.add(CustomEnchantPage.create("unknown"));

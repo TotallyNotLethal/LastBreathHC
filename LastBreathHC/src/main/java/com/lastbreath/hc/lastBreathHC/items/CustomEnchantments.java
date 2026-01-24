@@ -41,6 +41,9 @@ public class CustomEnchantments {
         if (tool == null || enchantId == null || enchantId.isBlank()) {
             return tool;
         }
+        if (!CustomEnchant.isAllowedEnchantId(enchantId)) {
+            return tool;
+        }
         if (!isNetheriteTool(tool.getType())) {
             return tool;
         }

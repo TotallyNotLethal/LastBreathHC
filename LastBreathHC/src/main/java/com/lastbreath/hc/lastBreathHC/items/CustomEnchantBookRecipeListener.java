@@ -30,6 +30,10 @@ public class CustomEnchantBookRecipeListener implements Listener {
             inventory.setResult(null);
             return;
         }
+        if (!CustomEnchant.isAllowedEnchantId(enchantId)) {
+            inventory.setResult(null);
+            return;
+        }
 
         inventory.setResult(CustomEnchantBook.create(enchantId));
     }
