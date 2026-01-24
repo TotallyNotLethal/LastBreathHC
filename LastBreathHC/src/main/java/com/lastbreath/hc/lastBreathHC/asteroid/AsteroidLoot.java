@@ -1,8 +1,11 @@
 package com.lastbreath.hc.lastBreathHC.asteroid;
 
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.items.CustomEnchantPage;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -44,7 +47,26 @@ public class AsteroidLoot {
         if (random.nextInt(100) < chanceForTier(normalizedTier, 1, 3, 5))
             inv.addItem(new ItemStack(Material.DRAGON_EGG));
 
+        addEnchantPageLoot(inv);
+
         return inv;
+    }
+
+    private static void addEnchantPageLoot(Inventory inv) {
+        FileConfiguration config = LastBreathHC.getInstance().getConfig();
+        double chance = config.getDouble("asteroid.loot.enchantPages.chance", 0.5);
+        if (chance <= 0) {
+            return;
+        }
+        if (random.nextDouble() * 100 >= chance) {
+            return;
+        }
+        java.util.List<String> ids = config.getStringList("asteroid.loot.enchantPages.ids");
+        if (ids.isEmpty()) {
+            return;
+        }
+        String enchantId = ids.get(random.nextInt(ids.size()));
+        inv.addItem(CustomEnchantPage.create(enchantId));
     }
 
     private static int chanceForTier(int tier, int tier1, int tier2, int tier3) {
