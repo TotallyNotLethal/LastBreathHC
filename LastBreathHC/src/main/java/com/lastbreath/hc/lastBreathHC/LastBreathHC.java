@@ -19,6 +19,7 @@ import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
+import com.lastbreath.hc.lastBreathHC.noise.NoiseDampenerManager;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
@@ -78,6 +79,7 @@ public final class LastBreathHC extends JavaPlugin {
     private CustomPotionEffectRegistry customPotionEffectRegistry;
     private CustomPotionEffectManager customPotionEffectManager;
     private EffectsStatusGUI effectsStatusGUI;
+    private NoiseDampenerManager noiseDampenerManager;
 
     @Override
     public void onEnable() {
@@ -157,6 +159,10 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new DispenserSwordListener(this), this
+        );
+        noiseDampenerManager = new NoiseDampenerManager();
+        getServer().getPluginManager().registerEvents(
+                noiseDampenerManager, this
         );
         environmentalEffectsManager = new EnvironmentalEffectsManager(this);
         getServer().getPluginManager().registerEvents(
@@ -239,6 +245,7 @@ public final class LastBreathHC extends JavaPlugin {
         customPotionEffectRegistry = null;
         customPotionEffectManager = null;
         effectsStatusGUI = null;
+        noiseDampenerManager = null;
         getLogger().info("LastBreathHC disabled.");
     }
 
