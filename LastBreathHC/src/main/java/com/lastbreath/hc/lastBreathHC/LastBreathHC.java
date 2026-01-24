@@ -43,6 +43,7 @@ import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
 import com.lastbreath.hc.lastBreathHC.environment.AnvilCrushListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
+import com.lastbreath.hc.lastBreathHC.items.CustomEnchantPageListener;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneLifeListener;
@@ -136,6 +137,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new EnhancedGrindstoneListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new CustomEnchantPageListener(), this
         );
         getServer().getPluginManager().registerEvents(
                 new GracestoneListener(), this

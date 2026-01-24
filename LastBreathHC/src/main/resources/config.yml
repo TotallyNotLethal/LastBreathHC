@@ -18,6 +18,20 @@ asteroid:
     minSeconds: 1800
     maxSeconds: 14400
   countdownSeconds: 10
+  loot:
+    enchantPages:
+      chance: 0.5
+      ids:
+        - lb:directional_mining
+        - lb:vein_miner
+        - lb:auto_pickup
+        - lb:auto_replant
+        - lb:tree_feller
+        - lb:excavator
+        - lb:fertile_harvest
+        - lb:smelter_touch
+        - lb:swift_tiller
+        - lb:prospector
   worlds:
     - world
   tiers:
