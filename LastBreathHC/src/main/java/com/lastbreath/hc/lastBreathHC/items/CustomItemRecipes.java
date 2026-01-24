@@ -11,10 +11,42 @@ import org.bukkit.inventory.ShapelessRecipe;
 public class CustomItemRecipes {
 
     public static void register() {
+        registerCustomEnchantBook();
         registerEnhancedGrindstone();
         registerTotemOfLife();
         registerRebirthStone();
         registerGracestone();
+    }
+
+    private static void registerCustomEnchantBook() {
+        NamespacedKey key = new NamespacedKey(
+                LastBreathHC.getInstance(), "custom_enchant_book"
+        );
+        ShapedRecipe recipe = new ShapedRecipe(key, CustomEnchantBook.create("unknown"));
+        recipe.shape(
+                "SPP",
+                "SPP",
+                "SPP"
+        );
+
+        recipe.setIngredient('S', Material.NETHER_STAR);
+
+        java.util.List<String> ids = LastBreathHC.getInstance()
+                .getConfig()
+                .getStringList("asteroid.loot.enchantPages.ids");
+        java.util.List<org.bukkit.inventory.ItemStack> choices = new java.util.ArrayList<>();
+        if (ids.isEmpty()) {
+            choices.add(CustomEnchantPage.create("unknown"));
+        } else {
+            for (String id : ids) {
+                if (id != null && !id.isBlank()) {
+                    choices.add(CustomEnchantPage.create(id));
+                }
+            }
+        }
+        recipe.setIngredient('P', new RecipeChoice.ExactChoice(choices));
+
+        Bukkit.addRecipe(recipe);
     }
 
     private static void registerEnhancedGrindstone() {
