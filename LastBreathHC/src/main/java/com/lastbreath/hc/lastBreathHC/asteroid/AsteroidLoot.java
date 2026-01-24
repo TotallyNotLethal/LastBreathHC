@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.asteroid;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantPage;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -61,7 +62,9 @@ public class AsteroidLoot {
         if (random.nextDouble() * 100 >= chance) {
             return;
         }
-        java.util.List<String> ids = config.getStringList("asteroid.loot.enchantPages.ids");
+        java.util.List<String> ids = CustomEnchant.filterAllowedIds(
+                config.getStringList("asteroid.loot.enchantPages.ids")
+        );
         if (ids.isEmpty()) {
             return;
         }
