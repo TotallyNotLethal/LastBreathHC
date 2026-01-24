@@ -38,6 +38,9 @@ public class CustomEnchantBook {
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("Use in an anvil with netherite gear.")
                         .color(NamedTextColor.DARK_GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Netherite tools only. Not for PvP.")
+                        .color(NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
 

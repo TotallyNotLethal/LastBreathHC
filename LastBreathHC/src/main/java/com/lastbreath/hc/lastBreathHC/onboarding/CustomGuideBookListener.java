@@ -72,6 +72,18 @@ public class CustomGuideBookListener implements Listener {
 
                 Component.text(
                         """
+                                §6Custom Enchants
+                                
+                                §0Asteroid-only pages bind
+                                §0into a 6-page recipe.
+                                §0Anvil cost: 30 levels.
+                                
+                                §8• Netherite tools only
+                                §8• Not for PvP"""
+                ),
+
+                Component.text(
+                        """
                                 §6Blood Moon
                                 
                                 §0Nightmares rise when
