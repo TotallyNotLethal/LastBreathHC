@@ -31,12 +31,17 @@ public class EffectsCommand implements BasicCommand {
 
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
-        List<String> rootOptions = List.of("gui", "list", "give");
+        boolean isOp = source.getSender().isOp();
+        List<String> rootOptions = isOp ? List.of("gui", "list", "give") : List.of("gui");
         if (args.length == 0) {
             return rootOptions;
         }
         if (args.length == 1) {
             return filterByPrefix(args[0], rootOptions);
+        }
+
+        if (!isOp) {
+            return List.of();
         }
 
         if ("give".equalsIgnoreCase(args[0])) {
@@ -69,11 +74,19 @@ public class EffectsCommand implements BasicCommand {
                 source.getSender().sendMessage("§cPlayer not found.");
                 return;
             }
+            if (!source.getSender().isOp() && source.getSender() != target) {
+                source.getSender().sendMessage("§cNo permission.");
+                return;
+            }
             effectsStatusGUI.open(target);
             return;
         }
 
         if (args[0].equalsIgnoreCase("list")) {
+            if (!source.getSender().isOp()) {
+                source.getSender().sendMessage("§cNo permission.");
+                return;
+            }
             List<String> ids = effectRegistry.getAll().stream()
                     .map(CustomPotionEffectRegistry.CustomPotionEffectDefinition::id)
                     .sorted(Comparator.naturalOrder())
@@ -83,6 +96,10 @@ public class EffectsCommand implements BasicCommand {
         }
 
         if (args[0].equalsIgnoreCase("give")) {
+            if (!source.getSender().isOp()) {
+                source.getSender().sendMessage("§cNo permission.");
+                return;
+            }
             if (args.length < 3) {
                 source.getSender().sendMessage("§cUsage: /effects give <player> <effectId> [durationSeconds]");
                 return;
