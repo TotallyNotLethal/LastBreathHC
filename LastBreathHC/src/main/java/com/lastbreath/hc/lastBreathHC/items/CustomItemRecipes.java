@@ -15,7 +15,6 @@ public class CustomItemRecipes {
         registerTotemOfLife();
         registerRebirthStone();
         registerGracestone();
-        registerNoiseDampener();
     }
 
     private static void registerEnhancedGrindstone() {
@@ -96,19 +95,4 @@ public class CustomItemRecipes {
 
         Bukkit.addRecipe(recipe);
     }
-
-    private static void registerNoiseDampener() {
-        NamespacedKey key = new NamespacedKey(
-                LastBreathHC.getInstance(), "noise_dampener"
-        );
-        ShapedRecipe recipe = new ShapedRecipe(key, com.lastbreath.hc.lastBreathHC.noise.NoiseDampener.create());
-        recipe.shape(
-                "WWW",
-                "WWW",
-                "WWW"
-        );
-        recipe.setIngredient('W', Material.WHITE_WOOL);
-        Bukkit.addRecipe(recipe);
-    }
-
 }

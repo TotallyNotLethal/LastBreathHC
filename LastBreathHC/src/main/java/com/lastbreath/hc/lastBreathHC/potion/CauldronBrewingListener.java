@@ -240,7 +240,7 @@ public class CauldronBrewingListener implements Listener {
         Material material = item.getType();
         return material == Material.REDSTONE
                 || material == Material.GLOWSTONE_DUST
-                || material == Material.NETHER_STAR
+                || material == Material.GHAST_TEAR
                 || definitionRegistry.getByIngredient(material) != null;
     }
 
@@ -326,7 +326,7 @@ public class CauldronBrewingListener implements Listener {
                 .map(def -> def.craftingIngredient().name() + " -> " + def.displayName())
                 .collect(Collectors.joining(", "));
 
-        String defaults = "REDSTONE -> extend duration, GLOWSTONE_DUST -> concentrate, NETHER_STAR -> purify";
+        String defaults = "REDSTONE -> extend duration, GLOWSTONE_DUST -> concentrate, GHAST_TEAR -> purify";
 
         if (custom.isBlank()) {
             return defaults;
@@ -368,7 +368,7 @@ public class CauldronBrewingListener implements Listener {
         if (ingredient == Material.GLOWSTONE_DUST) {
             return "concentrates existing potion effects";
         }
-        if (ingredient == Material.NETHER_STAR) {
+        if (ingredient == Material.GHAST_TEAR) {
             return "purifies negative effects";
         }
         HardcorePotionDefinition definition = definitionRegistry.getByIngredient(ingredient);

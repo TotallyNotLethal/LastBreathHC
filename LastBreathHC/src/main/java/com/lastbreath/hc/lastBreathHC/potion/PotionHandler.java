@@ -133,7 +133,7 @@ public class PotionHandler implements Listener {
         if (ingredient == Material.GLOWSTONE_DUST) {
             return applyConcentration(potion);
         }
-        if (ingredient == Material.NETHER_STAR) {
+        if (ingredient == Material.GHAST_TEAR) {
             return applyPurification(potion);
         }
         HardcorePotionDefinition definition = definitionRegistry.getByIngredient(ingredient);
