@@ -17,7 +17,7 @@ public class CustomEnchantPageListener implements Listener {
         if (left == null || right == null) {
             return;
         }
-        if (!CustomEnchantPage.isEnchantPage(right)) {
+        if (!CustomEnchantBook.isEnchantBook(right)) {
             return;
         }
         if (!CustomEnchantments.isNetheriteTool(left.getType())) {
@@ -25,7 +25,7 @@ public class CustomEnchantPageListener implements Listener {
             return;
         }
 
-        String enchantId = CustomEnchantPage.getEnchantId(right);
+        String enchantId = CustomEnchantBook.getEnchantId(right);
         if (enchantId == null || enchantId.isBlank()) {
             event.setResult(null);
             return;
