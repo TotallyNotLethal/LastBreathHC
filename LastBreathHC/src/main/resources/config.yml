@@ -22,16 +22,16 @@ asteroid:
     enchantPages:
       chance: 0.5
       ids:
-        - lb:directional_mining
-        - lb:vein_miner
-        - lb:auto_pickup
-        - lb:auto_replant
-        - lb:tree_feller
-        - lb:excavator
-        - lb:fertile_harvest
-        - lb:smelter_touch
-        - lb:swift_tiller
-        - lb:prospector
+        - "lb:directional_mining"
+        - "lb:vein_miner"
+        - "lb:auto_pickup"
+        - "lb:auto_replant"
+        - "lb:tree_feller"
+        - "lb:excavator"
+        - "lb:fertile_harvest"
+        - "lb:smelter_touch"
+        - "lb:swift_tiller"
+        - "lb:prospector"
   worlds:
     - world
   tiers:
@@ -139,4 +139,3 @@ environment:
         - DEEP_COLD_OCEAN
         - DEEP_FROZEN_OCEAN
         - DEEP_LUKEWARM_OCEAN
-
