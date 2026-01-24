@@ -39,6 +39,9 @@ public class CustomEnchantPage {
                         .decoration(TextDecoration.ITALIC, false),
                 Component.text("Asteroid-only treasure.")
                         .color(NamedTextColor.DARK_GRAY)
+                        .decoration(TextDecoration.ITALIC, false),
+                Component.text("Netherite tools only. Not for PvP.")
+                        .color(NamedTextColor.DARK_GRAY)
                         .decoration(TextDecoration.ITALIC, false)
         ));
 
