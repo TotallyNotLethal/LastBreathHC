@@ -20,7 +20,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.recipe.CookingRecipe;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -168,7 +167,7 @@ public class CustomEnchantListener implements Listener {
     }
 
     private boolean isOre(Material type) {
-        return Tag.ORES.isTagged(type);
+        return type.name().endsWith("_ORE") || type == Material.ANCIENT_DEBRIS;
     }
 
     private boolean isLog(Material type) {
@@ -271,19 +270,26 @@ public class CustomEnchantListener implements Listener {
 
     private ItemStack getSmeltedResult(ItemStack input) {
         Material type = input.getType();
+
         if (smeltCache.containsKey(type)) {
             ItemStack cached = smeltCache.get(type);
             return cached == null ? null : cached.clone();
         }
+
         ItemStack result = null;
-        for (Recipe recipe : Bukkit.recipeIterator()) {
-            if (recipe instanceof CookingRecipe<?> cookingRecipe) {
-                if (cookingRecipe.getInputChoice().test(input)) {
-                    result = cookingRecipe.getResult().clone();
+
+        var iterator = Bukkit.recipeIterator();
+        while (iterator.hasNext()) {
+            Recipe recipe = iterator.next();
+
+            if (recipe instanceof org.bukkit.inventory.FurnaceRecipe furnace) {
+                if (furnace.getInputChoice().test(input)) {
+                    result = furnace.getResult().clone();
                     break;
                 }
             }
         }
+
         smeltCache.put(type, result);
         return result == null ? null : result.clone();
     }
