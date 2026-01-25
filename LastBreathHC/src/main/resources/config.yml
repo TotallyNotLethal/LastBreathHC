@@ -17,6 +17,8 @@ asteroid:
   spawn:
     minSeconds: 1800
     maxSeconds: 14400
+    playerBiasChance: 0.5
+    playerBiasRadius: 250.0
   countdownSeconds: 10
   loot:
     enchantPages:
