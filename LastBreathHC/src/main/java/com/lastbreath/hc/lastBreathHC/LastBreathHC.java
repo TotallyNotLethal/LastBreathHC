@@ -449,6 +449,10 @@ public final class LastBreathHC extends JavaPlugin {
         return null;
     }
 
+    private Location pickAsteroidLocationNear(World world, Location origin, double radius, int attempts) {
+        return findAsteroidLocation(world, origin.getX(), origin.getZ(), radius, attempts);
+    }
+
     public World resolveAsteroidCommandWorld(CommandSender sender) {
         if (sender instanceof BlockCommandSender blockSender) {
             return blockSender.getBlock().getWorld();
@@ -480,8 +484,32 @@ public final class LastBreathHC extends JavaPlugin {
             return false;
         }
 
+        double meteorShowerChance = getConfig().getDouble("asteroid.spawn.meteorShowerChance", 0.0);
+        boolean meteorShower = random.nextDouble() < meteorShowerChance;
         int tier = pickWeightedAsteroidTier();
         AsteroidManager.spawnAsteroid(world, location, tier);
+
+        if (meteorShower) {
+            Bukkit.broadcastMessage("☄ Meteor shower incoming!");
+            int showerCount = 3 + random.nextInt(3);
+            double showerRadius = 50.0;
+            int offsetAttempts = 3;
+            int offsetSearchAttempts = 6;
+            for (int i = 1; i < showerCount; i++) {
+                Location offsetLocation = null;
+                for (int attempt = 0; attempt < offsetAttempts; attempt++) {
+                    offsetLocation = pickAsteroidLocationNear(world, location, showerRadius, offsetSearchAttempts);
+                    if (offsetLocation != null) {
+                        break;
+                    }
+                }
+                if (offsetLocation == null) {
+                    continue;
+                }
+                int offsetTier = pickWeightedAsteroidTier();
+                AsteroidManager.spawnAsteroid(world, offsetLocation, offsetTier);
+            }
+        }
         return true;
     }
 }
