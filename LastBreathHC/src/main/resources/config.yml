@@ -22,7 +22,7 @@ asteroid:
     enchantPages:
       chance: 0.5
       ids:
-        - "lb:directional_mining"
+        - "lb:quarry"
         - "lb:vein_miner"
         - "lb:auto_pickup"
         - "lb:auto_replant"

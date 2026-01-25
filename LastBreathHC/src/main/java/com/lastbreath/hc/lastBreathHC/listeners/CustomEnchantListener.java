@@ -38,7 +38,6 @@ public class CustomEnchantListener implements Listener {
 
     private static final int VEIN_LIMIT = 64;
     private static final int TREE_LIMIT = 128;
-    private static final int DIRECTIONAL_DISTANCE = 2;
     private static final double PROSPECTOR_CHANCE = 0.2;
 
     private static final Map<Material, Material> CROP_SEEDS = new EnumMap<>(Material.class);
@@ -87,7 +86,7 @@ public class CustomEnchantListener implements Listener {
         boolean veinMiner = normalized.contains(CustomEnchant.VEIN_MINER.getId());
         boolean treeFeller = normalized.contains(CustomEnchant.TREE_FELLER.getId());
         boolean excavator = normalized.contains(CustomEnchant.EXCAVATOR.getId());
-        boolean directional = normalized.contains(CustomEnchant.DIRECTIONAL_MINING.getId());
+        boolean quarry = normalized.contains(CustomEnchant.QUARRY.getId());
 
         if (handleCustomDrops(player, tool, block, normalized)) {
             event.setDropItems(false);
@@ -102,8 +101,8 @@ public class CustomEnchantListener implements Listener {
         if (excavator && isShovel(tool.getType()) && isShovelMineable(block.getType())) {
             breakExtraBlocks(player, tool, getExcavatorBlocks(block), normalized);
         }
-        if (directional && isPickaxe(tool.getType())) {
-            breakExtraBlocks(player, tool, getDirectionalBlocks(block, player), normalized);
+        if (quarry && isPickaxe(tool.getType()) && isPickaxeMineable(block.getType())) {
+            breakExtraBlocks(player, tool, getQuarryBlocks(block, player), normalized);
         }
     }
 
@@ -157,6 +156,10 @@ public class CustomEnchantListener implements Listener {
 
     private boolean isShovelMineable(Material type) {
         return Tag.MINEABLE_SHOVEL.isTagged(type);
+    }
+
+    private boolean isPickaxeMineable(Material type) {
+        return Tag.MINEABLE_PICKAXE.isTagged(type);
     }
 
     private boolean isPickaxe(Material type) {
@@ -416,16 +419,65 @@ public class CustomEnchantListener implements Listener {
         return blocks;
     }
 
-    private Collection<Block> getDirectionalBlocks(Block origin, Player player) {
+    private Collection<Block> getQuarryBlocks(Block origin, Player player) {
         Set<Block> blocks = new HashSet<>();
         BlockFace face = resolveDirectionalFace(player);
-        for (int i = 1; i <= DIRECTIONAL_DISTANCE; i++) {
-            Block candidate = origin.getRelative(face, i);
-            if (candidate.getType() != Material.AIR) {
-                blocks.add(candidate);
+        int primaryMin;
+        int primaryMax;
+        int secondaryMin;
+        int secondaryMax;
+
+        if (face == BlockFace.UP || face == BlockFace.DOWN) {
+            primaryMin = -1;
+            primaryMax = 1;
+            secondaryMin = -1;
+            secondaryMax = 1;
+            for (int x = primaryMin; x <= primaryMax; x++) {
+                for (int z = secondaryMin; z <= secondaryMax; z++) {
+                    if (x == 0 && z == 0) {
+                        continue;
+                    }
+                    addQuarryCandidate(blocks, origin.getRelative(x, 0, z));
+                }
+            }
+            return blocks;
+        }
+
+        if (face == BlockFace.EAST || face == BlockFace.WEST) {
+            primaryMin = -1;
+            primaryMax = 1;
+            secondaryMin = -1;
+            secondaryMax = 1;
+            for (int y = primaryMin; y <= primaryMax; y++) {
+                for (int z = secondaryMin; z <= secondaryMax; z++) {
+                    if (y == 0 && z == 0) {
+                        continue;
+                    }
+                    addQuarryCandidate(blocks, origin.getRelative(0, y, z));
+                }
+            }
+            return blocks;
+        }
+
+        primaryMin = -1;
+        primaryMax = 1;
+        secondaryMin = -1;
+        secondaryMax = 1;
+        for (int x = primaryMin; x <= primaryMax; x++) {
+            for (int y = secondaryMin; y <= secondaryMax; y++) {
+                if (x == 0 && y == 0) {
+                    continue;
+                }
+                addQuarryCandidate(blocks, origin.getRelative(x, y, 0));
             }
         }
         return blocks;
+    }
+
+    private void addQuarryCandidate(Set<Block> blocks, Block candidate) {
+        if (isPickaxeMineable(candidate.getType())) {
+            blocks.add(candidate);
+        }
     }
 
     private BlockFace resolveDirectionalFace(Player player) {

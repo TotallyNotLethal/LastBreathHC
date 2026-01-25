@@ -9,7 +9,7 @@ import java.util.Locale;
 import java.util.Set;
 
 public enum CustomEnchant {
-    DIRECTIONAL_MINING("lb:directional_mining", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
+    QUARRY("lb:quarry", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
     VEIN_MINER("lb:vein_miner", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
     AUTO_PICKUP("lb:auto_pickup", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
     AUTO_REPLANT("lb:auto_replant", false, EnumSet.of(Material.NETHERITE_HOE)),
