@@ -42,6 +42,10 @@ public class CustomEnchantAnvilListener implements Listener {
             event.setResult(null);
             return;
         }
+        if (!CustomEnchant.isAllowedForTool(enchantId, left.getType())) {
+            event.setResult(null);
+            return;
+        }
 
         ItemStack result = CustomEnchantments.applyEnchant(left, enchantId);
         event.setResult(result);
@@ -74,6 +78,10 @@ public class CustomEnchantAnvilListener implements Listener {
 
         String enchantId = CustomEnchantBook.getEnchantId(right);
         if (!CustomEnchant.isAllowedEnchantId(enchantId)) {
+            event.setCancelled(true);
+            return;
+        }
+        if (!CustomEnchant.isAllowedForTool(enchantId, left.getType())) {
             event.setCancelled(true);
             return;
         }
