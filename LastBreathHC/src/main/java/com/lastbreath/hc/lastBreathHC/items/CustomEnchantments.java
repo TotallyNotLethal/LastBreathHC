@@ -47,6 +47,9 @@ public class CustomEnchantments {
         if (!isNetheriteTool(tool.getType())) {
             return tool;
         }
+        if (!CustomEnchant.isAllowedForTool(enchantId, tool.getType())) {
+            return tool;
+        }
         ItemStack result = tool.clone();
         ItemMeta meta = result.getItemMeta();
         List<String> ids = new ArrayList<>(getEnchantIds(meta));
