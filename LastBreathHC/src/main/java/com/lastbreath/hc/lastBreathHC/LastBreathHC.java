@@ -33,6 +33,7 @@ import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import com.lastbreath.hc.lastBreathHC.token.TokenRecipe;
 import com.lastbreath.hc.lastBreathHC.token.ReviveGuiTokenRecipe;
@@ -382,15 +383,41 @@ public final class LastBreathHC extends JavaPlugin {
         WorldBorder border = world.getWorldBorder();
         double borderRadius = border.getSize() / 2.0;
         double spawnRadius = Math.min(10_000.0, borderRadius);
+        int attempts = 30;
+
+        List<Player> players = world.getPlayers();
+        double playerBiasChance = getConfig().getDouble("asteroid.spawn.playerBiasChance", 0.5);
+        double playerBiasRadius = getConfig().getDouble("asteroid.spawn.playerBiasRadius", 250.0);
+        if (!players.isEmpty() && random.nextDouble() < playerBiasChance) {
+            Player player = players.get(random.nextInt(players.size()));
+            Location playerBiased = findAsteroidLocation(world, player.getLocation().getX(),
+                    player.getLocation().getZ(), playerBiasRadius, attempts);
+            if (playerBiased != null) {
+                return playerBiased;
+            }
+        }
+
+        return findAsteroidLocation(world, 0.0, 0.0, spawnRadius, attempts);
+    }
+
+    private Location findAsteroidLocation(World world, double centerX, double centerZ, double radius, int attempts) {
+        WorldBorder border = world.getWorldBorder();
+        double borderRadius = border.getSize() / 2.0;
+        double minX = border.getCenter().getX() - borderRadius;
+        double maxX = border.getCenter().getX() + borderRadius;
+        double minZ = border.getCenter().getZ() - borderRadius;
+        double maxZ = border.getCenter().getZ() + borderRadius;
 
         int minHeight = world.getMinHeight();
         int maxHeight = world.getMaxHeight() - 1;
 
-        for (int attempt = 0; attempt < 30; attempt++) {
+        for (int attempt = 0; attempt < attempts; attempt++) {
             double angle = random.nextDouble() * Math.PI * 2;
-            double distance = Math.sqrt(random.nextDouble()) * spawnRadius;
-            double x = Math.cos(angle) * distance;
-            double z = Math.sin(angle) * distance;
+            double distance = Math.sqrt(random.nextDouble()) * radius;
+            double x = centerX + Math.cos(angle) * distance;
+            double z = centerZ + Math.sin(angle) * distance;
+            x = Math.max(minX, Math.min(maxX, x));
+            z = Math.max(minZ, Math.min(maxZ, z));
             int blockX = (int) Math.floor(x);
             int blockZ = (int) Math.floor(z);
 
