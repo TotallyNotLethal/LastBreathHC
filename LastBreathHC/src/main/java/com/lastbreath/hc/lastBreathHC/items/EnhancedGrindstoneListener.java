@@ -1,20 +1,27 @@
 package com.lastbreath.hc.lastBreathHC.items;
 
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.TileState;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.EnchantmentStorageMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.view.AnvilView;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,8 +35,7 @@ public class EnhancedGrindstoneListener implements Listener {
 
     @EventHandler
     public void onUse(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_AIR
-                && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
 
@@ -37,8 +43,8 @@ public class EnhancedGrindstoneListener implements Listener {
             return;
         }
 
-        ItemStack item = event.getItem();
-        if (!EnhancedGrindstone.isEnhancedGrindstone(item)) {
+        Block clicked = event.getClickedBlock();
+        if (!isEnhancedGrindstoneBlock(clicked)) {
             return;
         }
 
@@ -46,6 +52,37 @@ public class EnhancedGrindstoneListener implements Listener {
         Player player = event.getPlayer();
         activeUsers.add(player.getUniqueId());
         player.openAnvil(null, true);
+    }
+
+    @EventHandler
+    public void onPlace(BlockPlaceEvent event) {
+        ItemStack item = event.getItemInHand();
+        if (!EnhancedGrindstone.isEnhancedGrindstone(item)) {
+            return;
+        }
+
+        BlockState state = event.getBlockPlaced().getState();
+        if (!(state instanceof TileState tileState)) {
+            return;
+        }
+
+        PersistentDataContainer container = tileState.getPersistentDataContainer();
+        container.set(EnhancedGrindstone.KEY, PersistentDataType.BYTE, (byte) 1);
+        tileState.update();
+    }
+
+    @EventHandler
+    public void onBreak(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        if (!isEnhancedGrindstoneBlock(block)) {
+            return;
+        }
+
+        event.setDropItems(false);
+        block.getWorld().dropItemNaturally(
+                block.getLocation().add(0.5, 0.5, 0.5),
+                EnhancedGrindstone.create()
+        );
     }
 
     @EventHandler
@@ -95,5 +132,19 @@ public class EnhancedGrindstoneListener implements Listener {
         }
 
         return new HashMap<>(item.getEnchantments());
+    }
+
+    private boolean isEnhancedGrindstoneBlock(Block block) {
+        if (block == null || block.getType() != Material.GRINDSTONE) {
+            return false;
+        }
+
+        BlockState state = block.getState();
+        if (!(state instanceof TileState tileState)) {
+            return false;
+        }
+
+        return tileState.getPersistentDataContainer()
+                .has(EnhancedGrindstone.KEY, PersistentDataType.BYTE);
     }
 }
