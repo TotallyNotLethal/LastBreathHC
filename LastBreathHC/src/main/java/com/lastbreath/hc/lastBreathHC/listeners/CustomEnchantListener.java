@@ -61,6 +61,7 @@ public class CustomEnchantListener implements Listener {
     private final LastBreathHC plugin;
     private final Set<Location> processing = ConcurrentHashMap.newKeySet();
     private final Map<Material, ItemStack> smeltCache = new ConcurrentHashMap<>();
+    private final Set<Material> smeltMisses = ConcurrentHashMap.newKeySet();
 
     public CustomEnchantListener(LastBreathHC plugin) {
         this.plugin = plugin;
@@ -253,7 +254,10 @@ public class CustomEnchantListener implements Listener {
 
         if (smeltCache.containsKey(type)) {
             ItemStack cached = smeltCache.get(type);
-            return cached == null ? null : cached.clone();
+            return cached.clone();
+        }
+        if (smeltMisses.contains(type)) {
+            return null;
         }
 
         ItemStack result = null;
@@ -270,8 +274,12 @@ public class CustomEnchantListener implements Listener {
             }
         }
 
+        if (result == null) {
+            smeltMisses.add(type);
+            return null;
+        }
         smeltCache.put(type, result);
-        return result == null ? null : result.clone();
+        return result.clone();
     }
 
     private List<ItemStack> addProspectorBonus(List<ItemStack> drops, Material type) {
@@ -319,7 +327,7 @@ public class CustomEnchantListener implements Listener {
             return false;
         }
         List<ItemStack> drops = new ArrayList<>(block.getDrops(tool, player));
-        if (smelter && !isCoalOre(block.getType())) {
+        if (smelter && isOre(block.getType()) && !isCoalOre(block.getType())) {
             drops = smeltDrops(drops);
         }
         if (prospector && isOre(block.getType()) && Math.random() < PROSPECTOR_CHANCE) {
