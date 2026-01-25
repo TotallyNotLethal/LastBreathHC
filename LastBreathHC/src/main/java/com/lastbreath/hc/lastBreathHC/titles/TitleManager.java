@@ -338,9 +338,8 @@ public class TitleManager {
             if (instance == null) {
                 continue;
             }
-            if (instance.getModifier(modifier.uuid()) == null) {
-                instance.addModifier(modifier.asModifier());
-            }
+            removeExistingTitleModifier(instance, modifier.uuid());
+            instance.addModifier(modifier.asModifier());
         }
     }
 
@@ -350,11 +349,23 @@ public class TitleManager {
             if (instance == null) {
                 continue;
             }
-            for (UUID id : TITLE_MODIFIER_IDS) {
-                AttributeModifier existing = instance.getModifier(id);
-                if (existing != null) {
-                    instance.removeModifier(existing);
-                }
+            removeExistingTitleModifiers(instance);
+        }
+    }
+
+    private static void removeExistingTitleModifiers(AttributeInstance instance) {
+        for (AttributeModifier modifier : instance.getModifiers()) {
+            if (TITLE_MODIFIER_IDS.contains(modifier.getUniqueId())) {
+                instance.removeModifier(modifier);
+            }
+        }
+    }
+
+    private static void removeExistingTitleModifier(AttributeInstance instance, UUID modifierId) {
+        for (AttributeModifier existing : instance.getModifiers()) {
+            if (existing.getUniqueId().equals(modifierId)) {
+                instance.removeModifier(existing);
+                return;
             }
         }
     }
