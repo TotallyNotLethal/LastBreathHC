@@ -22,6 +22,7 @@ public class MobScalingListener implements Listener {
     private static final double HEART_TO_DAMAGE = 2.0;
     private static final double BLOOD_MOON_HEALTH_MULTIPLIER = 1.35;
     private static final double BLOOD_MOON_DAMAGE_MULTIPLIER = 1.25;
+    private static final double MAX_SCALED_HEALTH = 1024.0;
 
     private final BloodMoonManager bloodMoonManager;
 
@@ -68,7 +69,7 @@ public class MobScalingListener implements Listener {
         AttributeInstance maxHealth = entity.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealth != null) {
             double baseHealth = maxHealth.getBaseValue();
-            double newMaxHealth = Math.max(1.0, baseHealth * healthMultiplier);
+            double newMaxHealth = Math.max(1.0, Math.min(MAX_SCALED_HEALTH, baseHealth * healthMultiplier));
             maxHealth.setBaseValue(newMaxHealth);
             entity.setHealth(newMaxHealth);
         }
