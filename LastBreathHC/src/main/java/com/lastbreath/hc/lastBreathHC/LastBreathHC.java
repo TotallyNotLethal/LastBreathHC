@@ -502,20 +502,29 @@ public final class LastBreathHC extends JavaPlugin {
             double showerRadius = 50.0;
             int offsetAttempts = 3;
             int offsetSearchAttempts = 6;
-            for (int i = 1; i < showerCount; i++) {
-                Location offsetLocation = null;
-                for (int attempt = 0; attempt < offsetAttempts; attempt++) {
-                    offsetLocation = pickAsteroidLocationNear(world, location, showerRadius, offsetSearchAttempts);
-                    if (offsetLocation != null) {
-                        break;
+            new org.bukkit.scheduler.BukkitRunnable() {
+                private int spawned = 1;
+
+                @Override
+                public void run() {
+                    if (spawned >= showerCount) {
+                        cancel();
+                        return;
                     }
+                    Location offsetLocation = null;
+                    for (int attempt = 0; attempt < offsetAttempts; attempt++) {
+                        offsetLocation = pickAsteroidLocationNear(world, location, showerRadius, offsetSearchAttempts);
+                        if (offsetLocation != null) {
+                            break;
+                        }
+                    }
+                    if (offsetLocation != null) {
+                        int offsetTier = pickWeightedAsteroidTier();
+                        AsteroidManager.spawnAsteroid(world, offsetLocation, offsetTier);
+                    }
+                    spawned++;
                 }
-                if (offsetLocation == null) {
-                    continue;
-                }
-                int offsetTier = pickWeightedAsteroidTier();
-                AsteroidManager.spawnAsteroid(world, offsetLocation, offsetTier);
-            }
+            }.runTaskTimer(this, 1L, 1L);
         }
         return true;
     }
