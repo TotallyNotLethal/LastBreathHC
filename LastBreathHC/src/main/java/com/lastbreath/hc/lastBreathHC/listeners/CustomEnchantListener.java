@@ -146,6 +146,10 @@ public class CustomEnchantListener implements Listener {
         return type.name().endsWith("_ORE") || type == Material.ANCIENT_DEBRIS;
     }
 
+    private boolean isCoalOre(Material type) {
+        return type == Material.COAL_ORE || type == Material.DEEPSLATE_COAL_ORE;
+    }
+
     private boolean isLog(Material type) {
         return Tag.LOGS.isTagged(type);
     }
@@ -315,7 +319,7 @@ public class CustomEnchantListener implements Listener {
             return false;
         }
         List<ItemStack> drops = new ArrayList<>(block.getDrops(tool, player));
-        if (smelter) {
+        if (smelter && !isCoalOre(block.getType())) {
             drops = smeltDrops(drops);
         }
         if (prospector && isOre(block.getType()) && Math.random() < PROSPECTOR_CHANCE) {
