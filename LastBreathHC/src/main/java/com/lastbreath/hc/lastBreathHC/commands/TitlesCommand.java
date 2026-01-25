@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC.commands;
 
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
+import com.lastbreath.hc.lastBreathHC.gui.TitlesGUI;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.entity.Player;
@@ -11,6 +12,12 @@ import java.util.List;
 import java.util.Locale;
 
 public class TitlesCommand implements BasicCommand {
+
+    private final TitlesGUI titlesGUI;
+
+    public TitlesCommand(TitlesGUI titlesGUI) {
+        this.titlesGUI = titlesGUI;
+    }
 
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
@@ -44,7 +51,7 @@ public class TitlesCommand implements BasicCommand {
         }
 
         if (args.length == 0 || args[0].equalsIgnoreCase("list")) {
-            player.sendMessage("§6Unlocked titles: " + TitleManager.formatTitleList(player));
+            titlesGUI.open(player);
             return;
         }
 

@@ -245,6 +245,14 @@ public class TitleManager {
                 .toList();
     }
 
+    public static List<Title> getUnlockedTitles(Player player) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        initialize(stats);
+        return stats.unlockedTitles.stream()
+                .sorted(Comparator.comparing(Title::displayName))
+                .toList();
+    }
+
     public static void checkTimeBasedTitles(Player player) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.timeAlive = player.getStatistic(Statistic.PLAY_ONE_MINUTE);
