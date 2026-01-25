@@ -18,6 +18,7 @@ import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
+import com.lastbreath.hc.lastBreathHC.gui.TitlesGUI;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
@@ -82,6 +83,7 @@ public final class LastBreathHC extends JavaPlugin {
     private CustomPotionEffectRegistry customPotionEffectRegistry;
     private CustomPotionEffectManager customPotionEffectManager;
     private EffectsStatusGUI effectsStatusGUI;
+    private TitlesGUI titlesGUI;
 
     @Override
     public void onEnable() {
@@ -184,6 +186,7 @@ public final class LastBreathHC extends JavaPlugin {
         );
         customPotionEffectManager = new CustomPotionEffectManager(this, potionDefinitionRegistry, customPotionEffectRegistry);
         effectsStatusGUI = new EffectsStatusGUI(customPotionEffectManager, customPotionEffectRegistry);
+        titlesGUI = new TitlesGUI();
         getServer().getPluginManager().registerEvents(
                 customPotionEffectManager, this
         );
@@ -192,6 +195,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 effectsStatusGUI, this
+        );
+        getServer().getPluginManager().registerEvents(
+                titlesGUI, this
         );
 
         TokenRecipe.register();
@@ -207,7 +213,7 @@ public final class LastBreathHC extends JavaPlugin {
                 event -> {
                     event.registrar().register("asteroid", new AsteroidCommand());
                     event.registrar().register("bloodmoon", new BloodMoonCommand());
-                    event.registrar().register("titles", new TitlesCommand());
+                    event.registrar().register("titles", new TitlesCommand(titlesGUI));
                     event.registrar().register("bounty", new BountyCommand());
                     event.registrar().register("effects", new EffectsCommand(customPotionEffectManager, customPotionEffectRegistry, effectsStatusGUI));
                     event.registrar().register("rtp", new RtpCommand(this));
@@ -252,6 +258,7 @@ public final class LastBreathHC extends JavaPlugin {
         customPotionEffectRegistry = null;
         customPotionEffectManager = null;
         effectsStatusGUI = null;
+        titlesGUI = null;
         getLogger().info("LastBreathHC disabled.");
     }
 
