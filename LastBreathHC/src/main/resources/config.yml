@@ -19,6 +19,7 @@ asteroid:
     maxSeconds: 14400
     playerBiasChance: 0.5
     playerBiasRadius: 250.0
+    meteorShowerChance: 0.1
   countdownSeconds: 10
   loot:
     enchantPages:
