@@ -20,7 +20,7 @@ public class EnhancedGrindstone {
 
         meta.setDisplayName("§dEnhanced Grindstone");
         meta.setLore(List.of(
-                "§7Opens a portable anvil interface.",
+                "§7Place to open a custom anvil interface.",
                 "§7Imprint enchants onto books."
         ));
 
