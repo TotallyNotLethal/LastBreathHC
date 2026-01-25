@@ -83,50 +83,26 @@ public class CustomEnchantListener implements Listener {
             return;
         }
         Set<String> normalized = normalizeIds(enchantIds);
-        boolean autoPickup = normalized.contains(CustomEnchant.AUTO_PICKUP.getId());
-        boolean smelter = normalized.contains(CustomEnchant.SMELTER_TOUCH.getId());
-        boolean autoReplant = normalized.contains(CustomEnchant.AUTO_REPLANT.getId());
-        boolean fertileHarvest = normalized.contains(CustomEnchant.FERTILE_HARVEST.getId());
-        boolean prospector = normalized.contains(CustomEnchant.PROSPECTOR.getId());
         boolean veinMiner = normalized.contains(CustomEnchant.VEIN_MINER.getId());
         boolean treeFeller = normalized.contains(CustomEnchant.TREE_FELLER.getId());
         boolean excavator = normalized.contains(CustomEnchant.EXCAVATOR.getId());
         boolean directional = normalized.contains(CustomEnchant.DIRECTIONAL_MINING.getId());
 
-        boolean shouldHandleDrops = autoPickup || smelter || autoReplant || fertileHarvest || prospector;
-        if (shouldHandleDrops) {
+        if (handleCustomDrops(player, tool, block, normalized)) {
             event.setDropItems(false);
-            List<ItemStack> drops = new ArrayList<>(block.getDrops(tool, player));
-            if (smelter) {
-                drops = smeltDrops(drops);
-            }
-            if (prospector && isOre(block.getType()) && Math.random() < PROSPECTOR_CHANCE) {
-                drops = addProspectorBonus(drops, block.getType());
-            }
-            if (fertileHarvest && isMatureCrop(block)) {
-                Material extraCrop = CROP_DROPS.get(block.getType());
-                if (extraCrop != null) {
-                    drops.add(new ItemStack(extraCrop, 1));
-                }
-            }
-            if (autoReplant && isMatureCrop(block)) {
-                drops = consumeSeedForReplant(drops, block.getType());
-                scheduleReplant(block, block.getBlockData());
-            }
-            giveDrops(player, block.getLocation(), drops, autoPickup);
         }
 
         if (veinMiner && isPickaxe(tool.getType()) && isOre(block.getType())) {
-            breakExtraBlocks(player, tool, getVeinBlocks(block));
+            breakExtraBlocks(player, tool, getVeinBlocks(block), normalized);
         }
         if (treeFeller && isAxe(tool.getType()) && isLog(block.getType())) {
-            breakExtraBlocks(player, tool, getTreeBlocks(block));
+            breakExtraBlocks(player, tool, getTreeBlocks(block), normalized);
         }
         if (excavator && isShovel(tool.getType()) && isShovelMineable(block.getType())) {
-            breakExtraBlocks(player, tool, getExcavatorBlocks(block));
+            breakExtraBlocks(player, tool, getExcavatorBlocks(block), normalized);
         }
         if (directional && isPickaxe(tool.getType())) {
-            breakExtraBlocks(player, tool, getDirectionalBlocks(block, player));
+            breakExtraBlocks(player, tool, getDirectionalBlocks(block, player), normalized);
         }
     }
 
@@ -307,7 +283,7 @@ public class CustomEnchantListener implements Listener {
         return updated;
     }
 
-    private void breakExtraBlocks(Player player, ItemStack tool, Collection<Block> blocks) {
+    private void breakExtraBlocks(Player player, ItemStack tool, Collection<Block> blocks, Set<String> normalizedEnchantIds) {
         for (Block target : blocks) {
             if (target.getType() == Material.AIR) {
                 continue;
@@ -317,11 +293,46 @@ public class CustomEnchantListener implements Listener {
                 continue;
             }
             try {
-                target.breakNaturally(tool);
+                if (handleCustomDrops(player, tool, target, normalizedEnchantIds)) {
+                    target.setType(Material.AIR, false);
+                } else {
+                    target.breakNaturally(tool);
+                }
             } finally {
                 processing.remove(location);
             }
         }
+    }
+
+    private boolean handleCustomDrops(Player player, ItemStack tool, Block block, Set<String> normalizedEnchantIds) {
+        boolean autoPickup = normalizedEnchantIds.contains(CustomEnchant.AUTO_PICKUP.getId());
+        boolean smelter = normalizedEnchantIds.contains(CustomEnchant.SMELTER_TOUCH.getId());
+        boolean autoReplant = normalizedEnchantIds.contains(CustomEnchant.AUTO_REPLANT.getId());
+        boolean fertileHarvest = normalizedEnchantIds.contains(CustomEnchant.FERTILE_HARVEST.getId());
+        boolean prospector = normalizedEnchantIds.contains(CustomEnchant.PROSPECTOR.getId());
+        boolean shouldHandleDrops = autoPickup || smelter || autoReplant || fertileHarvest || prospector;
+        if (!shouldHandleDrops) {
+            return false;
+        }
+        List<ItemStack> drops = new ArrayList<>(block.getDrops(tool, player));
+        if (smelter) {
+            drops = smeltDrops(drops);
+        }
+        if (prospector && isOre(block.getType()) && Math.random() < PROSPECTOR_CHANCE) {
+            drops = addProspectorBonus(drops, block.getType());
+        }
+        if (fertileHarvest && isMatureCrop(block)) {
+            Material extraCrop = CROP_DROPS.get(block.getType());
+            if (extraCrop != null) {
+                drops.add(new ItemStack(extraCrop, 1));
+            }
+        }
+        if (autoReplant && isMatureCrop(block)) {
+            drops = consumeSeedForReplant(drops, block.getType());
+            scheduleReplant(block, block.getBlockData());
+        }
+        giveDrops(player, block.getLocation(), drops, autoPickup);
+        return true;
     }
 
     private Collection<Block> getVeinBlocks(Block origin) {
