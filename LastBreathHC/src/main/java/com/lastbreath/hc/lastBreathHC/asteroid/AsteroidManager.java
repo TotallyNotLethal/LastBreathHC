@@ -23,7 +23,9 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -43,6 +45,8 @@ public class AsteroidManager {
     private static File dataFile;
     private static JavaPlugin plugin;
     private static BukkitTask mobLeashTask;
+    private static BukkitTask asteroidSpawnTask;
+    private static final Deque<AsteroidSpawnSequence> ASTEROID_SPAWN_QUEUE = new ArrayDeque<>();
 
     public static class AsteroidEntry {
         private final Inventory inventory;
@@ -216,60 +220,103 @@ public class AsteroidManager {
     public static void spawnAsteroid(World world, Location loc, int tier) {
         Location center = loc.getBlock().getLocation();
         int resolvedTier = Math.max(1, Math.min(3, tier));
+        enqueueAsteroidSpawn(new AsteroidSpawnSequence(world, center, resolvedTier));
+    }
 
-        // 🔊 Explosion sound (no damage)
-        world.playSound(
-                center,
-                Sound.ENTITY_GENERIC_EXPLODE,
-                5.0f,
-                0.8f
-        );
+    private static void enqueueAsteroidSpawn(AsteroidSpawnSequence sequence) {
+        ASTEROID_SPAWN_QUEUE.add(sequence);
+        startAsteroidSpawnTask();
+    }
 
-        // 💥 Explosion particles only (no block damage)
-        world.spawnParticle(
-                Particle.EXPLOSION,
-                center,
-                1
-        );
+    private static void startAsteroidSpawnTask() {
+        if (plugin == null || asteroidSpawnTask != null) {
+            return;
+        }
+        asteroidSpawnTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                AsteroidSpawnSequence sequence = ASTEROID_SPAWN_QUEUE.peek();
+                if (sequence == null) {
+                    cancel();
+                    asteroidSpawnTask = null;
+                    return;
+                }
+                boolean complete = sequence.runNextStep();
+                if (complete) {
+                    ASTEROID_SPAWN_QUEUE.poll();
+                }
+            }
+        }.runTaskTimer(plugin, 1L, 1L);
+    }
 
-        // 🔥 Fire + scorched ground
-        for (int x = -1; x <= 1; x++) {
-            for (int z = -1; z <= 1; z++) {
+    private static final class AsteroidSpawnSequence {
+        private final World world;
+        private final Location center;
+        private final int tier;
+        private int step;
 
-                if (Math.random() < 0.6) { // random scatter
-                    Location ground = center.clone().add(x, 0, z);
+        private AsteroidSpawnSequence(World world, Location center, int tier) {
+            this.world = world;
+            this.center = center;
+            this.tier = tier;
+            this.step = 0;
+        }
 
-                    // Only replace solid ground
-                    if (ground.getBlock().getType().isSolid()) {
-                        ground.getBlock().setType(Material.NETHERRACK);
+        private boolean runNextStep() {
+            if (world == null) {
+                return true;
+            }
+            switch (step) {
+                case 0 -> playImpactEffects();
+                case 1 -> placeCoreAndScorch();
+                case 2 -> {
+                    spawnTierEffects(world, center.clone().add(0, 1, 0), tier);
+                    return true;
+                }
+                default -> {
+                    return true;
+                }
+            }
+            step++;
+            return false;
+        }
 
-                        Location fire = ground.clone().add(0, 1, 0);
-                        if (fire.getBlock().getType() == Material.AIR) {
-                            fire.getBlock().setType(Material.FIRE);
+        private void playImpactEffects() {
+            world.playSound(center, Sound.ENTITY_GENERIC_EXPLODE, 5.0f, 0.8f);
+            world.spawnParticle(Particle.EXPLOSION, center, 1);
+        }
+
+        private void placeCoreAndScorch() {
+            for (int x = -1; x <= 1; x++) {
+                for (int z = -1; z <= 1; z++) {
+                    if (ThreadLocalRandom.current().nextDouble() < 0.6) {
+                        Location ground = center.clone().add(x, 0, z);
+                        if (ground.getBlock().getType().isSolid()) {
+                            ground.getBlock().setType(Material.NETHERRACK);
+                            Location fire = ground.clone().add(0, 1, 0);
+                            if (fire.getBlock().getType() == Material.AIR) {
+                                fire.getBlock().setType(Material.FIRE);
+                            }
                         }
                     }
                 }
             }
+
+            Location core = center.clone().add(0, 1, 0);
+            core.getBlock().setType(Material.ANCIENT_DEBRIS);
+            AsteroidManager.registerAsteroid(core, tier);
+
+            Bukkit.broadcast(
+                    Component.text("☄ An asteroid has crashed at ")
+                            .color(NamedTextColor.GOLD)
+                            .append(Component.text(
+                                    core.getBlockX() + ", " +
+                                            core.getBlockY() + ", " +
+                                            core.getBlockZ(),
+                                    NamedTextColor.YELLOW
+                            ))
+            );
         }
-
-        // ☄ Place asteroid core
-        Location core = center.clone().add(0, 1, 0);
-        core.getBlock().setType(Material.ANCIENT_DEBRIS);
-
-        AsteroidManager.registerAsteroid(core, resolvedTier);
-        spawnTierEffects(world, core, resolvedTier);
-
-        // 📢 Broadcast
-        Bukkit.broadcast(
-                Component.text("☄ An asteroid has crashed at ")
-                        .color(NamedTextColor.GOLD)
-                        .append(Component.text(
-                                core.getBlockX() + ", " +
-                                        core.getBlockY() + ", " +
-                                        core.getBlockZ(),
-                                NamedTextColor.YELLOW
-                        ))
-        );
     }
 
     private static int determineTierByDistance(World world, Location center) {
@@ -343,27 +390,7 @@ public class AsteroidManager {
 
         List<PotionEffect> tierPotionEffects = resolveTierPotionEffects(basePath);
         if (!resolvedTypes.isEmpty() && mobCount > 0) {
-            int maxIndex = resolvedTypes.size();
-            AsteroidEntry entry = ASTEROIDS.get(blockLocation(center));
-            String asteroidKey = asteroidKey(center);
-            String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey;
-            for (int i = 0; i < mobCount; i++) {
-                EntityType mobType = resolvedTypes.get(ThreadLocalRandom.current().nextInt(maxIndex));
-                Location spawnLocation = findSpawnLocation(center);
-                if (world.spawnEntity(spawnLocation, mobType) instanceof LivingEntity livingEntity) {
-                    livingEntity.setRemoveWhenFarAway(false);
-                    livingEntity.addScoreboardTag(ASTEROID_MOB_TAG);
-                    livingEntity.addScoreboardTag(keyTag);
-                    applyAsteroidScale(livingEntity);
-                    livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
-                    livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 72000, 0, true, true, true));
-                    applyArmorProjectileProtection(livingEntity);
-                    applyTierPotionEffects(livingEntity, tierPotionEffects);
-                    if (entry != null) {
-                        entry.mobs().add(livingEntity.getUniqueId());
-                    }
-                }
-            }
+            scheduleMobSpawns(world, center, mobCount, resolvedTypes, tierPotionEffects);
         }
 
         boolean aoeEnabled = plugin.getConfig().getBoolean(basePath + ".aoe.enabled", false);
@@ -461,6 +488,48 @@ public class AsteroidManager {
                 livingEntity.addPotionEffect(effect);
             }
         }
+    }
+
+    private static void scheduleMobSpawns(World world, Location center, int mobCount, List<EntityType> resolvedTypes,
+                                          List<PotionEffect> tierPotionEffects) {
+        if (plugin == null) {
+            return;
+        }
+        int maxIndex = resolvedTypes.size();
+        AsteroidEntry entry = ASTEROIDS.get(blockLocation(center));
+        String asteroidKey = asteroidKey(center);
+        String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey;
+        int batchSize = 3;
+        new BukkitRunnable() {
+            private int remaining = mobCount;
+
+            @Override
+            public void run() {
+                if (remaining <= 0) {
+                    cancel();
+                    return;
+                }
+                int spawnNow = Math.min(batchSize, remaining);
+                for (int i = 0; i < spawnNow; i++) {
+                    EntityType mobType = resolvedTypes.get(ThreadLocalRandom.current().nextInt(maxIndex));
+                    Location spawnLocation = findSpawnLocation(center);
+                    if (world.spawnEntity(spawnLocation, mobType) instanceof LivingEntity livingEntity) {
+                        livingEntity.setRemoveWhenFarAway(false);
+                        livingEntity.addScoreboardTag(ASTEROID_MOB_TAG);
+                        livingEntity.addScoreboardTag(keyTag);
+                        applyAsteroidScale(livingEntity);
+                        livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
+                        livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 72000, 0, true, true, true));
+                        applyArmorProjectileProtection(livingEntity);
+                        applyTierPotionEffects(livingEntity, tierPotionEffects);
+                        if (entry != null) {
+                            entry.mobs().add(livingEntity.getUniqueId());
+                        }
+                    }
+                }
+                remaining -= spawnNow;
+            }
+        }.runTaskTimer(plugin, 1L, 1L);
     }
 
     private static void applyArmorProjectileProtection(LivingEntity livingEntity) {
