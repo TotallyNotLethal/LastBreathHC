@@ -33,7 +33,6 @@ public class AsteroidListener implements Listener {
     private static final Set<Material> SOFT_BLOCKS = EnumSet.of(
             Material.TALL_GRASS,
             Material.SHORT_GRASS,
-            Material.GRASS,
             Material.FERN,
             Material.LARGE_FERN,
             Material.DANDELION,
@@ -55,7 +54,6 @@ public class AsteroidListener implements Listener {
             Material.WITHER_ROSE,
             Material.TORCHFLOWER,
             Material.PINK_PETALS,
-            Material.CHERRY_PETALS,
             Material.SUGAR_CANE,
             Material.KELP,
             Material.SEAGRASS,

@@ -23,7 +23,6 @@ public class DiscordCommand implements BasicCommand {
                 Component.text("Join our Discord: ", NamedTextColor.AQUA)
                         .append(Component.text(INVITE_URL, NamedTextColor.BLUE)
                                 .clickEvent(ClickEvent.openUrl(INVITE_URL))
-                                .underlined(true))
-        );
+        ));
     }
 }
