@@ -10,6 +10,7 @@ import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.commands.AsteroidCommand;
 import com.lastbreath.hc.lastBreathHC.commands.BloodMoonCommand;
 import com.lastbreath.hc.lastBreathHC.commands.BountyCommand;
+import com.lastbreath.hc.lastBreathHC.commands.DiscordCommand;
 import com.lastbreath.hc.lastBreathHC.commands.EffectsCommand;
 import com.lastbreath.hc.lastBreathHC.commands.RtpCommand;
 import com.lastbreath.hc.lastBreathHC.commands.RtpUsageListener;
@@ -217,6 +218,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("bounty", new BountyCommand());
                     event.registrar().register("effects", new EffectsCommand(customPotionEffectManager, customPotionEffectRegistry, effectsStatusGUI));
                     event.registrar().register("rtp", new RtpCommand(this));
+                    event.registrar().register("discord", new DiscordCommand());
                 }
         );
     }
