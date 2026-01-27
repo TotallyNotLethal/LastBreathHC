@@ -198,10 +198,14 @@ public class AsteroidListener implements Listener {
             return;
         }
         LivingEntity target = event.getTarget();
-        if (target == null) {
-            return;
+        if (isAsteroidMob(attacker)) {
+            if (target instanceof Player) {
+                attacker.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+            } else {
+                attacker.removeScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+            }
         }
-        if (isAsteroidMob(attacker) && isAsteroidMob(target)) {
+        if (target != null && isAsteroidMob(attacker) && isAsteroidMob(target)) {
             event.setCancelled(true);
         }
     }
