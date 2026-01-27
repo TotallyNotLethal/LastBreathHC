@@ -197,8 +197,8 @@ public class HeadListener implements Listener {
     public void onBreak(BlockBreakEvent e) {
         if (!(e.getBlock().getState() instanceof Skull skull)) return;
 
-        // OPs can always break
-        if (e.getPlayer().isOp()) return;
+        // Admins can always break
+        if (isAdmin(e.getPlayer())) return;
 
         var pdc = skull.getPersistentDataContainer();
         if (!pdc.has(HeadManager.getKey(), PersistentDataType.STRING)) return;
@@ -291,5 +291,9 @@ public class HeadListener implements Listener {
         }
 
         return true;
+    }
+
+    private boolean isAdmin(Player player) {
+        return player.isOp() || player.hasPermission("lastbreathhc.admin");
     }
 }
