@@ -25,6 +25,8 @@ import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.command.BlockCommandSender;
@@ -434,10 +436,21 @@ public final class LastBreathHC extends JavaPlugin {
 
             int groundY = -1;
             for (int y = scanY; y >= minHeight; y--) {
-                if (world.getBlockAt(blockX, y, blockZ).getType().isSolid()) {
-                    groundY = y;
-                    break;
+                Material groundType = world.getBlockAt(blockX, y, blockZ).getType();
+                if (!groundType.isSolid()) {
+                    continue;
                 }
+                if (isLogOrLeaf(groundType)) {
+                    continue;
+                }
+                Material aboveType = y + 1 > maxHeight
+                        ? Material.AIR
+                        : world.getBlockAt(blockX, y + 1, blockZ).getType();
+                if (isLogOrLeaf(aboveType)) {
+                    continue;
+                }
+                groundY = y;
+                break;
             }
 
             if (groundY < minHeight || groundY >= maxHeight) {
@@ -453,6 +466,10 @@ public final class LastBreathHC extends JavaPlugin {
         }
 
         return null;
+    }
+
+    private boolean isLogOrLeaf(Material material) {
+        return Tag.LOGS.isTagged(material) || Tag.LEAVES.isTagged(material);
     }
 
     private Location pickAsteroidLocationNear(World world, Location origin, double radius, int attempts) {
