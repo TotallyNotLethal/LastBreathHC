@@ -42,6 +42,7 @@ public class AsteroidManager {
     public static final String ASTEROID_AGGRESSIVE_TAG = "asteroid_aggressive";
     public static final String ASTEROID_KEY_TAG_PREFIX = "asteroid_key:";
     public static final String ASTEROID_SCALE_TAG_PREFIX = "asteroid_scale:";
+    public static final String ASTEROID_TIER_TAG_PREFIX = "asteroid_tier:";
     private static final Set<String> PERSISTED_ASTEROIDS = new HashSet<>();
     private static File dataFile;
     private static JavaPlugin plugin;
@@ -423,7 +424,7 @@ public class AsteroidManager {
 
         List<PotionEffect> tierPotionEffects = resolveTierPotionEffects(basePath);
         if (!resolvedTypes.isEmpty() && mobCount > 0) {
-            scheduleMobSpawns(world, center, mobCount, resolvedTypes, tierPotionEffects);
+            scheduleMobSpawns(world, center, mobCount, resolvedTypes, tierPotionEffects, tier);
         }
 
         boolean aoeEnabled = plugin.getConfig().getBoolean(basePath + ".aoe.enabled", false);
@@ -524,7 +525,7 @@ public class AsteroidManager {
     }
 
     private static void scheduleMobSpawns(World world, Location center, int mobCount, List<EntityType> resolvedTypes,
-                                          List<PotionEffect> tierPotionEffects) {
+                                          List<PotionEffect> tierPotionEffects, int tier) {
         if (plugin == null) {
             return;
         }
@@ -532,6 +533,7 @@ public class AsteroidManager {
         AsteroidEntry entry = ASTEROIDS.get(blockLocation(center));
         String asteroidKey = asteroidKey(center);
         String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey;
+        String tierTag = ASTEROID_TIER_TAG_PREFIX + tier;
         int batchSize = 3;
         new BukkitRunnable() {
             private int remaining = mobCount;
@@ -550,6 +552,7 @@ public class AsteroidManager {
                         livingEntity.setRemoveWhenFarAway(false);
                         livingEntity.addScoreboardTag(ASTEROID_MOB_TAG);
                         livingEntity.addScoreboardTag(keyTag);
+                        livingEntity.addScoreboardTag(tierTag);
                         applyAsteroidScale(livingEntity);
                         livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
                         livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 72000, 0, true, true, true));

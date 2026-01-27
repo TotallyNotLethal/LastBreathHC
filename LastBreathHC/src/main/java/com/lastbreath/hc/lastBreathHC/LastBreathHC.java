@@ -1,5 +1,6 @@
 package com.lastbreath.hc.lastBreathHC;
 
+import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidBossMechanics;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidListener;
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonListener;
@@ -112,6 +113,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new AsteroidListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new AsteroidBossMechanics(this), this
         );
         getServer().getPluginManager().registerEvents(
                 new TitleListener(), this
