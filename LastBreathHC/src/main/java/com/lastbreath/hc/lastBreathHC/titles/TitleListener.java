@@ -10,7 +10,7 @@ public class TitleListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        PlayerStats stats = StatsManager.get(event.getPlayer().getUniqueId());
+        PlayerStats stats = StatsManager.load(event.getPlayer().getUniqueId());
         TitleManager.initialize(stats);
         TitleManager.checkTimeBasedTitles(event.getPlayer());
         TitleManager.checkProgressTitles(event.getPlayer());
