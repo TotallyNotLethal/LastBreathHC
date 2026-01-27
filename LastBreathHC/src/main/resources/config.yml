@@ -22,8 +22,78 @@ asteroid:
     meteorShowerChance: 0.1
   countdownSeconds: 10
   loot:
+    tier1:
+      ironIngot:
+        min: 6
+        max: 19
+      goldIngot:
+        min: 4
+        max: 9
+      emerald:
+        min: 2
+        max: 7
+      diamond:
+        min: 1
+        max: 4
+      netheriteScrap:
+        min: 1
+        max: 1
+    tier2:
+      ironIngot:
+        min: 10
+        max: 23
+      goldIngot:
+        min: 6
+        max: 11
+      emerald:
+        min: 4
+        max: 9
+      diamond:
+        min: 2
+        max: 5
+      netheriteScrap:
+        min: 1
+        max: 2
+      customItems:
+        rebirthStoneChance: 5
+        totemOfLifeChance: 5
+        gracestoneChance: 5
+        enhancedGrindstoneChance: 5
+    tier3:
+      ironIngot:
+        min: 14
+        max: 27
+      goldIngot:
+        min: 8
+        max: 13
+      emerald:
+        min: 6
+        max: 11
+      diamond:
+        min: 3
+        max: 6
+      netheriteScrap:
+        min: 2
+        max: 3
+      customItems:
+        rebirthStoneChance: 10
+        totemOfLifeChance: 10
+        gracestoneChance: 10
+        enhancedGrindstoneChance: 10
     enchantPages:
-      chance: 0.5
+      tier1Chance: 25
+      tier2Chance: 50
+      tier3Chance: 75
+      extraRolls:
+        tier1:
+          - 5
+        tier2:
+          - 15
+          - 5
+        tier3:
+          - 35
+          - 20
+          - 10
       ids:
         - "lb:quarry"
         - "lb:vein_miner"
