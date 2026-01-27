@@ -148,9 +148,11 @@ asteroid:
           - WITHER_SKELETON
           - VEX
           - PIGLIN_BRUTE
-          - RAVAGER
         mobType: WITHER_SKELETON
         mobCount: 8
+        bossTypes:
+          - RAVAGER
+          - WARDEN
         potionEffects:
           - INCREASE_DAMAGE:200:0
         aoe:

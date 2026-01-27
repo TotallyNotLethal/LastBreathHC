@@ -422,7 +422,20 @@ public class AsteroidManager {
                 .filter(mobType -> mobType != null)
                 .toList();
 
+        List<EntityType> bossTypes = List.of();
+        if (tier == 3) {
+            bossTypes = resolveBossTypes(basePath + ".bossTypes");
+            if (!bossTypes.isEmpty()) {
+                resolvedTypes = resolvedTypes.stream()
+                        .filter(mobType -> !bossTypes.contains(mobType))
+                        .toList();
+            }
+        }
+
         List<PotionEffect> tierPotionEffects = resolveTierPotionEffects(basePath);
+        if (!bossTypes.isEmpty()) {
+            spawnTierBoss(world, center, bossTypes, tierPotionEffects, tier);
+        }
         if (!resolvedTypes.isEmpty() && mobCount > 0) {
             scheduleMobSpawns(world, center, mobCount, resolvedTypes, tierPotionEffects, tier);
         }
@@ -513,6 +526,31 @@ public class AsteroidManager {
         return effects;
     }
 
+    private static List<EntityType> resolveBossTypes(String configPath) {
+        if (plugin == null) {
+            return List.of();
+        }
+        List<String> mobTypes = plugin.getConfig().getStringList(configPath);
+        if (mobTypes == null || mobTypes.isEmpty()) {
+            return List.of();
+        }
+        return mobTypes.stream()
+                .filter(mobTypeName -> mobTypeName != null && !mobTypeName.isBlank() && !mobTypeName.equalsIgnoreCase("NONE"))
+                .map(mobTypeName -> {
+                    EntityType mobType = EntityType.fromName(mobTypeName.toLowerCase());
+                    if (mobType == null) {
+                        try {
+                            mobType = EntityType.valueOf(mobTypeName.toUpperCase());
+                        } catch (IllegalArgumentException ignored) {
+                            return null;
+                        }
+                    }
+                    return mobType != null && mobType.isAlive() ? mobType : null;
+                })
+                .filter(mobType -> mobType != null)
+                .toList();
+    }
+
     private static void applyTierPotionEffects(LivingEntity livingEntity, List<PotionEffect> effects) {
         if (effects == null || effects.isEmpty()) {
             return;
@@ -524,6 +562,32 @@ public class AsteroidManager {
         }
     }
 
+    private static void spawnTierBoss(World world, Location center, List<EntityType> bossTypes,
+                                      List<PotionEffect> tierPotionEffects, int tier) {
+        if (bossTypes == null || bossTypes.isEmpty()) {
+            return;
+        }
+        EntityType bossType = bossTypes.get(ThreadLocalRandom.current().nextInt(bossTypes.size()));
+        Location spawnLocation = findSpawnLocation(center);
+        if (!(world.spawnEntity(spawnLocation, bossType) instanceof LivingEntity livingEntity)) {
+            return;
+        }
+        livingEntity.setRemoveWhenFarAway(false);
+        String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey(center);
+        String tierTag = ASTEROID_TIER_TAG_PREFIX + tier;
+        livingEntity.addScoreboardTag(ASTEROID_MOB_TAG);
+        livingEntity.addScoreboardTag(keyTag);
+        livingEntity.addScoreboardTag(tierTag);
+        applyAsteroidScale(livingEntity);
+        livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
+        livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 72000, 0, true, true, true));
+        applyArmorProjectileProtection(livingEntity);
+        applyTierPotionEffects(livingEntity, tierPotionEffects);
+        AsteroidEntry entry = ASTEROIDS.get(blockLocation(center));
+        if (entry != null) {
+            entry.mobs().add(livingEntity.getUniqueId());
+        }
+    }
     private static void scheduleMobSpawns(World world, Location center, int mobCount, List<EntityType> resolvedTypes,
                                           List<PotionEffect> tierPotionEffects, int tier) {
         if (plugin == null) {
