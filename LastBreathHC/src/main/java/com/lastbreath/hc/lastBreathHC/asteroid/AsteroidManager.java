@@ -110,6 +110,7 @@ public class AsteroidManager {
             PERSISTED_ASTEROIDS.remove(toKey(blockLoc));
         }
         saveAsteroids();
+        removeAsteroidMobs(blockLoc, entry);
         blockLoc.getBlock().setType(Material.AIR);
     }
 
@@ -148,6 +149,7 @@ public class AsteroidManager {
             if (location == null) {
                 continue;
             }
+            removeTaggedMobsForKey(location.getWorld(), ASTEROID_KEY_TAG_PREFIX + asteroidKey(location));
             location.getBlock().setType(Material.AIR);
         }
 
@@ -175,6 +177,36 @@ public class AsteroidManager {
 
     private static Location blockLocation(Location loc) {
         return loc.getBlock().getLocation();
+    }
+
+    private static void removeAsteroidMobs(Location blockLoc, AsteroidEntry entry) {
+        World world = blockLoc.getWorld();
+        if (world == null) {
+            return;
+        }
+        if (entry != null) {
+            entry.mobs().removeIf(mobId -> {
+                org.bukkit.entity.Entity entity = world.getEntity(mobId);
+                if (!(entity instanceof LivingEntity mob)) {
+                    return true;
+                }
+                mob.remove();
+                return true;
+            });
+        }
+        removeTaggedMobsForKey(world, ASTEROID_KEY_TAG_PREFIX + asteroidKey(blockLoc));
+    }
+
+    private static void removeTaggedMobsForKey(World world, String keyTag) {
+        if (world == null || keyTag == null || keyTag.isBlank()) {
+            return;
+        }
+        for (LivingEntity mob : world.getEntitiesByClass(LivingEntity.class)) {
+            Set<String> tags = mob.getScoreboardTags();
+            if (tags.contains(ASTEROID_MOB_TAG) && tags.contains(keyTag)) {
+                mob.remove();
+            }
+        }
     }
 
     private static String toKey(Location loc) {
