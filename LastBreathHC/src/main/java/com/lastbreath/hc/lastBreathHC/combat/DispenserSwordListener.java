@@ -79,7 +79,7 @@ public class DispenserSwordListener implements Listener {
         markDispenserSwordHit(target);
 
         // DAMAGE SWORD
-        damageSword(dispenser);
+        damageSword(dispenser, item);
     }
 
     @EventHandler
@@ -120,8 +120,13 @@ public class DispenserSwordListener implements Listener {
         };
     }
 
-    private void damageSword(Dispenser dispenser) {
+    private void damageSword(Dispenser dispenser, ItemStack dispensed) {
         Inventory inv = dispenser.getInventory();
+
+        Optional<Integer> slot = findSlot(inv, dispensed);
+        if (slot.isPresent() && applyDamage(inv, slot.get())) {
+            return;
+        }
 
         for (int i = 0; i < inv.getSize(); i++) {
             ItemStack stack = inv.getItem(i);
@@ -129,7 +134,7 @@ public class DispenserSwordListener implements Listener {
             if (stack == null) continue;
             if (!isSword(stack.getType())) continue;
 
-            if (!(stack.getItemMeta() instanceof Damageable dmg)) return;
+            if (!(stack.getItemMeta() instanceof Damageable dmg)) continue;
 
             int newDamage = dmg.getDamage() + 1;
 
@@ -144,11 +149,28 @@ public class DispenserSwordListener implements Listener {
         }
     }
 
+    private boolean applyDamage(Inventory inv, int slot) {
+        ItemStack stack = inv.getItem(slot);
+        if (stack == null) return false;
+        if (!isSword(stack.getType())) return false;
+        if (!(stack.getItemMeta() instanceof Damageable dmg)) return false;
+
+        int newDamage = dmg.getDamage() + 1;
+
+        if (newDamage >= stack.getType().getMaxDurability()) {
+            inv.setItem(slot, null); // break sword
+        } else {
+            dmg.setDamage(newDamage);
+            stack.setItemMeta(dmg);
+            inv.setItem(slot, stack);
+        }
+        return true;
+    }
 
     private Optional<Integer> findSlot(Inventory inv, ItemStack match) {
         for (int i = 0; i < inv.getSize(); i++) {
             ItemStack item = inv.getItem(i);
-            if (item != null && item.getType() == match.getType()) {
+            if (item != null && item.isSimilar(match)) {
                 return Optional.of(i);
             }
         }
