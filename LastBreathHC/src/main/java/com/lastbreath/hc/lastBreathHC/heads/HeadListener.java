@@ -156,6 +156,10 @@ public class HeadListener implements Listener {
                 }
 
                 if (!HeadManager.has(uuid)) {
+                    if (isAdmin(e.getPlayer())) {
+                        cleanupGlitchedHead(e.getPlayer(), skull, uuid);
+                        return;
+                    }
                     e.getPlayer().sendMessage("§cThis soul has already been claimed.");
                     return;
                 }
@@ -183,6 +187,10 @@ public class HeadListener implements Listener {
 
         Inventory inv = HeadManager.get(uuid);
         if (inv == null) {
+            if (isAdmin(e.getPlayer())) {
+                cleanupGlitchedHead(e.getPlayer(), skull, uuid);
+                return;
+            }
             e.getPlayer().sendMessage("§cThis soul has already been claimed.");
             return;
         }
@@ -295,5 +303,12 @@ public class HeadListener implements Listener {
 
     private boolean isAdmin(Player player) {
         return player.isOp() || player.hasPermission("lastbreathhc.admin");
+    }
+
+    private void cleanupGlitchedHead(Player player, Skull skull, UUID uuid) {
+        var pdc = skull.getPersistentDataContainer();
+        pdc.remove(HeadManager.getKey());
+        skull.update();
+        player.sendMessage("§eCleared soul data for " + uuid + ". You can now break this head.");
     }
 }
