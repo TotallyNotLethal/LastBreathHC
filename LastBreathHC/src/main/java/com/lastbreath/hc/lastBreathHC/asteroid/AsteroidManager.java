@@ -39,6 +39,7 @@ public class AsteroidManager {
 
     public static final Map<Location, AsteroidEntry> ASTEROIDS = new HashMap<>();
     public static final String ASTEROID_MOB_TAG = "asteroid_mob";
+    public static final String ASTEROID_AGGRESSIVE_TAG = "asteroid_aggressive";
     public static final String ASTEROID_KEY_TAG_PREFIX = "asteroid_key:";
     public static final String ASTEROID_SCALE_TAG_PREFIX = "asteroid_scale:";
     private static final Set<String> PERSISTED_ASTEROIDS = new HashSet<>();
@@ -648,7 +649,10 @@ public class AsteroidManager {
                         Location mobLoc = mob.getLocation();
                         if (Math.abs(mobLoc.getBlockX() - center.getBlockX()) > leashRadius
                                 || Math.abs(mobLoc.getBlockZ() - center.getBlockZ()) > leashRadius) {
-                            mob.teleport(center);
+                            if (!mob.getScoreboardTags().contains(ASTEROID_AGGRESSIVE_TAG)) {
+                                mob.teleport(center);
+                                applyReturnRegeneration(mob);
+                            }
                         }
                         return false;
                     });
@@ -662,5 +666,16 @@ public class AsteroidManager {
             return 16;
         }
         return plugin.getConfig().getInt("asteroid.mobLeashRadius", 16);
+    }
+
+    private static void applyReturnRegeneration(LivingEntity mob) {
+        if (mob.isDead()) {
+            return;
+        }
+        AttributeInstance maxHealthAttribute = mob.getAttribute(Attribute.MAX_HEALTH);
+        double maxHealth = maxHealthAttribute != null ? maxHealthAttribute.getValue() : mob.getMaxHealth();
+        double healAmount = Math.max(2.0, maxHealth * 0.05);
+        mob.setHealth(Math.min(maxHealth, mob.getHealth() + healAmount));
+        mob.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 60, 0, true, true, true));
     }
 }
