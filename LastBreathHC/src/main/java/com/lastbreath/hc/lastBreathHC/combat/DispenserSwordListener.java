@@ -43,6 +43,7 @@ public class DispenserSwordListener implements Listener {
         if (!isSword(item.getType())) return;
 
         Block block = event.getBlock();
+        if (!(block.getState() instanceof Dispenser dispenser)) return;
         if (!(block.getBlockData() instanceof Directional directional)) return;
 
         long now = System.currentTimeMillis();
@@ -78,9 +79,7 @@ public class DispenserSwordListener implements Listener {
         markDispenserSwordHit(target);
 
         // DAMAGE SWORD
-        if (block.getState() instanceof Dispenser dispenser) {
-            damageSword(dispenser);
-        }
+        damageSword(dispenser);
     }
 
     @EventHandler
