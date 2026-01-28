@@ -6,7 +6,7 @@ import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
-import com.lastbreath.hc.lastBreathHC.token.ReviveToken;
+import com.lastbreath.hc.lastBreathHC.token.ReviveTokenHelper;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -48,7 +48,11 @@ public class ReviveGUI implements Listener {
         if (e.getCurrentItem() == null) return;
 
         if (e.getCurrentItem().getType() == Material.LIME_WOOL) {
-            consumeToken(player);
+            if (!ReviveTokenHelper.consumeToken(player)) {
+                player.sendMessage("§cNo revive token found to consume.");
+                DeathListener.banPlayer(player, "Revival token missing at time of death.", null);
+                return;
+            }
             PlayerStats stats = StatsManager.get(player.getUniqueId());
             stats.revives++;
             TitleManager.unlockTitle(player, Title.REVIVED, "You returned from the brink.");
@@ -78,16 +82,8 @@ public class ReviveGUI implements Listener {
     public void onClose(InventoryCloseEvent e) {
         if (!(e.getPlayer() instanceof Player p)) return;
         if (e.getView().getTitle().equals("Use Revival Token?")) {
-            DeathListener.banPlayer(p, "Player closed revive menu.", null);
-        }
-    }
-
-    private void consumeToken(Player player) {
-        for (int i = 0; i < player.getInventory().getSize(); i++) {
-            ItemStack item = player.getInventory().getItem(i);
-            if (ReviveToken.isToken(item)) {
-                player.getInventory().setItem(i, null);
-                return;
+            if (!ReviveStateManager.isRevivePending(p.getUniqueId())) {
+                DeathListener.banPlayer(p, "Player closed revive menu.", null);
             }
         }
     }
