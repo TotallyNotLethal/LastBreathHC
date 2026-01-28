@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC.items;
 
 import net.kyori.adventure.text.Component;
 import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
@@ -11,6 +12,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemStack;
 
 public class GracestoneLifeListener implements Listener {
 
@@ -29,6 +31,9 @@ public class GracestoneLifeListener implements Listener {
         }
         double remainingHealth = player.getHealth() - event.getFinalDamage();
         if (remainingHealth > 0) {
+            return;
+        }
+        if (isHoldingTotem(player)) {
             return;
         }
         if (!Gracestone.consumeLife(player)) {
@@ -58,5 +63,14 @@ public class GracestoneLifeListener implements Listener {
                 1.0f
         );
         player.sendActionBar(Component.text("Grace saved you from death."));
+    }
+
+    private boolean isHoldingTotem(Player player) {
+        ItemStack mainHand = player.getInventory().getItemInMainHand();
+        if (mainHand != null && mainHand.getType() == Material.TOTEM_OF_UNDYING) {
+            return true;
+        }
+        ItemStack offHand = player.getInventory().getItemInOffHand();
+        return offHand != null && offHand.getType() == Material.TOTEM_OF_UNDYING;
     }
 }
