@@ -189,6 +189,7 @@ public class BountyManager {
             return;
         }
 
+        boolean updated = false;
         List<UUID> expired = new ArrayList<>();
         for (Map.Entry<UUID, BountyRecord> entry : BOUNTIES.entrySet()) {
             UUID uuid = entry.getKey();
@@ -201,6 +202,7 @@ public class BountyManager {
             record.accumulatedOnlineTicks += ticks;
             record.accumulatedOnlineSeconds += seconds;
             updateReward(uuid);
+            updated = true;
 
             if (record.accumulatedOnlineTicks >= BOUNTY_EXPIRATION_TICKS) {
                 expired.add(uuid);
@@ -209,6 +211,10 @@ public class BountyManager {
 
         for (UUID uuid : expired) {
             removeBounty(uuid, "Expired after 8 in-game hours online.");
+        }
+
+        if (updated) {
+            save();
         }
     }
 
