@@ -42,6 +42,9 @@ public class DeathListener implements Listener {
         if (remainingHealth > 0.0) {
             return;
         }
+        if (isHoldingTotem(player)) {
+            return;
+        }
 
         if (!ReviveTokenHelper.consumeToken(player)) {
             return;
@@ -223,6 +226,15 @@ public class DeathListener implements Listener {
         for (Player online : Bukkit.getOnlinePlayers()) {
             online.playSound(online.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1.0f, 1.0f);
         }
+    }
+
+    private boolean isHoldingTotem(Player player) {
+        ItemStack mainHand = player.getInventory().getItemInMainHand();
+        if (mainHand != null && mainHand.getType() == Material.TOTEM_OF_UNDYING) {
+            return true;
+        }
+        ItemStack offHand = player.getInventory().getItemInOffHand();
+        return offHand != null && offHand.getType() == Material.TOTEM_OF_UNDYING;
     }
 
     private static String formatDamageCause(EntityDamageEvent event) {
