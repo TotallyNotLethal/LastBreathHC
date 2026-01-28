@@ -3,12 +3,12 @@ package com.lastbreath.hc.lastBreathHC.death;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyRecord;
-import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
+import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
-import com.lastbreath.hc.lastBreathHC.token.ReviveToken;
+import com.lastbreath.hc.lastBreathHC.token.ReviveTokenHelper;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -39,7 +39,7 @@ public class DeathListener implements Listener {
             BountyManager.createBounty(killer.getUniqueId());
         }
 
-        boolean hasToken = hasReviveToken(player);
+        boolean hasToken = ReviveTokenHelper.hasToken(player);
 
         // Stop vanilla behavior
         event.setDeathMessage(null);
@@ -57,22 +57,16 @@ public class DeathListener implements Listener {
             @Override
             public void run() {
                 if (hasToken) {
+                    if (!ReviveTokenHelper.consumeToken(player)) {
+                        banPlayer(player, "Revival token missing at time of death.", deathMessage);
+                        return;
+                    }
                     triggerReviveFlow(player, deathMessage);
                 } else {
                     banPlayer(player, "You died with no revival token.", deathMessage);
                 }
             }
         }.runTaskLater(LastBreathHC.getInstance(), 1L);
-    }
-
-    private boolean hasReviveToken(Player player) {
-        for (ItemStack item : player.getInventory().getContents())
-            if (ReviveToken.isToken(item)) return true;
-
-        for (ItemStack item : player.getEnderChest().getContents())
-            if (ReviveToken.isToken(item)) return true;
-
-        return false;
     }
 
     private void triggerReviveFlow(Player player, String deathMessage) {
@@ -91,8 +85,28 @@ public class DeathListener implements Listener {
                 "§4☠ " + TitleManager.getTitleTag(player) + player.getName() + " has fallen... §7("
                         + formatDeathReason(player, deathMessage) + ")"
         );
+        applyRevive(player);
+    }
 
-        ReviveGUI.open(player);
+    private void applyRevive(Player player) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        stats.revives++;
+        TitleManager.unlockTitle(player, Title.REVIVED, "You returned from the brink.");
+        if (stats.revives >= 3) {
+            TitleManager.unlockTitle(player, Title.SOUL_RECLAIMER, "You have reclaimed your soul multiple times.");
+        }
+
+        player.setGameMode(GameMode.SURVIVAL);
+        ReviveStateManager.markRevivePending(player.getUniqueId());
+        player.teleport(
+                player.getBedSpawnLocation() != null
+                        ? player.getBedSpawnLocation()
+                        : player.getWorld().getSpawnLocation()
+        );
+
+        Bukkit.broadcastMessage(
+                "§6⚡ " + TitleManager.getTitleTag(player) + player.getName() + " defied death!"
+        );
     }
 
     public static void banPlayer(Player player, String reason, String deathMessage) {
