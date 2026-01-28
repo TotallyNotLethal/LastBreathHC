@@ -422,7 +422,7 @@ public class AsteroidManager {
                 .filter(mobType -> mobType != null)
                 .toList();
 
-        List<EntityType> bossTypes = List.of();
+        List<EntityType> bossTypes;
         if (tier == 3) {
             bossTypes = resolveBossTypes(basePath + ".bossTypes");
             if (!bossTypes.isEmpty()) {
@@ -430,6 +430,8 @@ public class AsteroidManager {
                         .filter(mobType -> !bossTypes.contains(mobType))
                         .toList();
             }
+        } else {
+            bossTypes = List.of();
         }
 
         List<PotionEffect> tierPotionEffects = resolveTierPotionEffects(basePath);
