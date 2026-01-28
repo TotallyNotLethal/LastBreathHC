@@ -362,19 +362,29 @@ public class CustomEnchantListener implements Listener {
                 if (!face.isCartesian()) {
                     continue;
                 }
-                Block neighbor = current.getRelative(face);
-                if (neighbor.getType() != type || matches.contains(neighbor)) {
-                    continue;
+                if (tryAddVeinNeighbor(current.getRelative(face), type, matches, queue)) {
+                    if (matches.size() >= VEIN_LIMIT) {
+                        break;
+                    }
                 }
-                matches.add(neighbor);
-                queue.add(neighbor);
-                if (matches.size() >= VEIN_LIMIT) {
-                    break;
+                if (tryAddVeinNeighbor(current.getRelative(face, 2), type, matches, queue)) {
+                    if (matches.size() >= VEIN_LIMIT) {
+                        break;
+                    }
                 }
             }
         }
         matches.remove(origin);
         return matches;
+    }
+
+    private boolean tryAddVeinNeighbor(Block neighbor, Material type, Set<Block> matches, Deque<Block> queue) {
+        if (neighbor.getType() != type || matches.contains(neighbor)) {
+            return false;
+        }
+        matches.add(neighbor);
+        queue.add(neighbor);
+        return true;
     }
 
     private Collection<Block> getTreeBlocks(Block origin) {
