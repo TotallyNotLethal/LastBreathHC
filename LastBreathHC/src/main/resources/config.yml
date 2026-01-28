@@ -15,11 +15,11 @@ anvilCrush:
 asteroid:
   mobLeashRadius: 16
   spawn:
-    minSeconds: 1800
-    maxSeconds: 14400
-    playerBiasChance: 0.5
-    playerBiasRadius: 250.0
-    meteorShowerChance: 0.1
+    minSeconds: 1200
+    maxSeconds: 3600
+    playerBiasChance: 0.05
+    playerBiasRadius: 25000.0
+    meteorShowerChance: 0.2
   countdownSeconds: 10
   loot:
     tier1:
@@ -57,7 +57,7 @@ asteroid:
       customItems:
         rebirthStoneChance: 5
         totemOfLifeChance: 5
-        gracestoneChance: 5
+        gracestoneChance: 1
         enhancedGrindstoneChance: 5
     tier3:
       ironIngot:
@@ -76,9 +76,9 @@ asteroid:
         min: 2
         max: 3
       customItems:
-        rebirthStoneChance: 10
-        totemOfLifeChance: 10
-        gracestoneChance: 10
+        rebirthStoneChance: 5
+        totemOfLifeChance: 5
+        gracestoneChance: 5
         enhancedGrindstoneChance: 10
     enchantPages:
       tier1Chance: 25
