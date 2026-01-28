@@ -13,8 +13,12 @@ import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Locale;
@@ -22,9 +26,59 @@ import java.util.Map;
 
 public class DeathListener implements Listener {
 
+    private static final String REVIVE_INTERCEPT_METADATA = "lastbreathhc.reviveIntercept";
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPreDeathDamage(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        if (!ReviveTokenHelper.hasToken(player)) {
+            return;
+        }
+
+        double remainingHealth = player.getHealth() - event.getFinalDamage();
+        if (remainingHealth > 0.0) {
+            return;
+        }
+
+        if (!ReviveTokenHelper.consumeToken(player)) {
+            return;
+        }
+
+        event.setCancelled(true);
+        player.setMetadata(
+                REVIVE_INTERCEPT_METADATA,
+                new FixedMetadataValue(LastBreathHC.getInstance(), true)
+        );
+
+        player.setHealth(1.0);
+        Location destination = player.getBedSpawnLocation() != null
+                ? player.getBedSpawnLocation()
+                : player.getWorld().getSpawnLocation();
+        player.teleport(destination);
+
+        Bukkit.broadcastMessage(
+                "§6⚡ " + TitleManager.getTitleTag(player) + player.getName()
+                        + " defied death! §7(" + formatDamageCause(player.getLastDamageCause()) + ")"
+        );
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                player.removeMetadata(REVIVE_INTERCEPT_METADATA, LastBreathHC.getInstance());
+            }
+        }.runTaskLater(LastBreathHC.getInstance(), 40L);
+    }
+
     @EventHandler
     public void onDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
+        if (player.hasMetadata(REVIVE_INTERCEPT_METADATA)) {
+            player.removeMetadata(REVIVE_INTERCEPT_METADATA, LastBreathHC.getInstance());
+            return;
+        }
         String deathMessage = event.getDeathMessage();
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.deaths++;
@@ -169,6 +223,24 @@ public class DeathListener implements Listener {
         for (Player online : Bukkit.getOnlinePlayers()) {
             online.playSound(online.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1.0f, 1.0f);
         }
+    }
+
+    private static String formatDamageCause(EntityDamageEvent event) {
+        if (event == null) {
+            return "Unknown cause";
+        }
+
+        if (event instanceof EntityDamageByEntityEvent byEntityEvent) {
+            if (byEntityEvent.getDamager() instanceof Player damager) {
+                return "slain by " + damager.getName();
+            }
+            String name = byEntityEvent.getDamager().getType().name().toLowerCase(Locale.US)
+                    .replace('_', ' ');
+            return "slain by " + name;
+        }
+
+        String cause = event.getCause().name().toLowerCase(Locale.US).replace('_', ' ');
+        return cause.isBlank() ? "Unknown cause" : cause;
     }
 
     private static String formatDeathReason(Player player, String deathMessage) {
