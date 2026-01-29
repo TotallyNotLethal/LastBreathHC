@@ -187,15 +187,15 @@ environment:
   biomes:
     swamp:
       poisonChance: 0.08
-      poisonDurationTicks: 100
+      poisonDurationTicks: 20
       poisonAmplifier: 0
       biomes:
         - SWAMP
         - MANGROVE_SWAMP
     desert:
       idleThresholdTicks: 160
-      heatTicks: 60
-      heatChance: 0.25
+      heatTicks: 20
+      heatChance: 0.05
       biomes:
         - DESERT
         - BADLANDS
@@ -213,7 +213,7 @@ environment:
         - MEADOW
         - SNOWY_SLOPES
     deepOcean:
-      swimSlowMultiplier: 0.6
+      swimSlowMultiplier: 0.5
       drownedDamageMultiplier: 1.35
       biomes:
         - DEEP_OCEAN
