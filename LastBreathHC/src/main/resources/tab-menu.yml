@@ -2,11 +2,15 @@ header:
   lines:
     - text: "{serverName}"
       color: "gold"
-    - text: "{onlineSection}{pingSection}{joinsSection}{deathsSection}"
+    - text: "Online players: {onlineCountFormatted} | Ping: {pingMillisFormatted}ms"
+      color: "gray"
+    - text: "Unique Joins: {uniqueJoinsFormatted} | Total Deaths: {totalDeathsFormatted}"
       color: "gray"
 
 footer:
   lines:
+    - text: "{dateTimeLine}"
+      color: "gray"
     - text: "Welcome to LastBreathHC!"
       color: "yellow"
   urls:
@@ -19,10 +23,15 @@ sections:
   showDeaths: true
 
 segments:
-  online: "Online: {onlineCount}  "
-  ping: "Ping: {pingMillis}ms  "
-  joins: "Unique Joins: {uniqueJoins}  "
-  deaths: "Total Deaths: {totalDeaths}"
+  online: "Online: {onlineCountFormatted}  "
+  ping: "Ping: {pingMillisFormatted}ms  "
+  joins: "Unique Joins: {uniqueJoinsFormatted}  "
+  deaths: "Total Deaths: {totalDeathsFormatted}"
+
+dateTime:
+  enabled: true
+  format: "MMM d, yyyy h:mm a z"
+  zoneId: "UTC"
 
 ranks:
   owner:
