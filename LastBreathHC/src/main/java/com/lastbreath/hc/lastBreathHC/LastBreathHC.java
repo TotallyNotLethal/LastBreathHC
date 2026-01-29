@@ -22,6 +22,9 @@ import com.lastbreath.hc.lastBreathHC.stats.StatsListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
+import com.lastbreath.hc.lastBreathHC.team.TeamChatListener;
+import com.lastbreath.hc.lastBreathHC.team.TeamChatService;
+import com.lastbreath.hc.lastBreathHC.team.TeamManager;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.BukkitTabMenuPlayerSource;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.BukkitTabMenuUpdateHandler;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModelProvider;
@@ -101,6 +104,8 @@ public final class LastBreathHC extends JavaPlugin {
         AsteroidManager.initialize(this);
         ReviveStateManager.initialize(this);
         bloodMoonManager = new BloodMoonManager(this);
+        TeamManager teamManager = new TeamManager();
+        TeamChatService teamChatService = new TeamChatService(this, teamManager);
 
         getServer().getPluginManager().registerEvents(
                 new DeathListener(), this
@@ -186,6 +191,9 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new DispenserSwordListener(this), this
         );
+        getServer().getPluginManager().registerEvents(
+                new TeamChatListener(teamChatService), this
+        );
         environmentalEffectsManager = new EnvironmentalEffectsManager(this);
         getServer().getPluginManager().registerEvents(
                 environmentalEffectsManager, this
@@ -233,6 +241,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("rtp", new RtpCommand(this));
                     event.registrar().register("nick", new NickCommand(this));
                     event.registrar().register("discord", new DiscordCommand());
+                    event.registrar().register("t", new TeamChatCommand(teamChatService));
                 }
         );
     }
