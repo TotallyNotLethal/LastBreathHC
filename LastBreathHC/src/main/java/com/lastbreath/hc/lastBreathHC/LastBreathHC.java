@@ -22,6 +22,11 @@ import com.lastbreath.hc.lastBreathHC.stats.StatsListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
+import com.lastbreath.hc.lastBreathHC.ui.tabmenu.BukkitTabMenuPlayerSource;
+import com.lastbreath.hc.lastBreathHC.ui.tabmenu.BukkitTabMenuUpdateHandler;
+import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModelProvider;
+import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuRefreshScheduler;
+import com.lastbreath.hc.lastBreathHC.ui.tabmenu.renderer.TabMenuRenderer;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -82,6 +87,7 @@ public final class LastBreathHC extends JavaPlugin {
     private CustomPotionEffectManager customPotionEffectManager;
     private EffectsStatusGUI effectsStatusGUI;
     private TitlesGUI titlesGUI;
+    private TabMenuRefreshScheduler tabMenuRefreshScheduler;
 
     @Override
     public void onEnable() {
@@ -211,6 +217,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleBountyTimers();
         scheduleBloodMoonChecks();
         scheduleTitleEffects();
+        scheduleTabMenuRefresh();
 
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS,
@@ -248,6 +255,10 @@ public final class LastBreathHC extends JavaPlugin {
             titleEffectTask.cancel();
             titleEffectTask = null;
         }
+        if (tabMenuRefreshScheduler != null) {
+            tabMenuRefreshScheduler.stop();
+            tabMenuRefreshScheduler = null;
+        }
         if (environmentalEffectsManager != null) {
             environmentalEffectsManager.shutdown();
             environmentalEffectsManager = null;
@@ -264,6 +275,7 @@ public final class LastBreathHC extends JavaPlugin {
         customPotionEffectManager = null;
         effectsStatusGUI = null;
         titlesGUI = null;
+        tabMenuRefreshScheduler = null;
         getLogger().info("LastBreathHC disabled.");
     }
 
@@ -328,6 +340,21 @@ public final class LastBreathHC extends JavaPlugin {
                 TitleManager.refreshEquippedTitleEffects();
             }
         }.runTaskTimer(this, 20L, TitleManager.getTitleEffectRefreshTicks());
+    }
+
+    private void scheduleTabMenuRefresh() {
+        long refreshTicks = Math.max(1L, getConfig().getLong("tabMenu.refreshTicks", 40L));
+        long statsRefreshSeconds = Math.max(1L, getConfig().getLong("tabMenu.statsRefreshSeconds", 10L));
+        TabMenuModelProvider modelProvider = new TabMenuModelProvider(this, Duration.ofSeconds(statsRefreshSeconds));
+        tabMenuRefreshScheduler = new TabMenuRefreshScheduler(
+                this,
+                modelProvider,
+                new TabMenuRenderer(),
+                new BukkitTabMenuPlayerSource(),
+                new BukkitTabMenuUpdateHandler(),
+                refreshTicks
+        );
+        tabMenuRefreshScheduler.start();
     }
 
     private void spawnScheduledAsteroid() {
