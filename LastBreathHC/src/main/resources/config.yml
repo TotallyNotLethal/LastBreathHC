@@ -6,6 +6,9 @@ debug: false
 teamChat:
   format: "&7[Team] &b%player%&7: &f%message%"
 
+deathMarker:
+  durationSeconds: 180
+
 tabMenu:
   refreshTicks: 40
   statsRefreshSeconds: 10

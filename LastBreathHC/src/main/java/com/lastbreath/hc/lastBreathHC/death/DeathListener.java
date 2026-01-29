@@ -27,6 +27,11 @@ import java.util.Map;
 public class DeathListener implements Listener {
 
     private static final String REVIVE_INTERCEPT_METADATA = "lastbreathhc.reviveIntercept";
+    private final DeathMarkerManager deathMarkerManager;
+
+    public DeathListener(DeathMarkerManager deathMarkerManager) {
+        this.deathMarkerManager = deathMarkerManager;
+    }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPreDeathDamage(EntityDamageEvent event) {
@@ -110,18 +115,20 @@ public class DeathListener implements Listener {
             event.setKeepLevel(false);
         }
 
+        Location deathLocation = player.getLocation().clone();
         new BukkitRunnable() {
             @Override
             public void run() {
                 if (hasToken) {
                     if (!ReviveTokenHelper.consumeToken(player)) {
                         banPlayer(player, "Revival token missing at time of death.", deathMessage);
-                        return;
+                    } else {
+                        triggerReviveFlow(player, deathMessage);
                     }
-                    triggerReviveFlow(player, deathMessage);
                 } else {
                     banPlayer(player, "You died with no revival token.", deathMessage);
                 }
+                deathMarkerManager.spawnMarker(player, deathLocation);
             }
         }.runTaskLater(LastBreathHC.getInstance(), 1L);
     }
