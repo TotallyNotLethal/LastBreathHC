@@ -246,6 +246,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("nick", new NickCommand(this));
                     event.registrar().register("discord", new DiscordCommand());
                     event.registrar().register("t", new TeamChatCommand(teamChatService));
+                    event.registrar().register("tping", new EmergencyPingCommand(this, teamManager));
                 }
         );
     }
