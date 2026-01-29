@@ -13,12 +13,15 @@ import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class NickCommand implements BasicCommand {
 
     private static final int MIN_LENGTH = 3;
     private static final int MAX_LENGTH = 16;
-    private static final String HEX_COLOR_PATTERN = "(?i)(§x(§[0-9a-f]){6}|&#[0-9a-f]{6})";
+    private static final String HEX_COLOR_PATTERN = "(?i)§x(§[0-9a-f]){6}";
+    private static final Pattern HEX_INPUT_PATTERN = Pattern.compile("(?i)&#([0-9a-f]{6})");
     private final NamespacedKey nicknameKey;
 
     public NickCommand(LastBreathHC plugin) {
@@ -52,7 +55,8 @@ public class NickCommand implements BasicCommand {
             return;
         }
 
-        String translated = ChatColor.translateAlternateColorCodes('&', rawNickname);
+        String normalizedNickname = normalizeHexColors(rawNickname);
+        String translated = ChatColor.translateAlternateColorCodes('&', normalizedNickname);
         String stripped = stripFormatting(translated);
 
         if (stripped.length() < MIN_LENGTH || stripped.length() > MAX_LENGTH) {
@@ -95,5 +99,20 @@ public class NickCommand implements BasicCommand {
             return "";
         }
         return stripped.trim();
+    }
+
+    private String normalizeHexColors(String input) {
+        Matcher matcher = HEX_INPUT_PATTERN.matcher(input);
+        StringBuffer buffer = new StringBuffer();
+        while (matcher.find()) {
+            String hex = matcher.group(1);
+            StringBuilder replacement = new StringBuilder("&x");
+            for (char digit : hex.toCharArray()) {
+                replacement.append('&').append(digit);
+            }
+            matcher.appendReplacement(buffer, replacement.toString());
+        }
+        matcher.appendTail(buffer);
+        return buffer.toString();
     }
 }
