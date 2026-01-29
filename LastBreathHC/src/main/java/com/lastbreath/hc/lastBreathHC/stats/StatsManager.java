@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.stats;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -54,6 +55,33 @@ public class StatsManager {
         } catch (IOException e) {
             LastBreathHC.getInstance().getLogger().warning("Unable to save player stats: " + e.getMessage());
         }
+    }
+
+    public static StatsSummary summarize() {
+        Map<UUID, Integer> deathsByPlayer = new HashMap<>();
+        File file = getFile();
+        if (file.exists()) {
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+            String base = "players";
+            ConfigurationSection playersSection = config.getConfigurationSection(base);
+            if (playersSection != null) {
+                for (String key : playersSection.getKeys(false)) {
+                    try {
+                        UUID uuid = UUID.fromString(key);
+                        deathsByPlayer.put(uuid, config.getInt(base + "." + key + ".deaths", 0));
+                    } catch (IllegalArgumentException ignored) {
+                        LastBreathHC.getInstance().getLogger().warning("Invalid UUID in stats file: " + key);
+                    }
+                }
+            }
+        }
+
+        for (Map.Entry<UUID, PlayerStats> entry : stats.entrySet()) {
+            deathsByPlayer.put(entry.getKey(), entry.getValue().deaths);
+        }
+
+        int totalDeaths = deathsByPlayer.values().stream().mapToInt(Integer::intValue).sum();
+        return new StatsSummary(deathsByPlayer.size(), totalDeaths);
     }
 
     private static PlayerStats loadFromDisk(UUID uuid) {
@@ -131,5 +159,8 @@ public class StatsManager {
                     "Unable to create stats directory at " + directory.getAbsolutePath()
             );
         }
+    }
+
+    public record StatsSummary(int uniqueJoins, int totalDeaths) {
     }
 }
