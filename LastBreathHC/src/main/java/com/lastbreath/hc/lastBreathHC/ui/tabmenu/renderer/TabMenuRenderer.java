@@ -9,7 +9,6 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
@@ -17,9 +16,6 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public final class TabMenuRenderer {
-    private static final int COLUMN_GAP = 4;
-    private static final ColumnLayout LEFT_COLUMN_LAYOUT = new ColumnLayout(32, ColumnAlignment.LEFT);
-    private static final ColumnLayout RIGHT_COLUMN_LAYOUT = new ColumnLayout(32, ColumnAlignment.LEFT);
     private static final int PING_BAR_COUNT = 5;
     private static final int SECTION_SPACING_LINES = 1;
     private static final NamedTextColor DEFAULT_RANK_COLOR = NamedTextColor.WHITE;
@@ -96,44 +92,9 @@ public final class TabMenuRenderer {
     }
 
     private List<Component> renderPlayers(List<PlayerRowFields> players) {
-        int totalPlayers = players.size();
-        int leftSize = (totalPlayers + 1) / 2;
-        List<PlayerRowFields> leftPlayers = players.subList(0, leftSize);
-        List<PlayerRowFields> rightPlayers = players.subList(leftSize, totalPlayers);
-
-        List<RenderedRow> leftRows = new ArrayList<>(leftPlayers.size());
-        List<RenderedRow> rightRows = new ArrayList<>(rightPlayers.size());
-
-        for (PlayerRowFields row : leftPlayers) {
-            leftRows.add(renderRow(row));
-        }
-        for (PlayerRowFields row : rightPlayers) {
-            rightRows.add(renderRow(row));
-        }
-
-        int leftWidth = leftRows.stream()
-                .mapToInt(RenderedRow::textLength)
-                .max()
-                .orElse(0);
-        leftWidth = Math.max(leftWidth, LEFT_COLUMN_LAYOUT.width());
-
-        int rightWidth = rightRows.stream()
-                .mapToInt(RenderedRow::textLength)
-                .max()
-                .orElse(0);
-        rightWidth = Math.max(rightWidth, RIGHT_COLUMN_LAYOUT.width());
-
-        List<Component> lines = new ArrayList<>(leftRows.size());
-        for (int i = 0; i < leftRows.size(); i++) {
-            RenderedRow leftRow = leftRows.get(i);
-            Component alignedLeft = alignRow(leftRow, leftWidth, LEFT_COLUMN_LAYOUT.alignment());
-            TextComponent spacing = Component.text(" ".repeat(COLUMN_GAP));
-            Component line = alignedLeft.append(spacing);
-            if (i < rightRows.size()) {
-                RenderedRow rightRow = rightRows.get(i);
-                line = line.append(alignRow(rightRow, rightWidth, RIGHT_COLUMN_LAYOUT.alignment()));
-            }
-            lines.add(line);
+        List<Component> lines = new ArrayList<>(players.size());
+        for (PlayerRowFields row : players) {
+            lines.add(renderRow(row).component());
         }
         return lines;
     }
@@ -218,17 +179,6 @@ public final class TabMenuRenderer {
         }
     }
 
-    private Component alignRow(RenderedRow row, int width, ColumnAlignment alignment) {
-        int padding = Math.max(0, width - row.textLength());
-        if (padding == 0) {
-            return row.component();
-        }
-        TextComponent paddingComponent = Component.text(" ".repeat(padding));
-        return alignment == ColumnAlignment.RIGHT
-                ? paddingComponent.append(row.component())
-                : row.component().append(paddingComponent);
-    }
-
     private TextColor parseColor(String customColor, TextColor fallbackColor) {
         if (customColor == null || customColor.isBlank()) {
             return fallbackColor;
@@ -271,14 +221,6 @@ public final class TabMenuRenderer {
             return false;
         }
         return LEGACY_COLOR_PATTERN.matcher(input).find();
-    }
-
-    private enum ColumnAlignment {
-        LEFT,
-        RIGHT
-    }
-
-    private record ColumnLayout(int width, ColumnAlignment alignment) {
     }
 
     private record RenderedRow(Component component, int textLength) {

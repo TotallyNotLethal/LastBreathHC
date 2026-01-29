@@ -2,14 +2,15 @@ package com.lastbreath.hc.lastBreathHC.ui.tabmenu;
 
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModel.PlayerRowFields;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import net.kyori.adventure.text.Component;
 
 public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
-    private final Map<String, String> lastPlayerNames = new HashMap<>();
+    private final Map<String, Component> lastPlayerNames = new HashMap<>();
 
     @Override
     public void apply(TabMenuUpdate update) {
@@ -20,7 +21,7 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
             applyHeaderFooter(update);
         }
         if (update.sections().contains(TabMenuSection.PLAYERS)) {
-            applyPlayers(update.model());
+            applyPlayers(update);
         }
     }
 
@@ -30,21 +31,24 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
         }
     }
 
-    private void applyPlayers(TabMenuModel model) {
-        Map<String, String> nextNames = new HashMap<>();
-        for (PlayerRowFields row : model.players()) {
-            String nextName = formatPlayerListName(row);
-            nextNames.put(row.username(), nextName);
+    private void applyPlayers(TabMenuUpdate update) {
+        Map<String, Component> nextNames = new HashMap<>();
+        List<PlayerRowFields> players = update.model().players();
+        List<Component> playerLines = update.renderResult().playerLines();
+        int count = Math.min(players.size(), playerLines.size());
+        for (int i = 0; i < count; i++) {
+            PlayerRowFields row = players.get(i);
+            nextNames.put(row.username(), playerLines.get(i));
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
             String username = player.getName();
-            String desired = nextNames.get(username);
+            Component desired = nextNames.get(username);
             if (desired == null) {
                 continue;
             }
-            String previous = lastPlayerNames.get(username);
+            Component previous = lastPlayerNames.get(username);
             if (!Objects.equals(previous, desired)) {
-                player.setPlayerListName(desired);
+                player.playerListName(desired);
             }
         }
         lastPlayerNames.clear();
@@ -64,10 +68,6 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
         if (row.suffix() != null && !row.suffix().isBlank()) {
             builder.append(row.suffix());
         }
-        builder.append(' ')
-                .append(ChatColor.GRAY)
-                .append(row.pingMillis())
-                .append("ms");
         return builder.toString().trim();
     }
 }
