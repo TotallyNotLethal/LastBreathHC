@@ -14,7 +14,7 @@ footer:
     - text: "Welcome to LastBreathHC!"
       color: "yellow"
   urls:
-    - "https://discord.gg/msZcMxmzyH"
+    - "Check out /discord"
 
 sections:
   showOnline: true
