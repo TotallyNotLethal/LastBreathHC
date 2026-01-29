@@ -80,7 +80,7 @@ public class DeathMarkerManager {
                     }
                     bossBar.addPlayer(teammate);
                     teammate.spawnParticle(
-                            Particle.REDSTONE,
+                            Particle.END_ROD,
                             markerLocation,
                             8,
                             0.45,
