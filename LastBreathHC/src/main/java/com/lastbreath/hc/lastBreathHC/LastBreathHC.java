@@ -13,6 +13,7 @@ import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
+import com.lastbreath.hc.lastBreathHC.gui.TeamManagementGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TitlesGUI;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
@@ -95,6 +96,7 @@ public final class LastBreathHC extends JavaPlugin {
     private TitlesGUI titlesGUI;
     private TabMenuRefreshScheduler tabMenuRefreshScheduler;
     private TeamWaypointManager teamWaypointManager;
+    private TeamManager teamManager;
 
     @Override
     public void onEnable() {
@@ -108,10 +110,11 @@ public final class LastBreathHC extends JavaPlugin {
         AsteroidManager.initialize(this);
         ReviveStateManager.initialize(this);
         bloodMoonManager = new BloodMoonManager(this);
-        TeamManager teamManager = new TeamManager();
+        teamManager = new TeamManager(this);
         TeamChatService teamChatService = new TeamChatService(this, teamManager);
         teamWaypointManager = new TeamWaypointManager(new java.io.File(getDataFolder(), "teams.yml"));
         teamWaypointManager.load();
+        TeamManagementGUI teamManagementGUI = new TeamManagementGUI(this, teamManager);
         int deathMarkerDurationSeconds = getConfig().getInt("deathMarker.durationSeconds", 180);
         deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
 
@@ -202,6 +205,9 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new TeamChatListener(teamChatService), this
         );
+        getServer().getPluginManager().registerEvents(
+                teamManagementGUI, this
+        );
         environmentalEffectsManager = new EnvironmentalEffectsManager(this);
         getServer().getPluginManager().registerEvents(
                 environmentalEffectsManager, this
@@ -251,6 +257,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("discord", new DiscordCommand());
                     event.registrar().register("t", new TeamChatCommand(teamChatService));
                     event.registrar().register("tping", new EmergencyPingCommand(this, teamManager));
+                    event.registrar().register("team", new TeamCommand(teamManager, teamManagementGUI));
                     event.registrar().register("waypoint", new WaypointCommand(this, teamManager, teamWaypointManager));
                 }
         );
@@ -296,6 +303,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (teamWaypointManager != null) {
             teamWaypointManager.save();
             teamWaypointManager = null;
+        }
+        if (teamManager != null) {
+            teamManager.saveOwners();
+            teamManager = null;
         }
         AsteroidManager.clearAllAsteroids();
         BountyManager.save();
