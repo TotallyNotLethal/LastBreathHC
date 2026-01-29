@@ -1,5 +1,6 @@
 package com.lastbreath.hc.lastBreathHC.titles;
 
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import org.bukkit.Bukkit;
@@ -7,7 +8,9 @@ import org.bukkit.Statistic;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -396,7 +399,10 @@ public class TitleManager {
         if (player == null) {
             return;
         }
-        player.setPlayerListName(getTitleTabTag(player) + player.getName());
+        NamespacedKey nicknameKey = new NamespacedKey(LastBreathHC.getInstance(), "nickname");
+        String nickname = player.getPersistentDataContainer().get(nicknameKey, PersistentDataType.STRING);
+        String displayName = nickname == null || nickname.isBlank() ? player.getName() : nickname;
+        player.setPlayerListName(getTitleTabTag(player) + displayName);
     }
 
     public static void refreshAllTabTitles() {
