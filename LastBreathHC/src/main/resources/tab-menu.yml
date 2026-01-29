@@ -1,0 +1,36 @@
+header:
+  lines:
+    - text: "{serverName}"
+      color: "gold"
+    - text: "{onlineSection}{pingSection}{joinsSection}{deathsSection}"
+      color: "gray"
+
+footer:
+  lines:
+    - text: "Welcome to LastBreathHC!"
+      color: "yellow"
+  urls:
+    - "https://lastbreath.example.com"
+
+sections:
+  showOnline: true
+  showPing: true
+  showJoins: true
+  showDeaths: true
+
+segments:
+  online: "Online: {onlineCount}  "
+  ping: "Ping: {pingMillis}ms  "
+  joins: "Unique Joins: {uniqueJoins}  "
+  deaths: "Total Deaths: {totalDeaths}"
+
+ranks:
+  owner:
+    icon: "&6✪"
+    color: "gold"
+  admin:
+    icon: "&c⚒"
+    color: "red"
+  member:
+    icon: "&7•"
+    color: "white"

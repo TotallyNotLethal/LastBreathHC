@@ -31,22 +31,34 @@ public record TabMenuModel(HeaderFields header,
         return payload;
     }
 
-    public record HeaderFields(String serverName,
-                               int onlineCount,
-                               int pingMillis,
-                               int uniqueJoins,
-                               int totalDeaths) implements Serializable {
+    public record LineFields(String text,
+                             String color) implements Serializable {
 
         @Serial
         private static final long serialVersionUID = 1L;
 
         public Map<String, Object> toMap() {
             Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("serverName", serverName);
-            payload.put("onlineCount", onlineCount);
-            payload.put("pingMillis", pingMillis);
-            payload.put("uniqueJoins", uniqueJoins);
-            payload.put("totalDeaths", totalDeaths);
+            payload.put("text", text);
+            payload.put("color", color);
+            return payload;
+        }
+    }
+
+    public record HeaderFields(List<LineFields> lines) implements Serializable {
+
+        @Serial
+        private static final long serialVersionUID = 1L;
+
+        public HeaderFields {
+            lines = List.copyOf(Objects.requireNonNull(lines, "lines"));
+        }
+
+        public Map<String, Object> toMap() {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("lines", lines.stream()
+                    .map(LineFields::toMap)
+                    .collect(Collectors.toList()));
             return payload;
         }
     }
@@ -73,22 +85,22 @@ public record TabMenuModel(HeaderFields header,
         }
     }
 
-    public record FooterFields(String dateTimeLine,
-                               List<String> announcements,
+    public record FooterFields(List<LineFields> lines,
                                List<String> urls) implements Serializable {
 
         @Serial
         private static final long serialVersionUID = 1L;
 
         public FooterFields {
-            announcements = List.copyOf(Objects.requireNonNull(announcements, "announcements"));
+            lines = List.copyOf(Objects.requireNonNull(lines, "lines"));
             urls = List.copyOf(Objects.requireNonNull(urls, "urls"));
         }
 
         public Map<String, Object> toMap() {
             Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("dateTimeLine", dateTimeLine);
-            payload.put("announcements", announcements);
+            payload.put("lines", lines.stream()
+                    .map(LineFields::toMap)
+                    .collect(Collectors.toList()));
             payload.put("urls", urls);
             return payload;
         }
