@@ -3,6 +3,9 @@
 
 debug: false
 
+teamChat:
+  format: "&7[Team] &b%player%&7: &f%message%"
+
 tabMenu:
   refreshTicks: 40
   statsRefreshSeconds: 10
