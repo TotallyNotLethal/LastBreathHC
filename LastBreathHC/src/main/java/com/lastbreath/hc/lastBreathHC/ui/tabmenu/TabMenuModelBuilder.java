@@ -71,6 +71,7 @@ public final class TabMenuModelBuilder {
             String color = rankStyle != null ? rankStyle.color() : null;
             playerRows.add(new TabMenuModel.PlayerRowFields(
                     player.username(),
+                    player.displayName(),
                     icon,
                     player.prefix(),
                     player.suffix(),
@@ -133,6 +134,7 @@ public final class TabMenuModelBuilder {
     }
 
     public record PlayerEntry(String username,
+                              String displayName,
                               String rank,
                               String prefix,
                               String suffix,

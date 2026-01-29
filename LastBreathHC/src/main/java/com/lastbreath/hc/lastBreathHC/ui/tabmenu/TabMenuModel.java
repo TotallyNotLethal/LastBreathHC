@@ -64,6 +64,7 @@ public record TabMenuModel(HeaderFields header,
     }
 
     public record PlayerRowFields(String username,
+                                  String displayName,
                                   String rankIcon,
                                   String prefix,
                                   String suffix,
@@ -76,6 +77,7 @@ public record TabMenuModel(HeaderFields header,
         public Map<String, Object> toMap() {
             Map<String, Object> payload = new LinkedHashMap<>();
             payload.put("username", username);
+            payload.put("displayName", displayName);
             payload.put("rankIcon", rankIcon);
             payload.put("prefix", prefix);
             payload.put("suffix", suffix);
