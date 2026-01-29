@@ -10,7 +10,7 @@ import java.util.List;
 
 public class DiscordCommand implements BasicCommand {
 
-    private static final String INVITE_URL = "https://discord.gg/tUmddDxc";
+    private static final String INVITE_URL = "https://discord.gg/msZcMxmzyH";
 
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
@@ -25,4 +25,5 @@ public class DiscordCommand implements BasicCommand {
                                 .clickEvent(ClickEvent.openUrl(INVITE_URL))
         ));
     }
+
 }
