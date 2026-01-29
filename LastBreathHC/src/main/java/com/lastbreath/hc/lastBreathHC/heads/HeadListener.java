@@ -1,7 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.heads;
 
-import com.lastbreath.hc.lastBreathHC.token.ReviveToken;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
+import com.lastbreath.hc.lastBreathHC.token.ReviveTokenHelper;
 import net.kyori.adventure.text.Component;
 import org.bukkit.*;
 import org.bukkit.block.BlockState;
@@ -148,9 +148,8 @@ public class HeadListener implements Listener {
         String targetName = target.getName();
 
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            ItemStack mainHand = e.getPlayer().getInventory().getItemInMainHand();
-            if (ReviveToken.isToken(mainHand)) {
-                if (!consumeReviveToken(e.getPlayer())) {
+            if (ReviveTokenHelper.hasToken(e.getPlayer())) {
+                if (!ReviveTokenHelper.consumeToken(e.getPlayer())) {
                     e.getPlayer().sendMessage("§cYou need a Revival Token to revive this soul.");
                     return;
                 }
@@ -284,21 +283,6 @@ public class HeadListener implements Listener {
                 HeadManager.getKey(),
                 PersistentDataType.STRING
         );
-    }
-
-    private boolean consumeReviveToken(Player player) {
-        ItemStack item = player.getInventory().getItemInMainHand();
-        if (!ReviveToken.isToken(item)) {
-            return false;
-        }
-
-        if (item.getAmount() > 1) {
-            item.setAmount(item.getAmount() - 1);
-        } else {
-            player.getInventory().setItemInMainHand(null);
-        }
-
-        return true;
     }
 
     private boolean isAdmin(Player player) {
