@@ -11,13 +11,27 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public final class TabMenuRenderer {
     private static final int COLUMN_GAP = 4;
+    private static final ColumnLayout LEFT_COLUMN_LAYOUT = new ColumnLayout(32, ColumnAlignment.LEFT);
+    private static final ColumnLayout RIGHT_COLUMN_LAYOUT = new ColumnLayout(32, ColumnAlignment.LEFT);
     private static final int PING_BAR_COUNT = 5;
     private static final int SECTION_SPACING_LINES = 1;
+    private static final NamedTextColor DEFAULT_RANK_COLOR = NamedTextColor.WHITE;
+    private static final NamedTextColor DEFAULT_STATS_COLOR = NamedTextColor.GRAY;
+    private static final NamedTextColor FOOTER_URL_COLOR = NamedTextColor.AQUA;
+    private static final NamedTextColor PING_EXCELLENT_COLOR = NamedTextColor.GREEN;
+    private static final NamedTextColor PING_GOOD_COLOR = NamedTextColor.YELLOW;
+    private static final NamedTextColor PING_WARN_COLOR = NamedTextColor.GOLD;
+    private static final NamedTextColor PING_POOR_COLOR = NamedTextColor.RED;
+    private static final NamedTextColor PING_INACTIVE_COLOR = NamedTextColor.DARK_GRAY;
+    private static final Style HEADER_STYLE = Style.style(TextDecoration.BOLD);
+    private static final Style FOOTER_STYLE = Style.style(TextDecoration.ITALIC);
     private static final Pattern LEGACY_COLOR_PATTERN = Pattern.compile("[§&][0-9A-FK-ORa-fk-or]");
 
     private final LegacyComponentSerializer legacySerializer;
@@ -40,7 +54,7 @@ public final class TabMenuRenderer {
 
     private List<Component> renderHeader(TabMenuModel.HeaderFields header) {
         List<Component> lines = new ArrayList<>();
-        lines.addAll(renderLines(header.lines()));
+        lines.addAll(renderLines(header.lines(), DEFAULT_STATS_COLOR, HEADER_STYLE));
         addSectionSpacing(lines);
         return lines;
     }
@@ -48,16 +62,18 @@ public final class TabMenuRenderer {
     private List<Component> renderFooter(TabMenuModel.FooterFields footer) {
         List<Component> lines = new ArrayList<>();
         addSectionSpacing(lines);
-        lines.addAll(renderLines(footer.lines()));
+        lines.addAll(renderLines(footer.lines(), DEFAULT_STATS_COLOR, FOOTER_STYLE));
         for (String url : footer.urls()) {
             if (url != null && !url.isBlank()) {
-                lines.add(Component.text(url).color(NamedTextColor.AQUA));
+                lines.add(Component.text(url).color(FOOTER_URL_COLOR).style(FOOTER_STYLE));
             }
         }
         return lines;
     }
 
-    private List<Component> renderLines(List<TabMenuModel.LineFields> lines) {
+    private List<Component> renderLines(List<TabMenuModel.LineFields> lines,
+                                        TextColor fallbackColor,
+                                        Style style) {
         List<Component> rendered = new ArrayList<>(lines.size());
         for (TabMenuModel.LineFields line : lines) {
             if (line == null || line.text() == null || line.text().isBlank()) {
@@ -65,11 +81,13 @@ public final class TabMenuRenderer {
             }
             String text = line.text();
             String color = line.color();
-            if (hasLegacyFormatting(text) || color == null || color.isBlank()) {
-                rendered.add(legacySerializer.deserialize(text));
+            Component component;
+            if (hasLegacyFormatting(text)) {
+                component = legacySerializer.deserialize(text);
             } else {
-                rendered.add(Component.text(text).color(parseColor(color)));
+                component = Component.text(text).color(parseColor(color, fallbackColor));
             }
+            rendered.add(style != null ? component.style(style) : component);
         }
         return rendered;
     }
@@ -94,15 +112,23 @@ public final class TabMenuRenderer {
                 .mapToInt(RenderedRow::textLength)
                 .max()
                 .orElse(0);
+        leftWidth = Math.max(leftWidth, LEFT_COLUMN_LAYOUT.width());
+
+        int rightWidth = rightRows.stream()
+                .mapToInt(RenderedRow::textLength)
+                .max()
+                .orElse(0);
+        rightWidth = Math.max(rightWidth, RIGHT_COLUMN_LAYOUT.width());
 
         List<Component> lines = new ArrayList<>(leftRows.size());
         for (int i = 0; i < leftRows.size(); i++) {
             RenderedRow leftRow = leftRows.get(i);
-            int padding = Math.max(0, leftWidth - leftRow.textLength());
-            TextComponent spacing = Component.text(" ".repeat(padding + COLUMN_GAP));
-            Component line = leftRow.component().append(spacing);
+            Component alignedLeft = alignRow(leftRow, leftWidth, LEFT_COLUMN_LAYOUT.alignment());
+            TextComponent spacing = Component.text(" ".repeat(COLUMN_GAP));
+            Component line = alignedLeft.append(spacing);
             if (i < rightRows.size()) {
-                line = line.append(rightRows.get(i).component());
+                RenderedRow rightRow = rightRows.get(i);
+                line = line.append(alignRow(rightRow, rightWidth, RIGHT_COLUMN_LAYOUT.alignment()));
             }
             lines.add(line);
         }
@@ -128,7 +154,7 @@ public final class TabMenuRenderer {
             suffixComponent = Component.text(" ").append(legacySerializer.deserialize(suffixText));
         }
 
-        TextColor nameColor = parseColor(row.customColor());
+        TextColor nameColor = parseColor(row.customColor(), DEFAULT_RANK_COLOR);
         Component nameComponent = Component.text(row.username()).color(nameColor);
 
         Component pingBars = renderPingBars(row.pingBars());
@@ -151,15 +177,15 @@ public final class TabMenuRenderer {
     private Component renderPingBars(int bars) {
         int clampedBars = Math.max(0, Math.min(PING_BAR_COUNT, bars));
         NamedTextColor activeColor = switch (clampedBars) {
-            case 5, 4 -> NamedTextColor.GREEN;
-            case 3 -> NamedTextColor.YELLOW;
-            case 2 -> NamedTextColor.GOLD;
-            default -> NamedTextColor.RED;
+            case 5, 4 -> PING_EXCELLENT_COLOR;
+            case 3 -> PING_GOOD_COLOR;
+            case 2 -> PING_WARN_COLOR;
+            default -> PING_POOR_COLOR;
         };
 
         Component result = Component.empty();
         for (int i = 0; i < PING_BAR_COUNT; i++) {
-            NamedTextColor color = i < clampedBars ? activeColor : NamedTextColor.DARK_GRAY;
+            NamedTextColor color = i < clampedBars ? activeColor : PING_INACTIVE_COLOR;
             result = result.append(Component.text("▮").color(color));
         }
         return result;
@@ -175,9 +201,20 @@ public final class TabMenuRenderer {
         }
     }
 
-    private TextColor parseColor(String customColor) {
+    private Component alignRow(RenderedRow row, int width, ColumnAlignment alignment) {
+        int padding = Math.max(0, width - row.textLength());
+        if (padding == 0) {
+            return row.component();
+        }
+        TextComponent paddingComponent = Component.text(" ".repeat(padding));
+        return alignment == ColumnAlignment.RIGHT
+                ? paddingComponent.append(row.component())
+                : row.component().append(paddingComponent);
+    }
+
+    private TextColor parseColor(String customColor, TextColor fallbackColor) {
         if (customColor == null || customColor.isBlank()) {
-            return NamedTextColor.WHITE;
+            return fallbackColor;
         }
         String trimmed = customColor.trim();
         if (trimmed.startsWith("#")) {
@@ -187,7 +224,7 @@ public final class TabMenuRenderer {
             }
         }
         NamedTextColor named = NamedTextColor.NAMES.value(trimmed.toLowerCase(Locale.ROOT));
-        return named != null ? named : NamedTextColor.WHITE;
+        return named != null ? named : fallbackColor;
     }
 
     private int calculateTextLength(String icon, String prefix, String username, String suffix) {
@@ -217,6 +254,14 @@ public final class TabMenuRenderer {
             return false;
         }
         return LEGACY_COLOR_PATTERN.matcher(input).find();
+    }
+
+    private enum ColumnAlignment {
+        LEFT,
+        RIGHT
+    }
+
+    private record ColumnLayout(int width, ColumnAlignment alignment) {
     }
 
     private record RenderedRow(Component component, int textLength) {
