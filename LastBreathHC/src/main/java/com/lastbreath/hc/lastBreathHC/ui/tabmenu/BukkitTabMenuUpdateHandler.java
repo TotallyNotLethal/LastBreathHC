@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
@@ -58,10 +59,15 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
         if (row.prefix() != null && !row.prefix().isBlank()) {
             builder.append(row.prefix());
         }
-        builder.append(row.username());
+        String displayName = row.displayName();
+        builder.append(displayName != null && !displayName.isBlank() ? displayName : row.username());
         if (row.suffix() != null && !row.suffix().isBlank()) {
             builder.append(row.suffix());
         }
+        builder.append(' ')
+                .append(ChatColor.GRAY)
+                .append(row.pingMillis())
+                .append("ms");
         return builder.toString().trim();
     }
 }
