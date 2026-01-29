@@ -18,6 +18,7 @@ public class NickCommand implements BasicCommand {
 
     private static final int MIN_LENGTH = 3;
     private static final int MAX_LENGTH = 16;
+    private static final String HEX_COLOR_PATTERN = "(?i)(§x(§[0-9a-f]){6}|&#[0-9a-f]{6})";
     private final NamespacedKey nicknameKey;
 
     public NickCommand(LastBreathHC plugin) {
@@ -52,11 +53,7 @@ public class NickCommand implements BasicCommand {
         }
 
         String translated = ChatColor.translateAlternateColorCodes('&', rawNickname);
-        String stripped = ChatColor.stripColor(translated);
-        if (stripped == null) {
-            stripped = "";
-        }
-        stripped = stripped.trim();
+        String stripped = stripFormatting(translated);
 
         if (stripped.length() < MIN_LENGTH || stripped.length() > MAX_LENGTH) {
             player.sendMessage("§cNickname must be between " + MIN_LENGTH + " and " + MAX_LENGTH + " characters.");
@@ -86,5 +83,17 @@ public class NickCommand implements BasicCommand {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.nickname = nickname;
         StatsManager.save(player.getUniqueId());
+    }
+
+    private String stripFormatting(String input) {
+        if (input == null) {
+            return "";
+        }
+        String withoutHex = input.replaceAll(HEX_COLOR_PATTERN, "");
+        String stripped = ChatColor.stripColor(withoutHex);
+        if (stripped == null) {
+            return "";
+        }
+        return stripped.trim();
     }
 }
