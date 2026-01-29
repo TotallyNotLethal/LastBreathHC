@@ -15,8 +15,9 @@ public final class TabMenuModelProvider {
 
     public TabMenuModelProvider(LastBreathHC plugin, Duration refreshInterval) {
         Objects.requireNonNull(plugin, "plugin");
-        this.modelBuilder = TabMenuModelBuilder.load(plugin);
-        this.dataSource = new TabMenuDataSource(plugin, refreshInterval);
+        TabMenuConfig config = TabMenuConfig.load(plugin);
+        this.modelBuilder = new TabMenuModelBuilder(config);
+        this.dataSource = new TabMenuDataSource(plugin, config.dateTime(), refreshInterval);
     }
 
     public TabMenuModel build(List<TabMenuModelBuilder.PlayerEntry> players) {

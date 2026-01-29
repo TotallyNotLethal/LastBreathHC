@@ -27,10 +27,16 @@ public final class TabMenuModelBuilder {
         Map<String, String> tokens = new HashMap<>();
         tokens.put("serverName", context.serverName());
         tokens.put("onlineCount", Integer.toString(context.onlineCount()));
+        tokens.put("onlineCountFormatted", formatNumber(context.onlineCount()));
         tokens.put("pingMillis", Integer.toString(context.pingMillis()));
+        tokens.put("pingMillisFormatted", formatNumber(context.pingMillis()));
         tokens.put("uniqueJoins", Integer.toString(context.uniqueJoins()));
+        tokens.put("uniqueJoinsFormatted", formatNumber(context.uniqueJoins()));
         tokens.put("totalDeaths", Integer.toString(context.totalDeaths()));
+        tokens.put("totalDeathsFormatted", formatNumber(context.totalDeaths()));
         tokens.put("dateTimeLine", emptyIfNull(context.dateTimeLine()));
+        tokens.put("playerListLine", emptyIfNull(context.playerListLine()));
+        tokens.put("playerCountLine", emptyIfNull(context.playerCountLine()));
 
         String onlineSection = config.sections().showOnline()
                 ? resolveTokens(config.segments().online(), tokens)
@@ -108,6 +114,10 @@ public final class TabMenuModelBuilder {
         return input.replaceAll("\\s{2,}", " ").trim();
     }
 
+    private String formatNumber(int value) {
+        return String.format("%,d", value);
+    }
+
     private String emptyIfNull(String value) {
         return value == null ? "" : value;
     }
@@ -117,7 +127,9 @@ public final class TabMenuModelBuilder {
                                  int pingMillis,
                                  int uniqueJoins,
                                  int totalDeaths,
-                                 String dateTimeLine) {
+                                 String dateTimeLine,
+                                 String playerListLine,
+                                 String playerCountLine) {
     }
 
     public record PlayerEntry(String username,

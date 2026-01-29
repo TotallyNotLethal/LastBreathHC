@@ -16,6 +16,7 @@ public record TabMenuConfig(Header header,
                             Footer footer,
                             Sections sections,
                             Segments segments,
+                            DateTimeSettings dateTime,
                             Map<String, RankStyle> rankStyles) {
 
     private static final String RESOURCE_PATH = "tab-menu.yml";
@@ -25,6 +26,7 @@ public record TabMenuConfig(Header header,
         Objects.requireNonNull(footer, "footer");
         Objects.requireNonNull(sections, "sections");
         Objects.requireNonNull(segments, "segments");
+        Objects.requireNonNull(dateTime, "dateTime");
         rankStyles = Collections.unmodifiableMap(new LinkedHashMap<>(Objects.requireNonNull(rankStyles, "rankStyles")));
     }
 
@@ -39,8 +41,9 @@ public record TabMenuConfig(Header header,
         Footer footer = readFooter(config.getConfigurationSection("footer"));
         Sections sections = readSections(config.getConfigurationSection("sections"));
         Segments segments = readSegments(config.getConfigurationSection("segments"));
+        DateTimeSettings dateTime = readDateTime(config.getConfigurationSection("dateTime"));
         Map<String, RankStyle> rankStyles = readRankStyles(config.getConfigurationSection("ranks"));
-        return new TabMenuConfig(header, footer, sections, segments, rankStyles);
+        return new TabMenuConfig(header, footer, sections, segments, dateTime, rankStyles);
     }
 
     private static Header readHeader(ConfigurationSection section) {
@@ -48,7 +51,8 @@ public record TabMenuConfig(Header header,
         if (lines.isEmpty()) {
             lines = List.of(
                     new TemplateLine("{serverName}", "gold"),
-                    new TemplateLine("{onlineSection}{pingSection}{joinsSection}{deathsSection}", "gray")
+                    new TemplateLine("Online players: {onlineCountFormatted} | Ping: {pingMillisFormatted}ms", "gray"),
+                    new TemplateLine("Unique Joins: {uniqueJoinsFormatted} | Total Deaths: {totalDeathsFormatted}", "gray")
             );
         }
         return new Header(lines);
@@ -81,6 +85,16 @@ public record TabMenuConfig(Header header,
         String joins = section.getString("joins", Segments.defaultSegments().joins());
         String deaths = section.getString("deaths", Segments.defaultSegments().deaths());
         return new Segments(online, ping, joins, deaths);
+    }
+
+    private static DateTimeSettings readDateTime(ConfigurationSection section) {
+        if (section == null) {
+            return DateTimeSettings.defaultSettings();
+        }
+        boolean enabled = section.getBoolean("enabled", DateTimeSettings.defaultSettings().enabled());
+        String format = section.getString("format", DateTimeSettings.defaultSettings().format());
+        String zoneId = section.getString("zoneId", DateTimeSettings.defaultSettings().zoneId());
+        return new DateTimeSettings(enabled, format, zoneId);
     }
 
     private static Map<String, RankStyle> readRankStyles(ConfigurationSection section) {
@@ -143,11 +157,19 @@ public record TabMenuConfig(Header header,
                            String deaths) {
         public static Segments defaultSegments() {
             return new Segments(
-                    "Online: {onlineCount}  ",
-                    "Ping: {pingMillis}ms  ",
-                    "Unique Joins: {uniqueJoins}  ",
-                    "Total Deaths: {totalDeaths}"
+                    "Online: {onlineCountFormatted}  ",
+                    "Ping: {pingMillisFormatted}ms  ",
+                    "Unique Joins: {uniqueJoinsFormatted}  ",
+                    "Total Deaths: {totalDeathsFormatted}"
             );
+        }
+    }
+
+    public record DateTimeSettings(boolean enabled,
+                                   String format,
+                                   String zoneId) {
+        public static DateTimeSettings defaultSettings() {
+            return new DateTimeSettings(true, "MMM d, yyyy h:mm a z", "UTC");
         }
     }
 
