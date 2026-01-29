@@ -87,7 +87,10 @@ public final class TabMenuRenderer {
             } else {
                 component = Component.text(text).color(parseColor(color, fallbackColor));
             }
-            rendered.add(style != null ? component.style(style) : component);
+            if (style != null) {
+                component = component.style(component.style().merge(style));
+            }
+            rendered.add(component);
         }
         return rendered;
     }
