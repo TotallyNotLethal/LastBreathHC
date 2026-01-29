@@ -10,6 +10,7 @@ public class HeadManager {
 
     // UUID -> Stored Ender Chest
     private static final Map<UUID, Inventory> HEAD_LOOT = new HashMap<>();
+    private static final Map<UUID, Inventory> PENDING_RESTORE = new HashMap<>();
 
     private static NamespacedKey KEY;
 
@@ -38,6 +39,26 @@ public class HeadManager {
 
     public static void remove(UUID uuid) {
         HEAD_LOOT.remove(uuid);
+    }
+
+    /* ============================
+       PENDING RESTORE
+       ============================ */
+
+    public static void storePendingRestore(UUID uuid, Inventory inv) {
+        PENDING_RESTORE.put(uuid, inv);
+    }
+
+    public static Inventory getPendingRestore(UUID uuid) {
+        return PENDING_RESTORE.get(uuid);
+    }
+
+    public static boolean hasPendingRestore(UUID uuid) {
+        return PENDING_RESTORE.containsKey(uuid);
+    }
+
+    public static void removePendingRestore(UUID uuid) {
+        PENDING_RESTORE.remove(uuid);
     }
 
     /* ============================
