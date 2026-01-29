@@ -101,14 +101,23 @@ public final class TabMenuRenderer {
         List<PlayerRowFields> leftPlayers = players.subList(0, leftSize);
         List<PlayerRowFields> rightPlayers = players.subList(leftSize, totalPlayers);
 
+        int leftNameWidth = 0;
+        for (PlayerRowFields row : leftPlayers) {
+            leftNameWidth = Math.max(leftNameWidth, nameSectionLength(row));
+        }
+        int rightNameWidth = 0;
+        for (PlayerRowFields row : rightPlayers) {
+            rightNameWidth = Math.max(rightNameWidth, nameSectionLength(row));
+        }
+
         List<RenderedRow> leftRows = new ArrayList<>(leftPlayers.size());
         List<RenderedRow> rightRows = new ArrayList<>(rightPlayers.size());
 
         for (PlayerRowFields row : leftPlayers) {
-            leftRows.add(renderRow(row));
+            leftRows.add(renderRow(row, leftNameWidth));
         }
         for (PlayerRowFields row : rightPlayers) {
-            rightRows.add(renderRow(row));
+            rightRows.add(renderRow(row, rightNameWidth));
         }
 
         int leftWidth = leftRows.stream()
@@ -138,7 +147,7 @@ public final class TabMenuRenderer {
         return lines;
     }
 
-    private RenderedRow renderRow(PlayerRowFields row) {
+    private RenderedRow renderRow(PlayerRowFields row, int nameColumnWidth) {
         Component iconComponent = Component.empty();
         String iconText = row.rankIcon();
         if (iconText != null && !iconText.isBlank()) {
@@ -157,10 +166,7 @@ public final class TabMenuRenderer {
             suffixComponent = Component.text(" ").append(legacySerializer.deserialize(suffixText));
         }
 
-        String displayName = row.displayName();
-        if (displayName == null || displayName.isBlank()) {
-            displayName = row.username();
-        }
+        String displayName = resolveDisplayName(row);
         TextColor nameColor = parseColor(row.customColor(), DEFAULT_RANK_COLOR);
         Component nameComponent = hasLegacyFormatting(displayName)
                 ? legacySerializer.deserialize(displayName)
@@ -169,17 +175,19 @@ public final class TabMenuRenderer {
         Component pingBars = renderPingBars(row.pingBars());
         String pingText = formatPingMillis(row.pingMillis());
         Component pingTextComponent = Component.text(pingText).color(DEFAULT_STATS_COLOR);
+        int nameLength = calculateTextLength(iconText, prefixText, displayName, suffixText);
+        int namePadding = Math.max(0, nameColumnWidth - nameLength);
 
         Component combined = Component.empty()
                 .append(iconComponent)
                 .append(prefixComponent)
                 .append(nameComponent)
                 .append(suffixComponent)
-                .append(Component.text(" "))
+                .append(Component.text(" ".repeat(1 + namePadding)))
                 .append(pingBars)
                 .append(pingTextComponent);
 
-        int textLength = calculateTextLength(iconText, prefixText, displayName, suffixText)
+        int textLength = nameColumnWidth
                 + 1
                 + PING_BAR_COUNT
                 + pingText.length();
@@ -257,6 +265,19 @@ public final class TabMenuRenderer {
             length += 1 + stripLegacy(suffix).length();
         }
         return length;
+    }
+
+    private int nameSectionLength(PlayerRowFields row) {
+        String displayName = resolveDisplayName(row);
+        return calculateTextLength(row.rankIcon(), row.prefix(), displayName, row.suffix());
+    }
+
+    private String resolveDisplayName(PlayerRowFields row) {
+        String displayName = row.displayName();
+        if (displayName == null || displayName.isBlank()) {
+            return row.username();
+        }
+        return displayName;
     }
 
     private String stripLegacy(String input) {
