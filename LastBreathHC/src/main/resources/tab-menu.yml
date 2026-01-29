@@ -14,7 +14,7 @@ footer:
     - text: "Welcome to LastBreathHC!"
       color: "yellow"
   urls:
-    - "https://lastbreath.example.com"
+    - "https://lastbreathmc.com"
 
 sections:
   showOnline: true
