@@ -9,6 +9,9 @@ teamChat:
 deathMarker:
   durationSeconds: 180
 
+emergencyPing:
+  cooldownSeconds: 300
+
 tabMenu:
   refreshTicks: 40
   statsRefreshSeconds: 10
