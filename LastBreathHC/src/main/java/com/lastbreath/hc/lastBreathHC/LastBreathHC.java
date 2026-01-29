@@ -46,6 +46,7 @@ import com.lastbreath.hc.lastBreathHC.token.ReviveGuiTokenRecipe;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveGUI;
 import com.lastbreath.hc.lastBreathHC.gui.ReviveNameGUI;
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
+import com.lastbreath.hc.lastBreathHC.death.DeathMarkerManager;
 import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
 import com.lastbreath.hc.lastBreathHC.environment.AnvilCrushListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
@@ -84,6 +85,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask bloodMoonTask;
     private BukkitTask titleEffectTask;
     private BloodMoonManager bloodMoonManager;
+    private DeathMarkerManager deathMarkerManager;
     private EnvironmentalEffectsManager environmentalEffectsManager;
     private PotionDefinitionRegistry potionDefinitionRegistry;
     private CustomPotionEffectRegistry customPotionEffectRegistry;
@@ -106,9 +108,11 @@ public final class LastBreathHC extends JavaPlugin {
         bloodMoonManager = new BloodMoonManager(this);
         TeamManager teamManager = new TeamManager();
         TeamChatService teamChatService = new TeamChatService(this, teamManager);
+        int deathMarkerDurationSeconds = getConfig().getInt("deathMarker.durationSeconds", 180);
+        deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
 
         getServer().getPluginManager().registerEvents(
-                new DeathListener(), this
+                new DeathListener(deathMarkerManager), this
         );
         getServer().getPluginManager().registerEvents(
                 new DeathRejoinListener(), this
@@ -278,6 +282,10 @@ public final class LastBreathHC extends JavaPlugin {
         }
         if (bloodMoonManager != null) {
             bloodMoonManager.shutdown();
+        }
+        if (deathMarkerManager != null) {
+            deathMarkerManager.shutdown();
+            deathMarkerManager = null;
         }
         AsteroidManager.clearAllAsteroids();
         BountyManager.save();
