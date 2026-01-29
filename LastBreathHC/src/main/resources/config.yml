@@ -3,6 +3,10 @@
 
 debug: false
 
+tabMenu:
+  refreshTicks: 40
+  statsRefreshSeconds: 10
+
 arrowAggro:
   radius: 3.0
 
