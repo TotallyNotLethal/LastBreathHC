@@ -105,7 +105,8 @@ public class TeamManagementGUI implements Listener {
         inventory.setItem(49, buildInfoItem(Material.PAPER,
                 ChatColor.GOLD + team.getName(),
                 List.of(ChatColor.GRAY + "Members: " + members.size(),
-                        ChatColor.GRAY + "Owner: " + getOwnerName(team))));
+                        ChatColor.GRAY + "Owner: " + getOwnerName(team),
+                        ChatColor.GRAY + "Joining: " + (teamManager.isJoinLocked(team) ? "Locked" : "Open"))));
 
         player.openInventory(inventory);
     }
@@ -158,10 +159,16 @@ public class TeamManagementGUI implements Listener {
             open(player);
             return;
         }
-        if (teamManager.joinTeam(player, team.get())) {
-            player.sendMessage(ChatColor.GREEN + "Joined team " + teamName + ".");
-        } else {
-            player.sendMessage(ChatColor.RED + "Unable to join that team.");
+        TeamManager.JoinOutcome outcome = teamManager.joinTeam(player, team.get());
+        switch (outcome) {
+            case JOINED -> player.sendMessage(ChatColor.GREEN + "Joined team " + teamName + ".");
+            case REQUESTED -> {
+                player.sendMessage(ChatColor.YELLOW + "Join request sent to the team owner.");
+                notifyOwnerOfRequest(team.get(), player);
+            }
+            case REQUEST_ALREADY_PENDING -> player.sendMessage(ChatColor.YELLOW + "You already have a pending join request.");
+            case ALREADY_MEMBER -> player.sendMessage(ChatColor.YELLOW + "You are already on that team.");
+            case FAILED -> player.sendMessage(ChatColor.RED + "Unable to join that team.");
         }
         open(player);
     }
@@ -228,7 +235,13 @@ public class TeamManagementGUI implements Listener {
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + "Members: " + team.getEntries().size());
         lore.add(ChatColor.GRAY + "Owner: " + getOwnerName(team));
-        lore.add(ChatColor.YELLOW + "Click to join.");
+        if (teamManager.isJoinLocked(team)) {
+            lore.add(ChatColor.RED + "Joining: Locked");
+            lore.add(ChatColor.YELLOW + "Click to request access.");
+        } else {
+            lore.add(ChatColor.GREEN + "Joining: Open");
+            lore.add(ChatColor.YELLOW + "Click to join.");
+        }
         meta.setLore(lore);
         meta.getPersistentDataContainer().set(teamKey, PersistentDataType.STRING, team.getName());
         item.setItemMeta(meta);
@@ -293,5 +306,12 @@ public class TeamManagementGUI implements Listener {
         } catch (IllegalArgumentException ignored) {
             return Bukkit.getOfflinePlayer(memberId);
         }
+    }
+
+    private void notifyOwnerOfRequest(Team team, Player requester) {
+        teamManager.getOwner(team)
+                .map(requester.getServer()::getPlayer)
+                .ifPresent(owner -> owner.sendMessage(ChatColor.YELLOW + requester.getName()
+                        + " requested to join your team. Use /team accept " + requester.getName() + " or /team deny " + requester.getName() + "."));
     }
 }
