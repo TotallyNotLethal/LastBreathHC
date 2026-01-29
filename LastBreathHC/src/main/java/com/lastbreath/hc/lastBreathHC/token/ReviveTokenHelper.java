@@ -8,14 +8,29 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 
+import java.util.function.Consumer;
+
 public class ReviveTokenHelper {
 
     public static boolean hasToken(Player player) {
-        return hasToken(player.getInventory()) || hasToken(player.getEnderChest());
+        return hasToken(player.getInventory())
+                || hasToken(player.getEnderChest())
+                || hasTokenInHand(player.getInventory().getItemInOffHand());
     }
 
     public static boolean consumeToken(Player player) {
-        return consumeToken(player.getInventory()) || consumeToken(player.getEnderChest());
+        return consumeTokenFromHand(player)
+                || consumeToken(player.getInventory())
+                || consumeToken(player.getEnderChest());
+    }
+
+    private static boolean hasTokenInHand(ItemStack item) {
+        return ReviveToken.isToken(item) || hasTokenInShulker(item);
+    }
+
+    private static boolean consumeTokenFromHand(Player player) {
+        ItemStack offHand = player.getInventory().getItemInOffHand();
+        return consumeTokenFromItem(offHand, player.getInventory()::setItemInOffHand);
     }
 
     private static boolean hasToken(Inventory inventory) {
@@ -53,6 +68,29 @@ public class ReviveTokenHelper {
         return false;
     }
 
+    private static boolean consumeTokenFromItem(ItemStack item, Consumer<ItemStack> setter) {
+        if (item == null) {
+            return false;
+        }
+
+        if (ReviveToken.isToken(item)) {
+            if (item.getAmount() > 1) {
+                item.setAmount(item.getAmount() - 1);
+                setter.accept(item);
+            } else {
+                setter.accept(null);
+            }
+            return true;
+        }
+
+        if (consumeTokenFromShulkerItem(item)) {
+            setter.accept(item);
+            return true;
+        }
+
+        return false;
+    }
+
     private static void consumeStack(Inventory inventory, int slot, ItemStack item) {
         if (item.getAmount() > 1) {
             item.setAmount(item.getAmount() - 1);
@@ -77,6 +115,15 @@ public class ReviveTokenHelper {
     }
 
     private static boolean consumeTokenFromShulker(Inventory inventory, int slot, ItemStack item) {
+        if (!consumeTokenFromShulkerItem(item)) {
+            return false;
+        }
+
+        inventory.setItem(slot, item);
+        return true;
+    }
+
+    private static boolean consumeTokenFromShulkerItem(ItemStack item) {
         ShulkerBox shulkerBox = getShulkerBox(item);
         if (shulkerBox == null) {
             return false;
@@ -99,7 +146,6 @@ public class ReviveTokenHelper {
             BlockStateMeta meta = (BlockStateMeta) item.getItemMeta();
             meta.setBlockState(shulkerBox);
             item.setItemMeta(meta);
-            inventory.setItem(slot, item);
             return true;
         }
         return false;
