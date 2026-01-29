@@ -1,6 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.ui.tabmenu;
 
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
+import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
+import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModelBuilder.PlayerEntry;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -15,8 +17,12 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
         List<PlayerEntry> entries = new ArrayList<>();
         for (Player player : Bukkit.getOnlinePlayers()) {
             String prefix = TitleManager.getTitleTabTag(player);
+            PlayerStats stats = StatsManager.get(player.getUniqueId());
+            String nickname = stats != null ? stats.nickname : null;
+            String displayName = nickname != null && !nickname.isBlank() ? nickname : player.getName();
             entries.add(new PlayerEntry(
                     player.getName(),
+                    displayName,
                     null,
                     prefix != null && !prefix.isBlank() ? prefix : null,
                     null,

@@ -154,8 +154,14 @@ public final class TabMenuRenderer {
             suffixComponent = Component.text(" ").append(legacySerializer.deserialize(suffixText));
         }
 
+        String displayName = row.displayName();
+        if (displayName == null || displayName.isBlank()) {
+            displayName = row.username();
+        }
         TextColor nameColor = parseColor(row.customColor(), DEFAULT_RANK_COLOR);
-        Component nameComponent = Component.text(row.username()).color(nameColor);
+        Component nameComponent = hasLegacyFormatting(displayName)
+                ? legacySerializer.deserialize(displayName)
+                : Component.text(displayName).color(nameColor);
 
         Component pingBars = renderPingBars(row.pingBars());
 
@@ -167,7 +173,7 @@ public final class TabMenuRenderer {
                 .append(Component.text(" "))
                 .append(pingBars);
 
-        int textLength = calculateTextLength(iconText, prefixText, row.username(), suffixText)
+        int textLength = calculateTextLength(iconText, prefixText, displayName, suffixText)
                 + 1
                 + PING_BAR_COUNT;
 
@@ -227,7 +233,7 @@ public final class TabMenuRenderer {
         return named != null ? named : fallbackColor;
     }
 
-    private int calculateTextLength(String icon, String prefix, String username, String suffix) {
+    private int calculateTextLength(String icon, String prefix, String displayName, String suffix) {
         int length = 0;
         if (icon != null && !icon.isBlank()) {
             length += stripLegacy(icon).length() + 1;
@@ -235,7 +241,7 @@ public final class TabMenuRenderer {
         if (prefix != null && !prefix.isBlank()) {
             length += stripLegacy(prefix).length() + 1;
         }
-        length += username != null ? username.length() : 0;
+        length += displayName != null ? stripLegacy(displayName).length() : 0;
         if (suffix != null && !suffix.isBlank()) {
             length += 1 + stripLegacy(suffix).length();
         }
