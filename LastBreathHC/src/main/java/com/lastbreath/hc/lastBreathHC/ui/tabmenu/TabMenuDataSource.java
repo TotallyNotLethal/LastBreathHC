@@ -57,10 +57,7 @@ public final class TabMenuDataSource {
     }
 
     private TabMenuModelBuilder.TabMenuContext buildSnapshot() {
-        String serverName = plugin.getConfig().getString("serverName");
-        if (serverName == null || serverName.isBlank()) {
-            serverName = Bukkit.getServer().getServerName();
-        }
+        String serverName = "Last Breath";
         StatsSummary summary = StatsManager.summarize();
         int onlineCount = Bukkit.getOnlinePlayers().size();
         int pingMillis = calculateAveragePing(Bukkit.getOnlinePlayers());
