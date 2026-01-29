@@ -24,44 +24,11 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 public class AsteroidListener implements Listener {
-    private static final Set<Material> SOFT_BLOCKS = EnumSet.of(
-            Material.TALL_GRASS,
-            Material.SHORT_GRASS,
-            Material.FERN,
-            Material.LARGE_FERN,
-            Material.DANDELION,
-            Material.POPPY,
-            Material.ALLIUM,
-            Material.AZURE_BLUET,
-            Material.BLUE_ORCHID,
-            Material.CORNFLOWER,
-            Material.LILY_OF_THE_VALLEY,
-            Material.ORANGE_TULIP,
-            Material.PINK_TULIP,
-            Material.RED_TULIP,
-            Material.WHITE_TULIP,
-            Material.OXEYE_DAISY,
-            Material.SUNFLOWER,
-            Material.LILAC,
-            Material.ROSE_BUSH,
-            Material.PEONY,
-            Material.WITHER_ROSE,
-            Material.TORCHFLOWER,
-            Material.PINK_PETALS,
-            Material.SUGAR_CANE,
-            Material.KELP,
-            Material.SEAGRASS,
-            Material.TALL_SEAGRASS,
-            Material.LEAF_LITTER,
-            Material.FIREFLY_BUSH
-    );
-
     @EventHandler
     public void onClick(PlayerInteractEvent e) {
         if (e.getClickedBlock() == null) return;
@@ -86,14 +53,6 @@ public class AsteroidListener implements Listener {
 
     @EventHandler
     public void onBreak(BlockBreakEvent e) {
-        if (isInRestrictedZone(e.getBlock().getLocation())) {
-            if (SOFT_BLOCKS.contains(e.getBlock().getType())) {
-                return;
-            }
-            e.setCancelled(true);
-            e.getPlayer().sendMessage("§cYou cannot build or break blocks near an active asteroid.");
-            return;
-        }
         if (AsteroidManager.isAsteroid(e.getBlock().getLocation())) {
             e.setCancelled(true);
             e.getPlayer().sendMessage("§cThis asteroid cannot be mined.");
