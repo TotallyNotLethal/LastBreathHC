@@ -12,6 +12,13 @@ deathMarker:
 emergencyPing:
   cooldownSeconds: 300
 
+waypoint:
+  enabled: true
+  messages:
+    set: "&a%player% set the team waypoint to %label%."
+    cleared: "&e%player% cleared the team waypoint."
+    view: "&bTeam waypoint: %label% (%world%) - %distance%"
+
 tabMenu:
   refreshTicks: 40
   statsRefreshSeconds: 10

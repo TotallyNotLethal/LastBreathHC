@@ -25,6 +25,7 @@ import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.team.TeamChatListener;
 import com.lastbreath.hc.lastBreathHC.team.TeamChatService;
 import com.lastbreath.hc.lastBreathHC.team.TeamManager;
+import com.lastbreath.hc.lastBreathHC.team.TeamWaypointManager;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.BukkitTabMenuPlayerSource;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.BukkitTabMenuUpdateHandler;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModelProvider;
@@ -93,6 +94,7 @@ public final class LastBreathHC extends JavaPlugin {
     private EffectsStatusGUI effectsStatusGUI;
     private TitlesGUI titlesGUI;
     private TabMenuRefreshScheduler tabMenuRefreshScheduler;
+    private TeamWaypointManager teamWaypointManager;
 
     @Override
     public void onEnable() {
@@ -108,6 +110,8 @@ public final class LastBreathHC extends JavaPlugin {
         bloodMoonManager = new BloodMoonManager(this);
         TeamManager teamManager = new TeamManager();
         TeamChatService teamChatService = new TeamChatService(this, teamManager);
+        teamWaypointManager = new TeamWaypointManager(new java.io.File(getDataFolder(), "teams.yml"));
+        teamWaypointManager.load();
         int deathMarkerDurationSeconds = getConfig().getInt("deathMarker.durationSeconds", 180);
         deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
 
@@ -247,6 +251,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("discord", new DiscordCommand());
                     event.registrar().register("t", new TeamChatCommand(teamChatService));
                     event.registrar().register("tping", new EmergencyPingCommand(this, teamManager));
+                    event.registrar().register("waypoint", new WaypointCommand(this, teamManager, teamWaypointManager));
                 }
         );
     }
@@ -287,6 +292,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (deathMarkerManager != null) {
             deathMarkerManager.shutdown();
             deathMarkerManager = null;
+        }
+        if (teamWaypointManager != null) {
+            teamWaypointManager.save();
+            teamWaypointManager = null;
         }
         AsteroidManager.clearAllAsteroids();
         BountyManager.save();
