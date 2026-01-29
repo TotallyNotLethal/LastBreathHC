@@ -40,14 +40,7 @@ public final class TabMenuRenderer {
 
     private List<Component> renderHeader(TabMenuModel.HeaderFields header) {
         List<Component> lines = new ArrayList<>();
-        lines.add(Component.text(header.serverName()).color(NamedTextColor.GOLD));
-        lines.add(Component.text(String.format(
-                "Online: %d  Ping: %dms  Unique Joins: %d  Total Deaths: %d",
-                header.onlineCount(),
-                header.pingMillis(),
-                header.uniqueJoins(),
-                header.totalDeaths()))
-                .color(NamedTextColor.GRAY));
+        lines.addAll(renderLines(header.lines()));
         addSectionSpacing(lines);
         return lines;
     }
@@ -55,21 +48,30 @@ public final class TabMenuRenderer {
     private List<Component> renderFooter(TabMenuModel.FooterFields footer) {
         List<Component> lines = new ArrayList<>();
         addSectionSpacing(lines);
-        if (footer.dateTimeLine() != null && !footer.dateTimeLine().isBlank()) {
-            lines.add(legacySerializer.deserialize(footer.dateTimeLine()));
-        }
-        for (String announcement : footer.announcements()) {
-            if (announcement != null && !announcement.isBlank()) {
-                lines.add(Component.text("• ").color(NamedTextColor.YELLOW)
-                        .append(legacySerializer.deserialize(announcement)));
-            }
-        }
+        lines.addAll(renderLines(footer.lines()));
         for (String url : footer.urls()) {
             if (url != null && !url.isBlank()) {
                 lines.add(Component.text(url).color(NamedTextColor.AQUA));
             }
         }
         return lines;
+    }
+
+    private List<Component> renderLines(List<TabMenuModel.LineFields> lines) {
+        List<Component> rendered = new ArrayList<>(lines.size());
+        for (TabMenuModel.LineFields line : lines) {
+            if (line == null || line.text() == null || line.text().isBlank()) {
+                continue;
+            }
+            String text = line.text();
+            String color = line.color();
+            if (hasLegacyFormatting(text) || color == null || color.isBlank()) {
+                rendered.add(legacySerializer.deserialize(text));
+            } else {
+                rendered.add(Component.text(text).color(parseColor(color)));
+            }
+        }
+        return rendered;
     }
 
     private List<Component> renderPlayers(List<PlayerRowFields> players) {
@@ -208,6 +210,13 @@ public final class TabMenuRenderer {
             return "";
         }
         return LEGACY_COLOR_PATTERN.matcher(input).replaceAll("");
+    }
+
+    private boolean hasLegacyFormatting(String input) {
+        if (input == null) {
+            return false;
+        }
+        return LEGACY_COLOR_PATTERN.matcher(input).find();
     }
 
     private record RenderedRow(Component component, int textLength) {
