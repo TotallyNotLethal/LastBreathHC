@@ -181,6 +181,9 @@ public final class LastBreathHC extends JavaPlugin {
                 new RtpUsageListener(this), this
         );
         getServer().getPluginManager().registerEvents(
+                new NickUsageListener(this), this
+        );
+        getServer().getPluginManager().registerEvents(
                 new DispenserSwordListener(this), this
         );
         environmentalEffectsManager = new EnvironmentalEffectsManager(this);
@@ -228,6 +231,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("bounty", new BountyCommand());
                     event.registrar().register("effects", new EffectsCommand(customPotionEffectManager, customPotionEffectRegistry, effectsStatusGUI));
                     event.registrar().register("rtp", new RtpCommand(this));
+                    event.registrar().register("nick", new NickCommand(this));
                     event.registrar().register("discord", new DiscordCommand());
                 }
         );
