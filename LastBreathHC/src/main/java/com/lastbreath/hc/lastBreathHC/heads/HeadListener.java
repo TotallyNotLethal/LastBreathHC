@@ -177,6 +177,14 @@ public class HeadListener implements Listener {
                 ReviveStateManager.markRevivePending(uuid);
                 Bukkit.broadcastMessage("§a✦ " + targetName + " has been revived!");
 
+                Inventory storedInventory = HeadManager.get(uuid);
+                Player onlineTarget = Bukkit.getPlayer(uuid);
+                if (onlineTarget != null && storedInventory != null) {
+                    onlineTarget.getEnderChest().setContents(storedInventory.getContents());
+                } else if (storedInventory != null) {
+                    HeadManager.storePendingRestore(uuid, storedInventory);
+                }
+
                 HeadManager.remove(uuid);
                 pdc.remove(HeadManager.getKey());
                 skull.update();
