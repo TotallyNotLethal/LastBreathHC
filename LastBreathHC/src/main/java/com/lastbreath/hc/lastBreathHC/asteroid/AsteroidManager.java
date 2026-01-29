@@ -321,22 +321,30 @@ public class AsteroidManager {
         }
 
         private void placeCoreAndScorch() {
-            for (int x = -1; x <= 1; x++) {
-                for (int z = -1; z <= 1; z++) {
+            int impactRadius = 2;
+            if (plugin != null) {
+                impactRadius = plugin.getConfig().getInt("asteroid.impact.radius", impactRadius);
+            }
+            impactRadius = Math.max(1, impactRadius);
+            for (int x = -impactRadius; x <= impactRadius; x++) {
+                for (int z = -impactRadius; z <= impactRadius; z++) {
                     if (ThreadLocalRandom.current().nextDouble() < 0.6) {
                         Location ground = center.clone().add(x, 0, z);
                         if (ground.getBlock().getType().isSolid()) {
                             ground.getBlock().setType(Material.NETHERRACK);
-                            Location fire = ground.clone().add(0, 1, 0);
-                            if (fire.getBlock().getType() == Material.AIR) {
-                                fire.getBlock().setType(Material.FIRE);
-                            }
+                            clearBlockingAbove(ground, 1);
+                            placeFireIfAir(ground.clone().add(0, 1, 0));
                         }
                     }
                 }
             }
 
-            Location core = center.clone().add(0, 1, 0);
+            Location coreGround = center.clone();
+            if (!coreGround.getBlock().getType().isSolid()) {
+                return;
+            }
+            Location core = findPassableAbove(coreGround, 3);
+            clearBlockingAbove(coreGround, 2);
             core.getBlock().setType(Material.ANCIENT_DEBRIS);
             AsteroidManager.registerAsteroid(core, tier);
 
@@ -350,6 +358,31 @@ public class AsteroidManager {
                                     NamedTextColor.YELLOW
                             ))
             );
+        }
+
+        private void clearBlockingAbove(Location ground, int height) {
+            for (int y = 1; y <= height; y++) {
+                Location above = ground.clone().add(0, y, 0);
+                if (!above.getBlock().isPassable()) {
+                    above.getBlock().setType(Material.AIR);
+                }
+            }
+        }
+
+        private Location findPassableAbove(Location ground, int height) {
+            for (int y = 1; y <= height; y++) {
+                Location above = ground.clone().add(0, y, 0);
+                if (above.getBlock().isPassable()) {
+                    return above;
+                }
+            }
+            return ground.clone().add(0, 1, 0);
+        }
+
+        private void placeFireIfAir(Location location) {
+            if (location.getBlock().getType() == Material.AIR) {
+                location.getBlock().setType(Material.FIRE);
+            }
         }
     }
 

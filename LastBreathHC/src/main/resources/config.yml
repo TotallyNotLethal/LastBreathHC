@@ -14,6 +14,8 @@ anvilCrush:
 
 asteroid:
   mobLeashRadius: 16
+  impact:
+    radius: 2
   spawn:
     minSeconds: 1200
     maxSeconds: 3600
