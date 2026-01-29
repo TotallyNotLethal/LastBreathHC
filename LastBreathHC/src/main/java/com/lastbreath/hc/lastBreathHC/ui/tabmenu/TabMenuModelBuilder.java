@@ -76,6 +76,7 @@ public final class TabMenuModelBuilder {
                     player.prefix(),
                     player.suffix(),
                     player.pingBars(),
+                    player.pingMillis(),
                     color
             ));
         }
@@ -138,6 +139,7 @@ public final class TabMenuModelBuilder {
                               String rank,
                               String prefix,
                               String suffix,
-                              int pingBars) {
+                              int pingBars,
+                              int pingMillis) {
     }
 }

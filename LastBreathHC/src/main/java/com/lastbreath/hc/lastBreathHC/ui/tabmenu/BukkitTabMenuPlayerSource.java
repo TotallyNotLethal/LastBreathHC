@@ -26,7 +26,8 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
                     null,
                     prefix != null && !prefix.isBlank() ? prefix : null,
                     null,
-                    pingBarsFor(player.getPing())
+                    pingBarsFor(player.getPing()),
+                    player.getPing()
             ));
         }
         entries.sort(Comparator.comparing(PlayerEntry::username, String.CASE_INSENSITIVE_ORDER));
