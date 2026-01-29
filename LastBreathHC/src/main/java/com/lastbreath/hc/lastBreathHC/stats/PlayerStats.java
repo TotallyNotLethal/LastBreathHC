@@ -16,6 +16,7 @@ public class PlayerStats {
     public int cropsHarvested;
     public int blocksMined;
     public int rareOresMined;
+    public String nickname;
     public Set<Title> unlockedTitles = new HashSet<>();
     public Title equippedTitle;
 

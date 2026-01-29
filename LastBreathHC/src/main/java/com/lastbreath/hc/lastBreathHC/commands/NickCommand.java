@@ -1,6 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.commands;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
+import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -63,6 +65,7 @@ public class NickCommand implements BasicCommand {
 
         player.getPersistentDataContainer().set(nicknameKey, PersistentDataType.STRING, translated);
         applyNickname(player, translated);
+        updateNicknameStats(player, translated);
         player.sendMessage("§aNickname set to " + translated + "§a.");
     }
 
@@ -70,11 +73,18 @@ public class NickCommand implements BasicCommand {
         player.getPersistentDataContainer().remove(nicknameKey);
         player.setDisplayName(player.getName());
         TitleManager.refreshPlayerTabTitle(player);
+        updateNicknameStats(player, null);
         player.sendMessage("§aNickname cleared.");
     }
 
     private void applyNickname(Player player, String nickname) {
         player.setDisplayName(nickname);
         player.setPlayerListName(TitleManager.getTitleTabTag(player) + nickname);
+    }
+
+    private void updateNicknameStats(Player player, String nickname) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        stats.nickname = nickname;
+        StatsManager.save(player.getUniqueId());
     }
 }

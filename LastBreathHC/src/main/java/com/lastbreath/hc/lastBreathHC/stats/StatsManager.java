@@ -97,6 +97,7 @@ public class StatsManager {
             playerStats.cropsHarvested = config.getInt(base + ".cropsHarvested", 0);
             playerStats.blocksMined = config.getInt(base + ".blocksMined", 0);
             playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
+            playerStats.nickname = config.getString(base + ".nickname");
 
             List<String> unlocked = config.getStringList(base + ".unlockedTitles");
             Set<Title> titles = new HashSet<>();
@@ -142,6 +143,7 @@ public class StatsManager {
         config.set(base + ".cropsHarvested", playerStats.cropsHarvested);
         config.set(base + ".blocksMined", playerStats.blocksMined);
         config.set(base + ".rareOresMined", playerStats.rareOresMined);
+        config.set(base + ".nickname", playerStats.nickname);
         config.set(base + ".unlockedTitles", playerStats.unlockedTitles.stream()
                 .map(Title::name)
                 .sorted()
