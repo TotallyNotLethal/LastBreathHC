@@ -305,7 +305,7 @@ public final class LastBreathHC extends JavaPlugin {
             teamWaypointManager = null;
         }
         if (teamManager != null) {
-            teamManager.saveOwners();
+            teamManager.saveAll();
             teamManager = null;
         }
         AsteroidManager.clearAllAsteroids();

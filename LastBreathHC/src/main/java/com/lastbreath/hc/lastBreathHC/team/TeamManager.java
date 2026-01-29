@@ -24,6 +24,14 @@ import java.util.stream.Collectors;
 
 public class TeamManager {
 
+    public enum JoinOutcome {
+        JOINED,
+        REQUESTED,
+        REQUEST_ALREADY_PENDING,
+        ALREADY_MEMBER,
+        FAILED
+    }
+
     public enum LeaveOutcome {
         NOT_IN_TEAM,
         LEFT,
@@ -33,15 +41,19 @@ public class TeamManager {
 
     private final LastBreathHC plugin;
     private final File ownerFile;
+    private final File dataFile;
     private final Map<String, UUID> teamOwners = new HashMap<>();
+    private final Map<String, Boolean> teamLocks = new HashMap<>();
+    private final Map<String, Map<UUID, String>> teamJoinRequests = new HashMap<>();
 
     public TeamManager(LastBreathHC plugin) {
         this.plugin = plugin;
         this.ownerFile = new File(plugin.getDataFolder(), "team-owners.yml");
+        this.dataFile = new File(plugin.getDataFolder(), "team-data.yml");
         if (!plugin.getDataFolder().exists()) {
             plugin.getDataFolder().mkdirs();
         }
-        loadOwners();
+        loadTeams();
     }
 
     public Optional<Team> getTeam(Player player) {
@@ -78,19 +90,41 @@ public class TeamManager {
         }
         Team team = scoreboard.registerNewTeam(name);
         setOwner(team, owner.getUniqueId());
+        setJoinLocked(team, false);
         return Optional.of(team);
     }
 
-    public boolean joinTeam(Player player, Team team) {
+    public JoinOutcome joinTeam(Player player, Team team) {
         if (team == null) {
-            return false;
+            return JoinOutcome.FAILED;
+        }
+        if (team.hasEntry(player.getName())) {
+            return JoinOutcome.ALREADY_MEMBER;
+        }
+        if (isJoinLocked(team) && !isOwner(player, team)) {
+            String teamKey = normalizeTeamKey(team.getName());
+            Map<UUID, String> requests = teamJoinRequests.computeIfAbsent(teamKey, key -> new HashMap<>());
+            if (requests.containsKey(player.getUniqueId())) {
+                return JoinOutcome.REQUEST_ALREADY_PENDING;
+            }
+            requests.put(player.getUniqueId(), player.getName());
+            saveAll();
+            return JoinOutcome.REQUESTED;
         }
         getTeam(player).ifPresent(current -> current.removeEntry(player.getName()));
         boolean joined = team.addEntry(player.getName());
         if (joined && getOwner(team).isEmpty()) {
             setOwner(team, player.getUniqueId());
         }
-        return joined;
+        if (joined) {
+            Map<UUID, String> requests = teamJoinRequests.get(normalizeTeamKey(team.getName()));
+            if (requests != null) {
+                requests.remove(player.getUniqueId());
+            }
+            saveAll();
+            return JoinOutcome.JOINED;
+        }
+        return JoinOutcome.FAILED;
     }
 
     public Collection<String> getTeamNames() {
@@ -119,6 +153,66 @@ public class TeamManager {
         return Optional.ofNullable(teamOwners.get(normalizeTeamKey(team.getName())));
     }
 
+    public boolean isJoinLocked(Team team) {
+        if (team == null) {
+            return false;
+        }
+        return teamLocks.getOrDefault(normalizeTeamKey(team.getName()), false);
+    }
+
+    public void setJoinLocked(Team team, boolean locked) {
+        if (team == null) {
+            return;
+        }
+        teamLocks.put(normalizeTeamKey(team.getName()), locked);
+        saveAll();
+    }
+
+    public Map<UUID, String> getJoinRequests(Team team) {
+        if (team == null) {
+            return Map.of();
+        }
+        return Map.copyOf(teamJoinRequests.getOrDefault(normalizeTeamKey(team.getName()), Map.of()));
+    }
+
+    public boolean approveJoinRequest(Team team, OfflinePlayer target) {
+        if (team == null || target == null) {
+            return false;
+        }
+        String teamKey = normalizeTeamKey(team.getName());
+        Map<UUID, String> requests = teamJoinRequests.get(teamKey);
+        if (requests == null || !requests.containsKey(target.getUniqueId())) {
+            return false;
+        }
+        String name = target.getName();
+        if (name == null) {
+            name = requests.get(target.getUniqueId());
+        }
+        if (name == null) {
+            return false;
+        }
+        requests.remove(target.getUniqueId());
+        team.addEntry(name);
+        saveAll();
+        return true;
+    }
+
+    public boolean denyJoinRequest(Team team, OfflinePlayer target) {
+        if (team == null || target == null) {
+            return false;
+        }
+        String teamKey = normalizeTeamKey(team.getName());
+        Map<UUID, String> requests = teamJoinRequests.get(teamKey);
+        if (requests == null) {
+            return false;
+        }
+        if (requests.remove(target.getUniqueId()) != null) {
+            saveAll();
+            return true;
+        }
+        return false;
+    }
+
     public boolean isOwner(Player player, Team team) {
         return getOwner(team)
                 .map(ownerId -> ownerId.equals(player.getUniqueId()))
@@ -130,7 +224,7 @@ public class TeamManager {
             return;
         }
         teamOwners.put(normalizeTeamKey(team.getName()), ownerId);
-        saveOwners();
+        saveAll();
     }
 
     public LeaveOutcome leaveTeam(Player player) {
@@ -144,6 +238,7 @@ public class TeamManager {
         team.removeEntry(player.getName());
 
         if (!wasOwner) {
+            saveAll();
             return LeaveOutcome.LEFT;
         }
 
@@ -179,6 +274,7 @@ public class TeamManager {
             return false;
         }
         team.removeEntry(target.getName());
+        saveAll();
         return true;
     }
 
@@ -186,8 +282,11 @@ public class TeamManager {
         if (team == null) {
             return;
         }
-        teamOwners.remove(normalizeTeamKey(team.getName()));
-        saveOwners();
+        String teamKey = normalizeTeamKey(team.getName());
+        teamOwners.remove(teamKey);
+        teamLocks.remove(teamKey);
+        teamJoinRequests.remove(teamKey);
+        saveAll();
         team.unregister();
     }
 
@@ -197,8 +296,16 @@ public class TeamManager {
             return Set.of();
         }
 
+        return getOnlineTeamMembers(team.get());
+    }
+
+    public Set<Player> getOnlineTeamMembers(Team team) {
+        if (team == null) {
+            return Set.of();
+        }
+
         Set<Player> members = new LinkedHashSet<>();
-        for (String entry : team.get().getEntries()) {
+        for (String entry : team.getEntries()) {
             Player online = Bukkit.getPlayerExact(entry);
             if (online != null) {
                 members.add(online);
@@ -259,6 +366,108 @@ public class TeamManager {
             config.save(ownerFile);
         } catch (IOException e) {
             plugin.getLogger().warning("Failed to save team owner data.");
+        }
+    }
+
+    private void loadTeams() {
+        Scoreboard scoreboard = getMainScoreboard();
+        if (scoreboard == null) {
+            return;
+        }
+
+        if (!dataFile.exists()) {
+            loadOwners();
+            for (Team team : scoreboard.getTeams()) {
+                String teamKey = normalizeTeamKey(team.getName());
+                teamLocks.put(teamKey, false);
+                teamJoinRequests.put(teamKey, new HashMap<>());
+            }
+            saveAll();
+            return;
+        }
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
+        org.bukkit.configuration.ConfigurationSection teamsSection = config.getConfigurationSection("teams");
+        if (teamsSection == null) {
+            return;
+        }
+
+        for (String key : teamsSection.getKeys(false)) {
+            org.bukkit.configuration.ConfigurationSection section = teamsSection.getConfigurationSection(key);
+            if (section == null) {
+                continue;
+            }
+            String teamName = section.getString("name", key);
+            Team team = scoreboard.getTeam(teamName);
+            if (team == null) {
+                team = scoreboard.registerNewTeam(teamName);
+            } else {
+                for (String entry : Set.copyOf(team.getEntries())) {
+                    team.removeEntry(entry);
+                }
+            }
+
+            for (String entry : section.getStringList("members")) {
+                if (entry != null && !entry.isBlank()) {
+                    team.addEntry(entry);
+                }
+            }
+
+            String ownerRaw = section.getString("owner");
+            if (ownerRaw != null) {
+                try {
+                    teamOwners.put(normalizeTeamKey(teamName), UUID.fromString(ownerRaw));
+                } catch (IllegalArgumentException ignored) {
+                    plugin.getLogger().warning("Invalid team owner UUID for team " + teamName);
+                }
+            }
+
+            teamLocks.put(normalizeTeamKey(teamName), section.getBoolean("locked", false));
+            Map<UUID, String> requests = new HashMap<>();
+            org.bukkit.configuration.ConfigurationSection requestSection = section.getConfigurationSection("requests");
+            if (requestSection != null) {
+                for (String requestKey : requestSection.getKeys(false)) {
+                    String name = requestSection.getString(requestKey);
+                    try {
+                        UUID uuid = UUID.fromString(requestKey);
+                        requests.put(uuid, name);
+                    } catch (IllegalArgumentException ignored) {
+                        plugin.getLogger().warning("Invalid join request UUID for team " + teamName);
+                    }
+                }
+            }
+            teamJoinRequests.put(normalizeTeamKey(teamName), requests);
+        }
+    }
+
+    public void saveAll() {
+        Scoreboard scoreboard = getMainScoreboard();
+        if (scoreboard == null) {
+            return;
+        }
+        FileConfiguration config = new YamlConfiguration();
+        for (Team team : scoreboard.getTeams()) {
+            String teamKey = normalizeTeamKey(team.getName());
+            String path = "teams." + teamKey;
+            config.set(path + ".name", team.getName());
+            UUID ownerId = teamOwners.get(teamKey);
+            if (ownerId != null) {
+                config.set(path + ".owner", ownerId.toString());
+            }
+            config.set(path + ".locked", teamLocks.getOrDefault(teamKey, false));
+            config.set(path + ".members", team.getEntries().stream().sorted(String.CASE_INSENSITIVE_ORDER).toList());
+            Map<UUID, String> requests = teamJoinRequests.getOrDefault(teamKey, Map.of());
+            if (!requests.isEmpty()) {
+                for (Map.Entry<UUID, String> entry : requests.entrySet()) {
+                    config.set(path + ".requests." + entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        dataFile.getParentFile().mkdirs();
+        try {
+            config.save(dataFile);
+        } catch (IOException e) {
+            plugin.getLogger().warning("Failed to save team data.");
         }
     }
 }

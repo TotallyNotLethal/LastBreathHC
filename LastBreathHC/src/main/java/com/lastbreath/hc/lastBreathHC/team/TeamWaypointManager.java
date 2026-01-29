@@ -95,6 +95,7 @@ public class TeamWaypointManager {
             return;
         }
         waypoints.put(normalizeTeamKey(team.getName()), waypoint);
+        save();
     }
 
     public void clearWaypoint(Team team) {
@@ -102,6 +103,7 @@ public class TeamWaypointManager {
             return;
         }
         waypoints.remove(normalizeTeamKey(team.getName()));
+        save();
     }
 
     public Location toLocation(TeamWaypoint waypoint) {
