@@ -68,9 +68,7 @@ public class ReviveGUI implements Listener {
                             : player.getWorld().getSpawnLocation()
             );
 
-            Bukkit.broadcastMessage(
-                    "§6⚡ " + TitleManager.getTitleTag(player) + player.getName() + " defied death!"
-            );
+            Bukkit.broadcastMessage("§a✦ " + player.getName() + " has been revived!");
 
             player.closeInventory();
         } else {
