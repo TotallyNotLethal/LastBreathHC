@@ -1,0 +1,904 @@
+package com.lastbreath.hc.lastBreathHC.worldboss;
+
+import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.WorldBorder;
+import org.bukkit.WorldCreator;
+import org.bukkit.WorldType;
+import org.bukkit.block.Block;
+import org.bukkit.block.Biome;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.weather.ThunderChangeEvent;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
+
+import java.time.Duration;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
+
+public class WorldBossManager implements Listener {
+
+    private static final String CONFIG_ROOT = "worldBoss";
+    private static final int DEFAULT_MIN_SECONDS = 1800;
+    private static final int DEFAULT_MAX_SECONDS = 3600;
+    private static final int MAX_LOCATION_ATTEMPTS = 25;
+    private static final double DEFAULT_FALLBACK_RADIUS = 40.0;
+    private static final int DEFAULT_ARENA_RADIUS = 24;
+    private static final int DEFAULT_ARENA_WALL_HEIGHT = 6;
+
+    private final Plugin plugin;
+    private final BloodMoonManager bloodMoonManager;
+    private final Random random = new Random();
+    private final NamespacedKey bossTypeKey;
+    private final NamespacedKey returnLocationKey;
+    private final Map<TriggerType, Map<UUID, Long>> lastTriggerTimes = new EnumMap<>(TriggerType.class);
+    private final Map<UUID, WorldBossController> activeBosses = new HashMap<>();
+    private final WorldBossAntiCheese antiCheese;
+    private BukkitTask randomSpawnTask;
+    private BukkitTask bloodMoonCheckTask;
+    private BukkitTask bossTickTask;
+    private boolean lastBloodMoonActive;
+    private int beaconTickCounter;
+    private final Map<World, Set<Location>> portalBlocks = new HashMap<>();
+    private final Map<UUID, Long> portalCooldowns = new HashMap<>();
+    private final Set<Location> escapeBlocks = new HashSet<>();
+
+    public WorldBossManager(Plugin plugin, BloodMoonManager bloodMoonManager) {
+        this.plugin = plugin;
+        this.bloodMoonManager = bloodMoonManager;
+        this.bossTypeKey = new NamespacedKey(plugin, "world_boss_type");
+        this.returnLocationKey = new NamespacedKey(plugin, "world_boss_return_location");
+        this.antiCheese = new WorldBossAntiCheese(plugin);
+        for (TriggerType triggerType : TriggerType.values()) {
+            lastTriggerTimes.put(triggerType, new HashMap<>());
+        }
+    }
+
+    public void start() {
+        scheduleNextRandomSpawn();
+        scheduleBloodMoonChecks();
+        startBossTick();
+        prepareInstancePortals();
+    }
+
+    public void shutdown() {
+        if (randomSpawnTask != null) {
+            randomSpawnTask.cancel();
+            randomSpawnTask = null;
+        }
+        if (bloodMoonCheckTask != null) {
+            bloodMoonCheckTask.cancel();
+            bloodMoonCheckTask = null;
+        }
+        if (bossTickTask != null) {
+            bossTickTask.cancel();
+            bossTickTask = null;
+        }
+        for (WorldBossController controller : activeBosses.values()) {
+            controller.cleanup();
+            antiCheese.clear(controller.getBoss());
+        }
+        activeBosses.clear();
+        portalBlocks.clear();
+        portalCooldowns.clear();
+        escapeBlocks.clear();
+    }
+
+    @EventHandler
+    public void onThunderChange(ThunderChangeEvent event) {
+        if (!event.toThunderState()) {
+            return;
+        }
+        if (!isTriggerEnabled(TriggerType.THUNDERSTORM)) {
+            return;
+        }
+        trySpawnTriggeredBoss(event.getWorld(), event.getWorld().getSpawnLocation(), TriggerType.THUNDERSTORM);
+    }
+
+    @EventHandler
+    public void onStructureInteract(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+        if (!isTriggerEnabled(TriggerType.STRUCTURE_INTERACTION)) {
+            return;
+        }
+        Block clicked = event.getClickedBlock();
+        if (clicked == null) {
+            return;
+        }
+        if (!getStructureBlocks().contains(clicked.getType())) {
+            return;
+        }
+        trySpawnTriggeredBoss(clicked.getWorld(), clicked.getLocation(), TriggerType.STRUCTURE_INTERACTION);
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        event.getChunk().getEntitiesByClass(LivingEntity.class).forEach(entity -> {
+            String bossTypeName = entity.getPersistentDataContainer().get(bossTypeKey, PersistentDataType.STRING);
+            if (bossTypeName == null) {
+                return;
+            }
+            WorldBossType type = WorldBossType.fromConfigKey(bossTypeName).orElse(null);
+            if (type == null) {
+                return;
+            }
+            if (activeBosses.containsKey(entity.getUniqueId())) {
+                return;
+            }
+            WorldBossController controller = createController(type, entity);
+            if (controller != null) {
+                controller.rebuildFromPersistent();
+                activeBosses.put(entity.getUniqueId(), controller);
+            }
+        });
+    }
+
+    @EventHandler
+    public void onBossDamage(EntityDamageByEntityEvent event) {
+        if (event.getEntity() instanceof LivingEntity target) {
+            WorldBossController controller = activeBosses.get(target.getUniqueId());
+            if (controller != null) {
+                controller.handleBossDamaged(event);
+                antiCheese.recordDamage(controller, event);
+            }
+        }
+        if (event.getDamager() instanceof LivingEntity damager) {
+            WorldBossController controller = activeBosses.get(damager.getUniqueId());
+            if (controller != null) {
+                controller.handleBossAttack(event);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerMove(PlayerMoveEvent event) {
+        if (event.getTo() == null) {
+            return;
+        }
+        Location to = event.getTo();
+        Location blockLocation = to.getBlock().getLocation();
+        if (escapeBlocks.contains(blockLocation)) {
+            long now = System.currentTimeMillis();
+            long last = portalCooldowns.getOrDefault(event.getPlayer().getUniqueId(), 0L);
+            if (now - last < 3000L) {
+                return;
+            }
+            portalCooldowns.put(event.getPlayer().getUniqueId(), now);
+            teleportToExit(event.getPlayer());
+            return;
+        }
+        Set<Location> blocks = portalBlocks.get(to.getWorld());
+        if (blocks == null || blocks.isEmpty()) {
+            return;
+        }
+        if (!blocks.contains(blockLocation)) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long last = portalCooldowns.getOrDefault(event.getPlayer().getUniqueId(), 0L);
+        if (now - last < 3000L) {
+            return;
+        }
+        portalCooldowns.put(event.getPlayer().getUniqueId(), now);
+        teleportViaPortal(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onBossBlockBreak(BlockBreakEvent event) {
+        for (WorldBossController controller : activeBosses.values()) {
+            controller.handleBlockBreak(event);
+        }
+    }
+
+    @EventHandler
+    public void onBossDeath(EntityDeathEvent event) {
+        WorldBossController controller = activeBosses.remove(event.getEntity().getUniqueId());
+        if (controller != null) {
+            controller.cleanup();
+            antiCheese.clear(event.getEntity());
+        }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        World arenaWorld = resolveArenaWorld();
+        if (arenaWorld == null) {
+            return;
+        }
+        Player player = event.getPlayer();
+        if (!player.getWorld().equals(arenaWorld)) {
+            return;
+        }
+        World exitWorld = resolveExitWorld();
+        if (exitWorld == null) {
+            return;
+        }
+        Location exitLocation = exitWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5);
+        storeReturnLocation(player, exitLocation);
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        Location returnLocation = loadReturnLocation(player);
+        if (returnLocation != null) {
+            player.teleport(returnLocation);
+            player.getPersistentDataContainer().remove(returnLocationKey);
+        }
+    }
+
+    private void scheduleNextRandomSpawn() {
+        if (randomSpawnTask != null) {
+            randomSpawnTask.cancel();
+        }
+
+        int minSeconds = plugin.getConfig().getInt(CONFIG_ROOT + ".spawn.minSeconds", DEFAULT_MIN_SECONDS);
+        int maxSeconds = plugin.getConfig().getInt(CONFIG_ROOT + ".spawn.maxSeconds", DEFAULT_MAX_SECONDS);
+        boolean enabled = plugin.getConfig().getBoolean(CONFIG_ROOT + ".spawn.enabled", true);
+
+        if (!enabled || minSeconds <= 0 || maxSeconds <= 0) {
+            plugin.getLogger().info("World boss random spawn disabled or invalid configuration.");
+            return;
+        }
+
+        if (maxSeconds < minSeconds) {
+            int swap = minSeconds;
+            minSeconds = maxSeconds;
+            maxSeconds = swap;
+        }
+
+        int delaySeconds = minSeconds + random.nextInt(maxSeconds - minSeconds + 1);
+        randomSpawnTask = new BukkitRunnable() {
+            private int remainingSeconds = delaySeconds;
+
+            @Override
+            public void run() {
+                if (remainingSeconds <= 0) {
+                    attemptRandomSpawn();
+                    cancel();
+                    scheduleNextRandomSpawn();
+                    return;
+                }
+                remainingSeconds--;
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private void scheduleBloodMoonChecks() {
+        if (bloodMoonCheckTask != null) {
+            bloodMoonCheckTask.cancel();
+        }
+        if (!isTriggerEnabled(TriggerType.BLOOD_MOON)) {
+            return;
+        }
+        bloodMoonCheckTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                boolean active = bloodMoonManager != null && bloodMoonManager.isActive();
+                if (active && !lastBloodMoonActive) {
+                    for (World world : getEligibleWorlds()) {
+                        trySpawnTriggeredBoss(world, world.getSpawnLocation(), TriggerType.BLOOD_MOON);
+                    }
+                }
+                lastBloodMoonActive = active;
+            }
+        }.runTaskTimer(plugin, 0L, 100L);
+    }
+
+    private void startBossTick() {
+        if (bossTickTask != null) {
+            return;
+        }
+        bossTickTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                activeBosses.values().removeIf(controller -> {
+                    LivingEntity boss = controller.getBoss();
+                    if (boss == null || boss.isDead() || !boss.isValid()) {
+                        controller.cleanup();
+                        return true;
+                    }
+                    controller.tick();
+                    if (antiCheese.tick(controller)) {
+                        return true;
+                    }
+                    return false;
+                });
+                tickBeaconAndCompass();
+            }
+        }.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    private void attemptRandomSpawn() {
+        List<World> worlds = getEligibleWorlds();
+        if (worlds.isEmpty()) {
+            plugin.getLogger().warning("World boss spawn skipped because no worlds are configured.");
+            return;
+        }
+        World world = worlds.get(random.nextInt(worlds.size()));
+        if (!spawnWorldBoss(world, pickRandomBaseLocation(world))) {
+            plugin.getLogger().warning("World boss random spawn failed to find a valid location.");
+        }
+    }
+
+    private void trySpawnTriggeredBoss(World world, Location origin, TriggerType triggerType) {
+        if (!isTriggerOffCooldown(world, triggerType)) {
+            return;
+        }
+        if (spawnWorldBoss(world, origin)) {
+            setTriggeredNow(world, triggerType);
+        } else {
+            plugin.getLogger().warning("World boss trigger failed for " + triggerType.name().toLowerCase(Locale.ROOT) + ".");
+        }
+    }
+
+    private boolean spawnWorldBoss(World world, Location origin) {
+        Location base = origin != null ? origin : pickRandomBaseLocation(world);
+        if (base == null) {
+            return false;
+        }
+
+        Biome baseBiome = world.getBiome(base.getBlockX(), base.getBlockY(), base.getBlockZ());
+        if (!isBiomeEligible(baseBiome)) {
+            return false;
+        }
+
+        WorldBossType bossType = resolveBossType(baseBiome)
+                .orElseGet(() -> getFallbackBossType().orElse(null));
+        if (bossType == null) {
+            return false;
+        }
+
+        BossSettings settings = getBossSettings(bossType);
+        World arenaWorld = resolveArenaWorld();
+        if (arenaWorld == null) {
+            plugin.getLogger().warning("World boss arena world could not be created.");
+            return false;
+        }
+        prepareArena(arenaWorld);
+        Location spawnLocation = findArenaSpawnLocation(arenaWorld, settings.spawnRadius);
+        if (spawnLocation == null) {
+            return false;
+        }
+
+        if (!(arenaWorld.spawnEntity(spawnLocation, settings.entityType) instanceof LivingEntity bossEntity)) {
+            return false;
+        }
+
+        bossEntity.setCustomName(bossType.getConfigKey());
+        bossEntity.setCustomNameVisible(true);
+        bossEntity.getPersistentDataContainer().set(bossTypeKey, PersistentDataType.STRING, bossType.getConfigKey());
+
+        WorldBossController controller = createController(bossType, bossEntity);
+        if (controller != null) {
+            controller.rebuildFromPersistent();
+            activeBosses.put(bossEntity.getUniqueId(), controller);
+        }
+
+        if (settings.despawnTimeoutSeconds > 0) {
+            long timeoutTicks = Duration.ofSeconds(settings.despawnTimeoutSeconds).toMillis() / 50L;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!bossEntity.isDead() && bossEntity.isValid()) {
+                    bossEntity.remove();
+                }
+            }, timeoutTicks);
+        }
+
+        Bukkit.broadcastMessage("⚔ " + bossType.getConfigKey() + " rises from the shadows!");
+        broadcastSpawnBiome(world, base);
+        return true;
+    }
+
+    private World resolveArenaWorld() {
+        String worldName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.worldName", "world_boss_arena");
+        World existing = Bukkit.getWorld(worldName);
+        if (existing != null) {
+            return existing;
+        }
+        WorldCreator creator = new WorldCreator(worldName);
+        creator.environment(World.Environment.NORMAL);
+        creator.type(WorldType.FLAT);
+        creator.generateStructures(false);
+        return creator.createWorld();
+    }
+
+    private void prepareArena(World world) {
+        int radius = Math.max(8, plugin.getConfig().getInt(CONFIG_ROOT + ".arena.radius", DEFAULT_ARENA_RADIUS));
+        int wallHeight = Math.max(2, plugin.getConfig().getInt(CONFIG_ROOT + ".arena.wallHeight", DEFAULT_ARENA_WALL_HEIGHT));
+        String floorMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.floorMaterial", "STONE");
+        String wallMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.wallMaterial", "GLASS");
+        Material floorMaterial = resolveMaterial(floorMaterialName, Material.STONE);
+        Material wallMaterial = resolveMaterial(wallMaterialName, Material.GLASS);
+
+        Location center = world.getSpawnLocation().clone();
+        int baseY = Math.max(world.getMinHeight() + 2, center.getBlockY());
+        center.setY(baseY);
+        world.setSpawnLocation(center);
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                Location floorLocation = center.clone().add(x, -1, z);
+                floorLocation.getBlock().setType(floorMaterial);
+                for (int y = 0; y <= wallHeight; y++) {
+                    Location clear = center.clone().add(x, y, z);
+                    if (Math.abs(x) == radius || Math.abs(z) == radius) {
+                        clear.getBlock().setType(wallMaterial);
+                    } else if (y > 0) {
+                        clear.getBlock().setType(Material.AIR);
+                    }
+                }
+            }
+        }
+        createPortal(world, world.getSpawnLocation());
+        createEscapePoint(world, world.getSpawnLocation());
+    }
+
+    private Location findArenaSpawnLocation(World world, double spawnRadius) {
+        Location center = world.getSpawnLocation().clone();
+        center.setY(Math.max(world.getMinHeight() + 2, center.getBlockY()));
+        double radius = Math.max(2.0, Math.min(spawnRadius, getArenaRadius(world) - 2.0));
+        double angle = random.nextDouble() * Math.PI * 2.0;
+        double distance = Math.sqrt(random.nextDouble()) * radius;
+        double x = center.getX() + Math.cos(angle) * distance;
+        double z = center.getZ() + Math.sin(angle) * distance;
+        return new Location(world, x + 0.5, center.getY() + 1.0, z + 0.5);
+    }
+
+    private int getArenaRadius(World world) {
+        return Math.max(8, plugin.getConfig().getInt(CONFIG_ROOT + ".arena.radius", DEFAULT_ARENA_RADIUS));
+    }
+
+    private Material resolveMaterial(String name, Material fallback) {
+        if (name == null || name.isBlank()) {
+            return fallback;
+        }
+        try {
+            return Material.valueOf(name.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            return fallback;
+        }
+    }
+
+    private void prepareInstancePortals() {
+        List<World> worlds = getEligibleWorlds();
+        for (World world : worlds) {
+            createPortal(world, world.getSpawnLocation());
+        }
+    }
+
+    private void createPortal(World world, Location origin) {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".arena.portal.enabled", true)) {
+            return;
+        }
+        String frameMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.frameMaterial", "GLOWSTONE");
+        String innerMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "WATER");
+        Material frameMaterial = resolveMaterial(frameMaterialName, Material.GLOWSTONE);
+        Material innerMaterial = resolveMaterial(innerMaterialName, Material.WATER);
+
+        Location base = origin.clone().add(2, 0, 2);
+        int baseY = Math.max(world.getMinHeight() + 2, base.getBlockY());
+        base.setY(baseY);
+
+        Set<Location> portalSet = portalBlocks.computeIfAbsent(world, ignored -> new HashSet<>());
+        int width = 4;
+        int height = 5;
+        int innerWidth = 2;
+        int innerHeight = 3;
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                Location target = base.clone().add(x, y, 0);
+                boolean frame = y == 0 || y == height - 1 || x == 0 || x == width - 1;
+                if (frame) {
+                    target.getBlock().setType(frameMaterial);
+                } else {
+                    target.getBlock().setType(innerMaterial);
+                    portalSet.add(target.getBlock().getLocation());
+                }
+            }
+        }
+
+        Location labelLocation = base.clone().add(1, height, 0);
+        labelLocation.getBlock().setType(Material.LANTERN);
+    }
+
+    private void createEscapePoint(World world, Location origin) {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".arena.escape.enabled", true)) {
+            return;
+        }
+        String blockName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.escape.blockMaterial", "EMERALD_BLOCK");
+        Material blockMaterial = resolveMaterial(blockName, Material.EMERALD_BLOCK);
+        Location base = origin.clone().add(-2, 0, -2);
+        int baseY = Math.max(world.getMinHeight() + 2, base.getBlockY());
+        base.setY(baseY);
+        Location blockLocation = base.getBlock().getLocation();
+        blockLocation.getBlock().setType(blockMaterial);
+        escapeBlocks.add(blockLocation);
+    }
+
+    private void teleportViaPortal(Player player) {
+        World arenaWorld = resolveArenaWorld();
+        if (arenaWorld == null) {
+            return;
+        }
+        World current = player.getWorld();
+        World targetWorld;
+        if (current.equals(arenaWorld)) {
+            targetWorld = resolveExitWorld();
+        } else {
+            targetWorld = arenaWorld;
+        }
+        if (targetWorld == null) {
+            return;
+        }
+        player.teleport(targetWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5));
+    }
+
+    private void teleportToExit(Player player) {
+        World exitWorld = resolveExitWorld();
+        if (exitWorld == null) {
+            return;
+        }
+        player.teleport(exitWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5));
+    }
+
+    private void storeReturnLocation(Player player, Location location) {
+        String encoded = encodeLocation(location);
+        player.getPersistentDataContainer().set(returnLocationKey, PersistentDataType.STRING, encoded);
+    }
+
+    private Location loadReturnLocation(Player player) {
+        String encoded = player.getPersistentDataContainer().get(returnLocationKey, PersistentDataType.STRING);
+        if (encoded == null || encoded.isBlank()) {
+            return null;
+        }
+        return decodeLocation(encoded);
+    }
+
+    private String encodeLocation(Location location) {
+        World world = location.getWorld();
+        String worldName = world != null ? world.getName() : "world";
+        return worldName + "|" + location.getBlockX() + "," + location.getBlockY() + "," + location.getBlockZ();
+    }
+
+    private Location decodeLocation(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String[] worldSplit = value.split("\\|");
+        if (worldSplit.length != 2) {
+            return null;
+        }
+        String worldName = worldSplit[0].trim();
+        String[] coords = worldSplit[1].split(",");
+        if (coords.length != 3) {
+            return null;
+        }
+        try {
+            int x = Integer.parseInt(coords[0].trim());
+            int y = Integer.parseInt(coords[1].trim());
+            int z = Integer.parseInt(coords[2].trim());
+            World world = Bukkit.getWorld(worldName);
+            if (world == null) {
+                return null;
+            }
+            return new Location(world, x + 0.5, y + 1.0, z + 0.5);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private World resolveExitWorld() {
+        String exitName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.exitWorld", null);
+        if (exitName != null) {
+            World world = Bukkit.getWorld(exitName);
+            if (world != null) {
+                return world;
+            }
+        }
+        List<World> worlds = getEligibleWorlds();
+        return worlds.isEmpty() ? null : worlds.get(0);
+    }
+
+    private void tickBeaconAndCompass() {
+        boolean beaconEnabled = plugin.getConfig().getBoolean(CONFIG_ROOT + ".beacon.enabled", true);
+        boolean compassEnabled = plugin.getConfig().getBoolean(CONFIG_ROOT + ".compassTracking.enabled", true);
+        if (!beaconEnabled && !compassEnabled) {
+            return;
+        }
+        beaconTickCounter = (beaconTickCounter + 1) % 5;
+        List<LivingEntity> bosses = activeBosses.values().stream()
+                .map(WorldBossController::getBoss)
+                .filter(entity -> entity != null && entity.isValid())
+                .toList();
+        if (bosses.isEmpty()) {
+            return;
+        }
+        if (beaconEnabled && beaconTickCounter == 0) {
+            double intensity = Math.max(0.5, plugin.getConfig().getDouble(CONFIG_ROOT + ".particleIntensity", 1.0));
+            for (LivingEntity boss : bosses) {
+                spawnBeaconParticles(boss, intensity);
+            }
+        }
+        if (compassEnabled) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                LivingEntity nearest = findNearestBoss(player, bosses);
+                if (nearest != null) {
+                    player.setCompassTarget(nearest.getLocation());
+                }
+            }
+        }
+    }
+
+    private void spawnBeaconParticles(LivingEntity boss, double intensity) {
+        World world = boss.getWorld();
+        Location base = boss.getLocation().clone().add(0, 1.0, 0);
+        int maxHeight = world.getMaxHeight();
+        int startY = Math.min(maxHeight - 1, base.getBlockY());
+        int step = 5;
+        int count = (int) Math.max(1, Math.round(4 * intensity));
+        for (int y = startY; y < maxHeight; y += step) {
+            Location point = new Location(world, base.getX(), y, base.getZ());
+            world.spawnParticle(org.bukkit.Particle.END_ROD, point, count, 0.1, 0.2, 0.1, 0.01);
+        }
+    }
+
+    private LivingEntity findNearestBoss(Player player, List<LivingEntity> bosses) {
+        double closest = Double.MAX_VALUE;
+        LivingEntity nearest = null;
+        Location playerLocation = player.getLocation();
+        for (LivingEntity boss : bosses) {
+            if (!boss.getWorld().equals(playerLocation.getWorld())) {
+                continue;
+            }
+            double distance = boss.getLocation().distanceSquared(playerLocation);
+            if (distance < closest) {
+                closest = distance;
+                nearest = boss;
+            }
+        }
+        return nearest;
+    }
+
+    private void broadcastSpawnBiome(World world, Location location) {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".broadcasts.enabled", true)) {
+            return;
+        }
+        Biome biome = world.getBiome(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        String formattedBiome = biome.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        String display = formattedBiome.isEmpty() ? "wilderness" : formattedBiome;
+        Bukkit.broadcastMessage("The ground trembles\u2026 something ancient stirs in the " + display + ".");
+    }
+
+    private WorldBossController createController(WorldBossType type, LivingEntity bossEntity) {
+        return switch (type) {
+            case GRAVEWARDEN -> new GravewardenBoss(plugin, bossEntity);
+            case STORM_HERALD -> new StormHeraldBoss(plugin, bossEntity);
+            case HOLLOW_COLOSSUS -> new HollowColossusBoss(plugin, bossEntity);
+        };
+    }
+
+    private Location pickRandomBaseLocation(World world) {
+        WorldBorder border = world.getWorldBorder();
+        double borderRadius = border.getSize() / 2.0;
+        double minX = border.getCenter().getX() - borderRadius;
+        double maxX = border.getCenter().getX() + borderRadius;
+        double minZ = border.getCenter().getZ() - borderRadius;
+        double maxZ = border.getCenter().getZ() + borderRadius;
+
+        for (int attempt = 0; attempt < MAX_LOCATION_ATTEMPTS; attempt++) {
+            double x = minX + random.nextDouble() * (maxX - minX);
+            double z = minZ + random.nextDouble() * (maxZ - minZ);
+            int blockX = (int) Math.floor(x);
+            int blockZ = (int) Math.floor(z);
+            int y = world.getHighestBlockYAt(blockX, blockZ);
+            Location candidate = new Location(world, blockX + 0.5, y, blockZ + 0.5);
+            if (border.isInside(candidate)) {
+                return candidate;
+            }
+        }
+        return world.getSpawnLocation();
+    }
+
+    private Location findSpawnLocation(World world, Location base, double radius, int attempts) {
+        if (radius <= 0.0) {
+            radius = DEFAULT_FALLBACK_RADIUS;
+        }
+        int minHeight = world.getMinHeight();
+        int maxHeight = world.getMaxHeight() - 1;
+        for (int attempt = 0; attempt < attempts; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2.0;
+            double distance = Math.sqrt(random.nextDouble()) * radius;
+            double x = base.getX() + Math.cos(angle) * distance;
+            double z = base.getZ() + Math.sin(angle) * distance;
+            int blockX = (int) Math.floor(x);
+            int blockZ = (int) Math.floor(z);
+            int y = world.getHighestBlockYAt(blockX, blockZ);
+            if (y < minHeight || y >= maxHeight) {
+                continue;
+            }
+            Material ground = world.getBlockAt(blockX, y, blockZ).getType();
+            if (!ground.isSolid() || ground.isAir()) {
+                continue;
+            }
+            Material above = world.getBlockAt(blockX, y + 1, blockZ).getType();
+            if (!above.isAir()) {
+                continue;
+            }
+            Location candidate = new Location(world, blockX + 0.5, y + 1, blockZ + 0.5);
+            Biome candidateBiome = world.getBiome(candidate.getBlockX(), candidate.getBlockY(), candidate.getBlockZ());
+            if (!isBiomeEligible(candidateBiome)) {
+                continue;
+            }
+            return candidate;
+        }
+        return null;
+    }
+
+    private Optional<WorldBossType> resolveBossType(Biome biome) {
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection(CONFIG_ROOT + ".biomeBossMap");
+        if (section == null) {
+            return Optional.empty();
+        }
+        for (String key : section.getKeys(false)) {
+            Optional<Biome> mappedBiome = resolveBiome(key);
+            if (mappedBiome.isPresent() && mappedBiome.get() == biome) {
+                String bossName = section.getString(key);
+                return WorldBossType.fromConfigKey(bossName);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<WorldBossType> getFallbackBossType() {
+        ConfigurationSection bossesSection = plugin.getConfig().getConfigurationSection(CONFIG_ROOT + ".bosses");
+        if (bossesSection == null) {
+            return Optional.empty();
+        }
+        for (String key : bossesSection.getKeys(false)) {
+            Optional<WorldBossType> type = WorldBossType.fromConfigKey(key);
+            if (type.isPresent()) {
+                return type;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private BossSettings getBossSettings(WorldBossType type) {
+        String basePath = CONFIG_ROOT + ".bosses." + type.getConfigKey();
+        String entityName = plugin.getConfig().getString(basePath + ".entityType", "WARDEN");
+        EntityType entityType;
+        try {
+            entityType = EntityType.valueOf(entityName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning("Unknown entity type " + entityName + " for world boss " + type.getConfigKey());
+            entityType = EntityType.WARDEN;
+        }
+        double spawnRadius = plugin.getConfig().getDouble(basePath + ".spawnRadius", DEFAULT_FALLBACK_RADIUS);
+        int despawnTimeoutSeconds = plugin.getConfig().getInt(basePath + ".despawnTimeoutSeconds", 600);
+        return new BossSettings(entityType, spawnRadius, despawnTimeoutSeconds);
+    }
+
+    private boolean isBiomeEligible(Biome biome) {
+        List<String> allowed = plugin.getConfig().getStringList(CONFIG_ROOT + ".eligibleBiomes");
+        if (allowed == null || allowed.isEmpty()) {
+            return true;
+        }
+        for (String entry : allowed) {
+            Optional<Biome> resolved = resolveBiome(entry);
+            if (resolved.isPresent() && resolved.get() == biome) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Optional<Biome> resolveBiome(String name) {
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Biome.valueOf(name.toUpperCase(Locale.ROOT)));
+        } catch (IllegalArgumentException ex) {
+            return Optional.empty();
+        }
+    }
+
+    private List<World> getEligibleWorlds() {
+        List<String> configuredWorlds = plugin.getConfig().getStringList(CONFIG_ROOT + ".worlds");
+        if (configuredWorlds == null || configuredWorlds.isEmpty()) {
+            return Bukkit.getWorlds();
+        }
+        List<World> worlds = new java.util.ArrayList<>();
+        for (String worldName : configuredWorlds) {
+            World world = Bukkit.getWorld(worldName);
+            if (world != null) {
+                worlds.add(world);
+            }
+        }
+        return worlds;
+    }
+
+    private boolean isTriggerEnabled(TriggerType triggerType) {
+        return plugin.getConfig().getBoolean(CONFIG_ROOT + ".triggers." + triggerType.configKey + ".enabled", true);
+    }
+
+    private long getTriggerCooldownSeconds(TriggerType triggerType) {
+        return Math.max(0L, plugin.getConfig().getLong(CONFIG_ROOT + ".triggers." + triggerType.configKey + ".cooldownSeconds", 0L));
+    }
+
+    private boolean isTriggerOffCooldown(World world, TriggerType triggerType) {
+        long cooldownSeconds = getTriggerCooldownSeconds(triggerType);
+        if (cooldownSeconds <= 0) {
+            return true;
+        }
+        long now = System.currentTimeMillis();
+        long lastTime = lastTriggerTimes.get(triggerType).getOrDefault(world.getUID(), 0L);
+        return now - lastTime >= cooldownSeconds * 1000L;
+    }
+
+    private void setTriggeredNow(World world, TriggerType triggerType) {
+        lastTriggerTimes.get(triggerType).put(world.getUID(), System.currentTimeMillis());
+    }
+
+    private Set<Material> getStructureBlocks() {
+        List<String> entries = plugin.getConfig().getStringList(CONFIG_ROOT + ".triggers.structureInteraction.blocks");
+        if (entries == null || entries.isEmpty()) {
+            return Set.of();
+        }
+        Set<Material> materials = new HashSet<>();
+        for (String entry : entries) {
+            try {
+                materials.add(Material.valueOf(entry.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException ex) {
+                plugin.getLogger().warning("Unknown structure interaction material: " + entry);
+            }
+        }
+        return materials;
+    }
+
+    private enum TriggerType {
+        THUNDERSTORM("thunderstorm"),
+        BLOOD_MOON("bloodMoon"),
+        STRUCTURE_INTERACTION("structureInteraction");
+
+        private final String configKey;
+
+        TriggerType(String configKey) {
+            this.configKey = configKey;
+        }
+    }
+
+    private record BossSettings(EntityType entityType, double spawnRadius, int despawnTimeoutSeconds) {
+    }
+}

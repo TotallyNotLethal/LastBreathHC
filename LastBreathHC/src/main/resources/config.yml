@@ -184,6 +184,76 @@ asteroid:
           durationTicks: 240
           waitTimeTicks: 0
 
+worldBoss:
+  spawn:
+    enabled: true
+    minSeconds: 1800
+    maxSeconds: 3600
+  broadcasts:
+    enabled: true
+  compassTracking:
+    enabled: true
+  beacon:
+    enabled: true
+  particleIntensity: 1.0
+  antiCheese:
+    maxPlayerDistance: 48.0
+    maxPillarHeight: 6.0
+    maxRangedHits: 6
+    arenaRadius: 40.0
+    teleportDistance: 30.0
+    despawnAfterMinutes: 10
+  arena:
+    worldName: world_boss_arena
+    radius: 24
+    wallHeight: 6
+    floorMaterial: STONE
+    wallMaterial: GLASS
+    escape:
+      enabled: true
+      blockMaterial: EMERALD_BLOCK
+    portal:
+      enabled: true
+      frameMaterial: GLOWSTONE
+      innerMaterial: WATER
+      exitWorld: world
+  worlds:
+    - world
+  eligibleBiomes:
+    - DARK_FOREST
+    - WINDSWEPT_HILLS
+    - BADLANDS
+  biomeBossMap:
+    DARK_FOREST: Gravewarden
+    WINDSWEPT_HILLS: StormHerald
+    BADLANDS: HollowColossus
+  triggers:
+    thunderstorm:
+      enabled: true
+      cooldownSeconds: 1800
+    bloodMoon:
+      enabled: true
+      cooldownSeconds: 3600
+    structureInteraction:
+      enabled: true
+      cooldownSeconds: 1200
+      blocks:
+        - LODESTONE
+        - ENCHANTING_TABLE
+  bosses:
+    Gravewarden:
+      entityType: WARDEN
+      spawnRadius: 40
+      despawnTimeoutSeconds: 600
+    StormHerald:
+      entityType: WITHER
+      spawnRadius: 50
+      despawnTimeoutSeconds: 600
+    HollowColossus:
+      entityType: RAVAGER
+      spawnRadius: 45
+      despawnTimeoutSeconds: 600
+
 customEnchants:
   rarity: rare
   allowedTools:
