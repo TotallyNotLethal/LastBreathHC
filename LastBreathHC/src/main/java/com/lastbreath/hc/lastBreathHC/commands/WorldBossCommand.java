@@ -20,7 +20,7 @@ public class WorldBossCommand implements BasicCommand {
             return List.of();
         }
         if (args.length == 0) {
-            return List.of("spawn", "portal");
+            return List.of("spawn", "portal", "enable", "disable");
         }
         if ("spawn".equalsIgnoreCase(args[0]) && args.length == 1) {
             return List.of("Gravewarden", "StormHerald", "HollowColossus");
@@ -41,7 +41,7 @@ public class WorldBossCommand implements BasicCommand {
             return;
         }
         if (args.length == 0) {
-            sender.sendMessage("§cUsage: /worldboss <spawn|portal> [type]");
+            sender.sendMessage("§cUsage: /worldboss <spawn|portal|enable|disable> [type]");
             return;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -77,7 +77,15 @@ public class WorldBossCommand implements BasicCommand {
                     sender.sendMessage("§cUnable to spawn world boss.");
                 }
             }
-            default -> sender.sendMessage("§cUsage: /worldboss <spawn|portal> [type]");
+            case "enable" -> {
+                manager.enableBosses();
+                sender.sendMessage("§aWorld bosses enabled.");
+            }
+            case "disable" -> {
+                manager.disableBosses();
+                sender.sendMessage("§eWorld bosses disabled and existing bosses removed.");
+            }
+            default -> sender.sendMessage("§cUsage: /worldboss <spawn|portal|enable|disable> [type]");
         }
     }
 }

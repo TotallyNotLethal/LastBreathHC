@@ -70,6 +70,7 @@ public class WorldBossManager implements Listener {
     private final Map<World, Set<Location>> portalBlocks = new HashMap<>();
     private final Map<UUID, Long> portalCooldowns = new HashMap<>();
     private final Set<Location> escapeBlocks = new HashSet<>();
+    private boolean enabled = true;
 
     public WorldBossManager(Plugin plugin, BloodMoonManager bloodMoonManager) {
         this.plugin = plugin;
@@ -112,7 +113,37 @@ public class WorldBossManager implements Listener {
         escapeBlocks.clear();
     }
 
+    public void enableBosses() {
+        enabled = true;
+        scheduleNextRandomSpawn();
+        scheduleBloodMoonChecks();
+    }
+
+    public void disableBosses() {
+        enabled = false;
+        if (randomSpawnTask != null) {
+            randomSpawnTask.cancel();
+            randomSpawnTask = null;
+        }
+        if (bloodMoonCheckTask != null) {
+            bloodMoonCheckTask.cancel();
+            bloodMoonCheckTask = null;
+        }
+        for (WorldBossController controller : activeBosses.values()) {
+            LivingEntity boss = controller.getBoss();
+            if (boss != null && boss.isValid()) {
+                boss.remove();
+            }
+            controller.cleanup();
+            antiCheese.clear(controller.getBoss());
+        }
+        activeBosses.clear();
+    }
+
     public boolean spawnTestBoss(World world, Location origin, WorldBossType overrideType) {
+        if (!enabled) {
+            return false;
+        }
         if (world == null) {
             return false;
         }
@@ -280,6 +311,9 @@ public class WorldBossManager implements Listener {
     }
 
     private void scheduleNextRandomSpawn() {
+        if (!enabled) {
+            return;
+        }
         if (randomSpawnTask != null) {
             randomSpawnTask.cancel();
         }
@@ -317,6 +351,9 @@ public class WorldBossManager implements Listener {
     }
 
     private void scheduleBloodMoonChecks() {
+        if (!enabled) {
+            return;
+        }
         if (bloodMoonCheckTask != null) {
             bloodMoonCheckTask.cancel();
         }
