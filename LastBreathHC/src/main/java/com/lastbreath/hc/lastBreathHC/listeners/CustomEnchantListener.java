@@ -99,7 +99,7 @@ public class CustomEnchantListener implements Listener {
             breakExtraBlocks(player, tool, getTreeBlocks(block), normalized);
         }
         if (excavator && isShovel(tool.getType()) && isShovelMineable(block.getType())) {
-            breakExtraBlocks(player, tool, getExcavatorBlocks(block), normalized);
+            breakExtraBlocks(player, tool, getExcavatorBlocks(block, player), normalized);
         }
         if (quarry && isPickaxe(tool.getType()) && isPickaxeMineable(block.getType())) {
             breakExtraBlocks(player, tool, getQuarryBlocks(block, player), normalized);
@@ -413,14 +413,45 @@ public class CustomEnchantListener implements Listener {
         return matches;
     }
 
-    private Collection<Block> getExcavatorBlocks(Block origin) {
+    private Collection<Block> getExcavatorBlocks(Block origin, Player player) {
         Set<Block> blocks = new HashSet<>();
+        BlockFace face = resolveMiningFace(player, origin);
+        if (face == BlockFace.UP || face == BlockFace.DOWN) {
+            for (int x = -1; x <= 1; x++) {
+                for (int z = -1; z <= 1; z++) {
+                    if (x == 0 && z == 0) {
+                        continue;
+                    }
+                    Block candidate = origin.getRelative(x, 0, z);
+                    if (isShovelMineable(candidate.getType())) {
+                        blocks.add(candidate);
+                    }
+                }
+            }
+            return blocks;
+        }
+
+        if (face == BlockFace.EAST || face == BlockFace.WEST) {
+            for (int y = -1; y <= 1; y++) {
+                for (int z = -1; z <= 1; z++) {
+                    if (y == 0 && z == 0) {
+                        continue;
+                    }
+                    Block candidate = origin.getRelative(0, y, z);
+                    if (isShovelMineable(candidate.getType())) {
+                        blocks.add(candidate);
+                    }
+                }
+            }
+            return blocks;
+        }
+
         for (int x = -1; x <= 1; x++) {
-            for (int z = -1; z <= 1; z++) {
-                if (x == 0 && z == 0) {
+            for (int y = -1; y <= 1; y++) {
+                if (x == 0 && y == 0) {
                     continue;
                 }
-                Block candidate = origin.getRelative(x, 0, z);
+                Block candidate = origin.getRelative(x, y, 0);
                 if (isShovelMineable(candidate.getType())) {
                     blocks.add(candidate);
                 }
@@ -431,7 +462,7 @@ public class CustomEnchantListener implements Listener {
 
     private Collection<Block> getQuarryBlocks(Block origin, Player player) {
         Set<Block> blocks = new HashSet<>();
-        BlockFace face = resolveDirectionalFace(player);
+        BlockFace face = resolveMiningFace(player, origin);
         int primaryMin;
         int primaryMax;
         int secondaryMin;
@@ -499,6 +530,15 @@ public class CustomEnchantListener implements Listener {
             return BlockFace.UP;
         }
         return player.getFacing();
+    }
+
+    private BlockFace resolveMiningFace(Player player, Block origin) {
+        Block target = player.getTargetBlockExact(6);
+        BlockFace face = player.getTargetBlockFace(6);
+        if (target != null && target.equals(origin) && face != null) {
+            return face;
+        }
+        return resolveDirectionalFace(player);
     }
 
     private void tillArea(Block origin) {
