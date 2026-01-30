@@ -54,6 +54,9 @@ public class StormHeraldBoss extends BaseWorldBossController {
     @Override
     public void tick() {
         anchors.removeIf(location -> location.getBlock().getType() != ANCHOR_MATERIAL);
+        if (!anchors.isEmpty()) {
+            spawnAnchorSafeRings();
+        }
         if (PHASE_SHIELDED.equals(getPhase(PHASE_SHIELDED))) {
             if (anchors.isEmpty()) {
                 dropShield();
@@ -177,11 +180,17 @@ public class StormHeraldBoss extends BaseWorldBossController {
         Location center = boss.getLocation();
         world.playSound(center, Sound.BLOCK_BEACON_POWER_SELECT, 1.1f, 1.5f);
         world.spawnParticle(Particle.ELECTRIC_SPARK, center, 30, 1.5, 1.0, 1.5, 0.2);
+        double safeRadius = getLightningSafeRadius();
+        double safeRadiusSquared = safeRadius * safeRadius;
         for (Player player : world.getPlayers()) {
             if (player.getLocation().distanceSquared(center) > 225) {
                 continue;
             }
             world.strikeLightningEffect(player.getLocation());
+            if (safeRadiusSquared > 0.0 && isPlayerInAnchorSafeZone(player.getLocation(), safeRadiusSquared)) {
+                world.spawnParticle(Particle.END_ROD, player.getLocation().add(0, 0.2, 0), 8, 0.4, 0.4, 0.4, 0.02);
+                continue;
+            }
             player.damage(enraged ? 7.0 : 4.0, boss);
         }
         world.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1.0f, 1.0f);
@@ -204,5 +213,46 @@ public class StormHeraldBoss extends BaseWorldBossController {
         }
         world.playSound(center, Sound.ENTITY_PHANTOM_FLAP, 1.1f, 0.8f);
         world.spawnParticle(Particle.CLOUD, center, 50, 2.5, 0.8, 2.5, 0.2);
+    }
+
+    private boolean isPlayerInAnchorSafeZone(Location playerLocation, double safeRadiusSquared) {
+        if (anchors.isEmpty()) {
+            return false;
+        }
+        for (Location anchor : anchors) {
+            if (!anchor.getWorld().equals(playerLocation.getWorld())) {
+                continue;
+            }
+            if (playerLocation.distanceSquared(anchor) <= safeRadiusSquared) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double getLightningSafeRadius() {
+        return Math.max(0.0, plugin.getConfig().getDouble("worldBoss.bosses.StormHerald.lightningSafeRadius", 3.0));
+    }
+
+    private void spawnAnchorSafeRings() {
+        double radius = getLightningSafeRadius();
+        if (radius <= 0.0) {
+            return;
+        }
+        World world = boss.getWorld();
+        int points = 16;
+        for (Location anchor : anchors) {
+            if (!anchor.getWorld().equals(world)) {
+                continue;
+            }
+            Location center = anchor.clone().add(0.5, 0.1, 0.5);
+            for (int i = 0; i < points; i++) {
+                double angle = (Math.PI * 2.0 / points) * i;
+                double x = Math.cos(angle) * radius;
+                double z = Math.sin(angle) * radius;
+                Location point = center.clone().add(x, 0.0, z);
+                world.spawnParticle(Particle.ELECTRIC_SPARK, point, 1, 0.05, 0.05, 0.05, 0.0);
+            }
+        }
     }
 }

@@ -249,6 +249,7 @@ worldBoss:
       entityType: WITHER
       spawnRadius: 50
       despawnTimeoutSeconds: 600
+      lightningSafeRadius: 3.0
     HollowColossus:
       entityType: RAVAGER
       spawnRadius: 45
