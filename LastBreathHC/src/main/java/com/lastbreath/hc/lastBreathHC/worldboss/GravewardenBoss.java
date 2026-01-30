@@ -85,8 +85,8 @@ public class GravewardenBoss extends BaseWorldBossController {
             return;
         }
         double healAmount = event.getFinalDamage() * 0.35;
-        double maxHealth = boss.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH) != null
-                ? boss.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue()
+        double maxHealth = boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH) != null
+                ? boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue()
                 : boss.getHealth();
         boss.setHealth(Math.min(maxHealth, boss.getHealth() + healAmount));
         if (event.getEntity() instanceof Player player) {
@@ -161,13 +161,13 @@ public class GravewardenBoss extends BaseWorldBossController {
         World world = boss.getWorld();
         world.playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.5f, 0.6f);
         world.spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), 80, 2.0, 1.0, 2.0, 0.02);
-        boss.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 200, 0));
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 200, 0));
         boss.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 40, 0));
     }
 
     private void pulseShield() {
         World world = boss.getWorld();
-        world.spawnParticle(Particle.SPELL_INSTANT, boss.getLocation(), 12, 1.2, 0.8, 1.2, 0.1);
+        world.spawnParticle(Particle.CRIT, boss.getLocation(), 12, 1.2, 0.8, 1.2, 0.1);
         world.playSound(boss.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 0.6f, 1.2f);
     }
 
