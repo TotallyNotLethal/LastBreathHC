@@ -2,8 +2,7 @@ package com.lastbreath.hc.lastBreathHC.items;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.TileState;
+import org.bukkit.Chunk;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -23,11 +22,14 @@ import org.bukkit.inventory.view.AnvilView;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class EnhancedGrindstoneListener implements Listener {
 
@@ -61,14 +63,11 @@ public class EnhancedGrindstoneListener implements Listener {
             return;
         }
 
-        BlockState state = event.getBlockPlaced().getState();
-        if (!(state instanceof TileState tileState)) {
-            return;
-        }
-
-        PersistentDataContainer container = tileState.getPersistentDataContainer();
-        container.set(EnhancedGrindstone.KEY, PersistentDataType.BYTE, (byte) 1);
-        tileState.update();
+        Block placed = event.getBlockPlaced();
+        Chunk chunk = placed.getChunk();
+        Set<String> blocks = getEnhancedBlocks(chunk);
+        blocks.add(encodeBlockKey(placed));
+        saveEnhancedBlocks(chunk, blocks);
     }
 
     @EventHandler
@@ -79,6 +78,7 @@ public class EnhancedGrindstoneListener implements Listener {
         }
 
         event.setDropItems(false);
+        removeEnhancedBlock(block);
         block.getWorld().dropItemNaturally(
                 block.getLocation().add(0.5, 0.5, 0.5),
                 EnhancedGrindstone.create()
@@ -139,12 +139,44 @@ public class EnhancedGrindstoneListener implements Listener {
             return false;
         }
 
-        BlockState state = block.getState();
-        if (!(state instanceof TileState tileState)) {
-            return false;
-        }
+        return getEnhancedBlocks(block.getChunk()).contains(encodeBlockKey(block));
+    }
 
-        return tileState.getPersistentDataContainer()
-                .has(EnhancedGrindstone.KEY, PersistentDataType.BYTE);
+    private void removeEnhancedBlock(Block block) {
+        Chunk chunk = block.getChunk();
+        Set<String> blocks = getEnhancedBlocks(chunk);
+        if (blocks.remove(encodeBlockKey(block))) {
+            saveEnhancedBlocks(chunk, blocks);
+        }
+    }
+
+    private Set<String> getEnhancedBlocks(Chunk chunk) {
+        PersistentDataContainer container = chunk.getPersistentDataContainer();
+        String stored = container.get(EnhancedGrindstone.BLOCKS_KEY, PersistentDataType.STRING);
+        if (stored == null || stored.isBlank()) {
+            return new HashSet<>();
+        }
+        return Arrays.stream(stored.split(";"))
+                .filter(entry -> !entry.isBlank())
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    private void saveEnhancedBlocks(Chunk chunk, Set<String> blocks) {
+        PersistentDataContainer container = chunk.getPersistentDataContainer();
+        if (blocks.isEmpty()) {
+            container.remove(EnhancedGrindstone.BLOCKS_KEY);
+            return;
+        }
+        container.set(
+                EnhancedGrindstone.BLOCKS_KEY,
+                PersistentDataType.STRING,
+                String.join(";", blocks)
+        );
+    }
+
+    private String encodeBlockKey(Block block) {
+        int localX = block.getX() & 0xF;
+        int localZ = block.getZ() & 0xF;
+        return localX + "," + block.getY() + "," + localZ;
     }
 }
