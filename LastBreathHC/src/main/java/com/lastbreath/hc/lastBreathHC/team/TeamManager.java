@@ -95,37 +95,56 @@ public class TeamManager {
     }
 
     public JoinOutcome joinTeam(Player player, Team team) {
-        if (team == null) {
-            return JoinOutcome.FAILED;
-        }
-        if (team.hasEntry(player.getName())) {
-            return JoinOutcome.ALREADY_MEMBER;
-        }
-        if (isJoinLocked(team) && !isOwner(player, team)) {
-            String teamKey = normalizeTeamKey(team.getName());
-            Map<UUID, String> requests = teamJoinRequests.computeIfAbsent(teamKey, key -> new HashMap<>());
-            if (requests.containsKey(player.getUniqueId())) {
-                return JoinOutcome.REQUEST_ALREADY_PENDING;
-            }
-            requests.put(player.getUniqueId(), player.getName());
-            saveAll();
-            return JoinOutcome.REQUESTED;
-        }
-        getTeam(player).ifPresent(current -> current.removeEntry(player.getName()));
-        boolean joined = team.addEntry(player.getName());
-        if (joined && getOwner(team).isEmpty()) {
-            setOwner(team, player.getUniqueId());
-        }
-        if (joined) {
-            Map<UUID, String> requests = teamJoinRequests.get(normalizeTeamKey(team.getName()));
-            if (requests != null) {
-                requests.remove(player.getUniqueId());
-            }
-            saveAll();
-            return JoinOutcome.JOINED;
-        }
+    if (team == null) {
         return JoinOutcome.FAILED;
     }
+
+    // Already in team
+    if (team.hasEntry(player.getName())) {
+        return JoinOutcome.ALREADY_MEMBER;
+    }
+
+    // Team is locked → request join
+    if (isJoinLocked(team) && !isOwner(player, team)) {
+        String teamKey = normalizeTeamKey(team.getName());
+        Map<UUID, String> requests = teamJoinRequests.computeIfAbsent(
+                teamKey,
+                key -> new HashMap<>()
+        );
+
+        if (requests.containsKey(player.getUniqueId())) {
+            return JoinOutcome.REQUEST_ALREADY_PENDING;
+        }
+
+        requests.put(player.getUniqueId(), player.getName());
+        saveAll();
+        return JoinOutcome.REQUESTED;
+    }
+
+    // Remove from any current team
+    getTeam(player).ifPresent(current ->
+            current.removeEntry(player.getName())
+    );
+
+    // Add to new team (void method — no boolean return)
+    team.addEntry(player.getName());
+
+    // Assign owner if none exists
+    if (getOwner(team).isEmpty()) {
+        setOwner(team, player.getUniqueId());
+    }
+
+    // Clear any pending request
+    Map<UUID, String> requests = teamJoinRequests.get(
+            normalizeTeamKey(team.getName())
+    );
+    if (requests != null) {
+        requests.remove(player.getUniqueId());
+    }
+
+    saveAll();
+    return JoinOutcome.JOINED;
+}
 
     public Collection<String> getTeamNames() {
         Scoreboard scoreboard = getMainScoreboard();
