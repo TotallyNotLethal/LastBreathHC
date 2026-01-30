@@ -550,6 +550,16 @@ public class WorldBossManager implements Listener {
                 }
             }
         }
+        int roofHeight = wallHeight + 1;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                Location ceilingLocation = center.clone().add(x, roofHeight, z);
+                ceilingLocation.getBlock().setType(wallMaterial);
+            }
+        }
+        WorldBorder worldBorder = world.getWorldBorder();
+        worldBorder.setCenter(center);
+        worldBorder.setSize(radius * 2.0);
         createPortal(world, world.getSpawnLocation());
         createEscapePoint(world, world.getSpawnLocation());
     }
