@@ -156,7 +156,7 @@ public class DeathMarkerManager {
         for (double travelled = step; travelled <= maxDistance; travelled += step) {
             point.add(markerLocation.toVector().subtract(start.toVector()).normalize().multiply(step));
             teammate.spawnParticle(
-                    Particle.REDSTONE,
+                    Particle.END_ROD,
                     point,
                     2,
                     0.1,
