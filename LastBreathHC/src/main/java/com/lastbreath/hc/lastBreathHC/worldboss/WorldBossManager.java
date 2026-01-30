@@ -108,9 +108,8 @@ public class WorldBossManager implements Listener {
             antiCheese.clear(controller.getBoss());
         }
         activeBosses.clear();
-        portalBlocks.clear();
+        removeAllPortals();
         portalCooldowns.clear();
-        escapeBlocks.clear();
     }
 
     public void enableBosses() {
@@ -129,6 +128,12 @@ public class WorldBossManager implements Listener {
             bloodMoonCheckTask.cancel();
             bloodMoonCheckTask = null;
         }
+        World arenaWorld = resolveArenaWorld();
+        if (arenaWorld != null) {
+            for (Player player : arenaWorld.getPlayers()) {
+                teleportPlayerToRespawn(player);
+            }
+        }
         for (WorldBossController controller : activeBosses.values()) {
             LivingEntity boss = controller.getBoss();
             if (boss != null && boss.isValid()) {
@@ -138,6 +143,7 @@ public class WorldBossManager implements Listener {
             antiCheese.clear(controller.getBoss());
         }
         activeBosses.clear();
+        removeAllPortals();
     }
 
     public boolean spawnTestBoss(World world, Location origin, WorldBossType overrideType) {
@@ -301,12 +307,10 @@ public class WorldBossManager implements Listener {
         if (!player.getWorld().equals(arenaWorld)) {
             return;
         }
-        World exitWorld = resolveExitWorld();
-        if (exitWorld == null) {
-            return;
+        Location returnLocation = resolveReturnLocation(player);
+        if (returnLocation != null) {
+            storeReturnLocation(player, returnLocation);
         }
-        Location exitLocation = exitWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5);
-        storeReturnLocation(player, exitLocation);
     }
 
     @EventHandler
@@ -622,6 +626,19 @@ public class WorldBossManager implements Listener {
         escapeBlocks.add(blockLocation);
     }
 
+    private void removeAllPortals() {
+        for (Set<Location> locations : portalBlocks.values()) {
+            for (Location location : locations) {
+                location.getBlock().setType(Material.AIR);
+            }
+        }
+        for (Location location : escapeBlocks) {
+            location.getBlock().setType(Material.AIR);
+        }
+        portalBlocks.clear();
+        escapeBlocks.clear();
+    }
+
     private void teleportViaPortal(Player player) {
         World arenaWorld = resolveArenaWorld();
         if (arenaWorld == null) {
@@ -630,22 +647,36 @@ public class WorldBossManager implements Listener {
         World current = player.getWorld();
         World targetWorld;
         if (current.equals(arenaWorld)) {
-            targetWorld = resolveExitWorld();
+            teleportPlayerToRespawn(player);
+            return;
         } else {
             targetWorld = arenaWorld;
-        }
-        if (targetWorld == null) {
-            return;
         }
         player.teleport(targetWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5));
     }
 
     private void teleportToExit(Player player) {
-        World exitWorld = resolveExitWorld();
-        if (exitWorld == null) {
+        teleportPlayerToRespawn(player);
+    }
+
+    private void teleportPlayerToRespawn(Player player) {
+        Location target = resolveReturnLocation(player);
+        if (target == null) {
             return;
         }
-        player.teleport(exitWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5));
+        player.teleport(target);
+    }
+
+    private Location resolveReturnLocation(Player player) {
+        Location respawnLocation = player.getRespawnLocation();
+        if (respawnLocation != null && respawnLocation.getWorld() != null) {
+            return respawnLocation;
+        }
+        World exitWorld = resolveExitWorld();
+        if (exitWorld == null) {
+            return null;
+        }
+        return exitWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5);
     }
 
     private void storeReturnLocation(Player player, Location location) {
