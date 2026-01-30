@@ -13,6 +13,8 @@ public class EnhancedGrindstone {
 
     public static final NamespacedKey KEY =
             new NamespacedKey(LastBreathHC.getInstance(), "enhanced_grindstone");
+    public static final NamespacedKey BLOCKS_KEY =
+            new NamespacedKey(LastBreathHC.getInstance(), "enhanced_grindstone_blocks");
 
     public static ItemStack create() {
         ItemStack item = new ItemStack(Material.GRINDSTONE);
