@@ -32,10 +32,12 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -71,6 +73,8 @@ public class WorldBossManager implements Listener {
     private final Map<UUID, Long> portalCooldowns = new HashMap<>();
     private final Set<Location> escapeBlocks = new HashSet<>();
     private boolean enabled = true;
+    private boolean arenaMarkedForDeletion;
+    private String markedArenaWorldName;
 
     public WorldBossManager(Plugin plugin, BloodMoonManager bloodMoonManager) {
         this.plugin = plugin;
@@ -294,6 +298,8 @@ public class WorldBossManager implements Listener {
         if (controller != null) {
             controller.cleanup();
             antiCheese.clear(event.getEntity());
+            removeAllPortals();
+            markArenaForDeletionIfEmpty();
         }
     }
 
@@ -407,6 +413,8 @@ public class WorldBossManager implements Listener {
                     return false;
                 });
                 tickBeaconAndCompass();
+                markArenaForDeletionIfEmpty();
+                checkArenaForDeletion();
             }
         }.runTaskTimer(plugin, 20L, 20L);
     }
@@ -461,6 +469,8 @@ public class WorldBossManager implements Listener {
             plugin.getLogger().warning("World boss arena world could not be created.");
             return false;
         }
+        arenaMarkedForDeletion = false;
+        markedArenaWorldName = null;
         prepareArena(arenaWorld);
         Location spawnLocation = findArenaSpawnLocation(arenaWorld, settings.spawnRadius);
         if (spawnLocation == null) {
@@ -506,6 +516,11 @@ public class WorldBossManager implements Listener {
         creator.type(WorldType.FLAT);
         creator.generateStructures(false);
         return creator.createWorld();
+    }
+
+    private World getLoadedArenaWorld() {
+        String worldName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.worldName", "world_boss_arena");
+        return Bukkit.getWorld(worldName);
     }
 
     private void prepareArena(World world) {
@@ -637,6 +652,74 @@ public class WorldBossManager implements Listener {
         }
         portalBlocks.clear();
         escapeBlocks.clear();
+    }
+
+    private void markArenaForDeletionIfEmpty() {
+        if (!activeBosses.isEmpty()) {
+            return;
+        }
+        World arenaWorld = getLoadedArenaWorld();
+        if (arenaWorld == null) {
+            return;
+        }
+        arenaMarkedForDeletion = true;
+        markedArenaWorldName = arenaWorld.getName();
+    }
+
+    private void checkArenaForDeletion() {
+        if (!arenaMarkedForDeletion) {
+            return;
+        }
+        World arenaWorld = markedArenaWorldName == null ? null : Bukkit.getWorld(markedArenaWorldName);
+        if (arenaWorld == null) {
+            arenaMarkedForDeletion = false;
+            markedArenaWorldName = null;
+            return;
+        }
+        if (!arenaWorld.getPlayers().isEmpty()) {
+            return;
+        }
+        cleanupBossesInArena(arenaWorld);
+        removeAllPortals();
+        Bukkit.unloadWorld(arenaWorld, false);
+        deleteWorldFolder(arenaWorld.getWorldFolder());
+        arenaMarkedForDeletion = false;
+        markedArenaWorldName = null;
+    }
+
+    private void cleanupBossesInArena(World arenaWorld) {
+        Iterator<Map.Entry<UUID, WorldBossController>> iterator = activeBosses.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, WorldBossController> entry = iterator.next();
+            WorldBossController controller = entry.getValue();
+            LivingEntity boss = controller.getBoss();
+            if (boss == null || !boss.getWorld().equals(arenaWorld)) {
+                continue;
+            }
+            if (boss.isValid()) {
+                boss.remove();
+            }
+            controller.cleanup();
+            antiCheese.clear(boss);
+            iterator.remove();
+        }
+    }
+
+    private void deleteWorldFolder(File folder) {
+        if (folder == null || !folder.exists()) {
+            return;
+        }
+        File[] files = folder.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isDirectory()) {
+                    deleteWorldFolder(file);
+                } else {
+                    file.delete();
+                }
+            }
+        }
+        folder.delete();
     }
 
     private void teleportViaPortal(Player player) {
