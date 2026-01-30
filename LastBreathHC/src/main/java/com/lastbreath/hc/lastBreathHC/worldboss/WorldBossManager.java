@@ -585,7 +585,11 @@ public class WorldBossManager implements Listener {
                 if (frame) {
                     target.getBlock().setType(frameMaterial);
                 } else {
-                    target.getBlock().setType(innerMaterial);
+                    if (innerMaterial == Material.WATER) {
+                        target.getBlock().setType(innerMaterial, false);
+                    } else {
+                        target.getBlock().setType(innerMaterial);
+                    }
                     portalSet.add(target.getBlock().getLocation());
                 }
             }
