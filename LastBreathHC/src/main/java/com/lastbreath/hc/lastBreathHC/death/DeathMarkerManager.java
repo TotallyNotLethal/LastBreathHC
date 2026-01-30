@@ -114,6 +114,7 @@ public class DeathMarkerManager {
                         continue;
                     }
                     bossBar.addPlayer(teammate);
+                    spawnDirectionalPath(teammate, markerLocation);
                     teammate.spawnParticle(
                             Particle.END_ROD,
                             markerLocation,
@@ -138,6 +139,33 @@ public class DeathMarkerManager {
 
         activeMarkers.put(markerId, new ActiveMarker(data, bossBar, tickTask, expiryTask));
         saveMarkers();
+    }
+
+    private void spawnDirectionalPath(Player teammate, Location markerLocation) {
+        if (!teammate.getWorld().equals(markerLocation.getWorld())) {
+            return;
+        }
+        Location start = teammate.getEyeLocation();
+        double maxDistance = Math.min(15.0, start.distance(markerLocation));
+        if (maxDistance < 1.0) {
+            return;
+        }
+        Particle.DustOptions dust = new Particle.DustOptions(Color.RED, 1.2f);
+        double step = 1.5;
+        Location point = start.clone();
+        for (double travelled = step; travelled <= maxDistance; travelled += step) {
+            point.add(markerLocation.toVector().subtract(start.toVector()).normalize().multiply(step));
+            teammate.spawnParticle(
+                    Particle.REDSTONE,
+                    point,
+                    2,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.0,
+                    dust
+            );
+        }
     }
 
     private void loadMarkers() {
