@@ -119,7 +119,7 @@ public final class LastBreathHC extends JavaPlugin {
         deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
 
         getServer().getPluginManager().registerEvents(
-                new DeathListener(deathMarkerManager), this
+                new DeathListener(deathMarkerManager, teamChatService), this
         );
         getServer().getPluginManager().registerEvents(
                 new DeathRejoinListener(), this

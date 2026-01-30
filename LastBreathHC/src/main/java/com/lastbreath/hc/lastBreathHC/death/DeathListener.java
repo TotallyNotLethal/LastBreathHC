@@ -6,6 +6,7 @@ import com.lastbreath.hc.lastBreathHC.bounty.BountyRecord;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
+import com.lastbreath.hc.lastBreathHC.team.TeamChatService;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.token.ReviveTokenHelper;
@@ -28,9 +29,11 @@ public class DeathListener implements Listener {
 
     private static final String REVIVE_INTERCEPT_METADATA = "lastbreathhc.reviveIntercept";
     private final DeathMarkerManager deathMarkerManager;
+    private final TeamChatService teamChatService;
 
-    public DeathListener(DeathMarkerManager deathMarkerManager) {
+    public DeathListener(DeathMarkerManager deathMarkerManager, TeamChatService teamChatService) {
         this.deathMarkerManager = deathMarkerManager;
+        this.teamChatService = teamChatService;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -116,6 +119,7 @@ public class DeathListener implements Listener {
         }
 
         Location deathLocation = player.getLocation().clone();
+        sendTeamDeathLocation(player, deathLocation);
         new BukkitRunnable() {
             @Override
             public void run() {
@@ -131,6 +135,21 @@ public class DeathListener implements Listener {
                 deathMarkerManager.spawnMarker(player, deathLocation);
             }
         }.runTaskLater(LastBreathHC.getInstance(), 1L);
+    }
+
+    private void sendTeamDeathLocation(Player player, Location deathLocation) {
+        World world = deathLocation.getWorld();
+        String worldName = world == null ? "Unknown" : world.getName();
+        String message = player.getName()
+                + " died at "
+                + deathLocation.getBlockX()
+                + ", "
+                + deathLocation.getBlockY()
+                + ", "
+                + deathLocation.getBlockZ()
+                + " in "
+                + worldName;
+        teamChatService.sendTeamSystemMessage(player, message);
     }
 
     private void triggerReviveFlow(Player player, String deathMessage) {

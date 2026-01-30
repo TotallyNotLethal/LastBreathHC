@@ -10,6 +10,7 @@ import java.util.Set;
 public class TeamChatService {
 
     private static final String DEFAULT_FORMAT = "&7[Team] &b%player%&7: &f%message%";
+    private static final String SYSTEM_FORMAT = "&7[Team] &f%message%";
 
     private final LastBreathHC plugin;
     private final TeamManager teamManager;
@@ -48,11 +49,42 @@ public class TeamChatService {
         return true;
     }
 
+    public boolean sendTeamSystemMessage(Player subject, String message) {
+        String trimmed = message == null ? "" : message.trim();
+        if (trimmed.isEmpty()) {
+            return false;
+        }
+
+        Set<Player> recipients = teamManager.getOnlineTeamMembers(subject);
+        if (recipients.isEmpty()) {
+            return false;
+        }
+
+        String formatted = formatSystemMessage(trimmed);
+        Runnable sendTask = () -> {
+            for (Player recipient : recipients) {
+                recipient.sendMessage(formatted);
+            }
+        };
+
+        if (Bukkit.isPrimaryThread()) {
+            sendTask.run();
+        } else {
+            Bukkit.getScheduler().runTask(plugin, sendTask);
+        }
+
+        return true;
+    }
+
     private String formatMessage(String playerName, String message) {
         String raw = plugin.getConfig().getString("teamChat.format", DEFAULT_FORMAT);
         String withPlaceholders = raw
                 .replace("%player%", playerName)
                 .replace("%message%", message);
         return ChatColor.translateAlternateColorCodes('&', withPlaceholders);
+    }
+
+    private String formatSystemMessage(String message) {
+        return ChatColor.translateAlternateColorCodes('&', SYSTEM_FORMAT.replace("%message%", message));
     }
 }
