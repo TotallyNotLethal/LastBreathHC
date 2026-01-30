@@ -32,6 +32,8 @@ import com.lastbreath.hc.lastBreathHC.ui.tabmenu.BukkitTabMenuUpdateHandler;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModelProvider;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuRefreshScheduler;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.renderer.TabMenuRenderer;
+import com.lastbreath.hc.lastBreathHC.worldboss.WorldBossManager;
+import com.lastbreath.hc.lastBreathHC.commands.WorldBossCommand;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -97,6 +99,7 @@ public final class LastBreathHC extends JavaPlugin {
     private TabMenuRefreshScheduler tabMenuRefreshScheduler;
     private TeamWaypointManager teamWaypointManager;
     private TeamManager teamManager;
+    private WorldBossManager worldBossManager;
 
     @Override
     public void onEnable() {
@@ -234,6 +237,10 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 titlesGUI, this
         );
+        worldBossManager = new WorldBossManager(this, bloodMoonManager);
+        getServer().getPluginManager().registerEvents(
+                worldBossManager, this
+        );
 
         TokenRecipe.register();
         ReviveGuiTokenRecipe.register();
@@ -243,6 +250,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleBloodMoonChecks();
         scheduleTitleEffects();
         scheduleTabMenuRefresh();
+        worldBossManager.start();
 
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS,
@@ -259,6 +267,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("tping", new EmergencyPingCommand(this, teamManager));
                     event.registrar().register("team", new TeamCommand(teamManager, teamManagementGUI));
                     event.registrar().register("waypoint", new WaypointCommand(this, teamManager, teamWaypointManager));
+                    event.registrar().register("worldboss", new WorldBossCommand());
                 }
         );
     }
@@ -288,6 +297,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (tabMenuRefreshScheduler != null) {
             tabMenuRefreshScheduler.stop();
             tabMenuRefreshScheduler = null;
+        }
+        if (worldBossManager != null) {
+            worldBossManager.shutdown();
+            worldBossManager = null;
         }
         if (environmentalEffectsManager != null) {
             environmentalEffectsManager.shutdown();
@@ -327,6 +340,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     public BloodMoonManager getBloodMoonManager() {
         return bloodMoonManager;
+    }
+
+    public WorldBossManager getWorldBossManager() {
+        return worldBossManager;
     }
 
     private void scheduleNextAsteroid() {
