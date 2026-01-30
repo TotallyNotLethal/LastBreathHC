@@ -62,8 +62,8 @@ public class StormHeraldBoss extends BaseWorldBossController {
             }
             return;
         }
-        double maxHealth = boss.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null
-                ? boss.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue()
+        double maxHealth = boss.getAttribute(Attribute.MAX_HEALTH) != null
+                ? boss.getAttribute(Attribute.MAX_HEALTH).getValue()
                 : boss.getHealth();
         double healthFraction = maxHealth > 0 ? boss.getHealth() / maxHealth : 1.0;
         if (!enraged && healthFraction <= 0.2) {
@@ -95,7 +95,7 @@ public class StormHeraldBoss extends BaseWorldBossController {
     @Override
     public void handleBossAttack(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Player player) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, enraged ? 1 : 0));
+            player.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 40, enraged ? 1 : 0));
         }
     }
 
