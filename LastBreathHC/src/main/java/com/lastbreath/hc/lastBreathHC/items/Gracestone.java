@@ -126,7 +126,7 @@ public class Gracestone {
     }
 
     private static void applyHealthModifier(Player player, int lives) {
-        AttributeInstance attribute = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance attribute = player.getAttribute(Attribute.MAX_HEALTH);
         if (attribute == null) {
             return;
         }
