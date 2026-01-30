@@ -33,6 +33,7 @@ import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModelProvider;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuRefreshScheduler;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.renderer.TabMenuRenderer;
 import com.lastbreath.hc.lastBreathHC.worldboss.WorldBossManager;
+import com.lastbreath.hc.lastBreathHC.commands.WorldBossCommand;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -266,6 +267,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("tping", new EmergencyPingCommand(this, teamManager));
                     event.registrar().register("team", new TeamCommand(teamManager, teamManagementGUI));
                     event.registrar().register("waypoint", new WaypointCommand(this, teamManager, teamWaypointManager));
+                    event.registrar().register("worldboss", new WorldBossCommand());
                 }
         );
     }
@@ -338,6 +340,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     public BloodMoonManager getBloodMoonManager() {
         return bloodMoonManager;
+    }
+
+    public WorldBossManager getWorldBossManager() {
+        return worldBossManager;
     }
 
     private void scheduleNextAsteroid() {

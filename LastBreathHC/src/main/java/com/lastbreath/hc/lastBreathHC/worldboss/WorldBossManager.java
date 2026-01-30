@@ -112,6 +112,28 @@ public class WorldBossManager implements Listener {
         escapeBlocks.clear();
     }
 
+    public boolean spawnTestBoss(World world, Location origin, WorldBossType overrideType) {
+        if (world == null) {
+            return false;
+        }
+        Location base = origin != null ? origin : world.getSpawnLocation();
+        Biome baseBiome = world.getBiome(base.getBlockX(), base.getBlockY(), base.getBlockZ());
+        WorldBossType bossType = overrideType != null
+                ? overrideType
+                : resolveBossType(baseBiome).orElseGet(() -> getFallbackBossType().orElse(null));
+        if (bossType == null) {
+            return false;
+        }
+        return spawnBossInArena(world, base, bossType);
+    }
+
+    public void createPortalAt(Location origin) {
+        if (origin == null || origin.getWorld() == null) {
+            return;
+        }
+        createPortal(origin.getWorld(), origin);
+    }
+
     @EventHandler
     public void onThunderChange(ThunderChangeEvent event) {
         if (!event.toThunderState()) {
@@ -379,6 +401,10 @@ public class WorldBossManager implements Listener {
             return false;
         }
 
+        return spawnBossInArena(world, base, bossType);
+    }
+
+    private boolean spawnBossInArena(World sourceWorld, Location base, WorldBossType bossType) {
         BossSettings settings = getBossSettings(bossType);
         World arenaWorld = resolveArenaWorld();
         if (arenaWorld == null) {
@@ -415,7 +441,7 @@ public class WorldBossManager implements Listener {
         }
 
         Bukkit.broadcastMessage("⚔ " + bossType.getConfigKey() + " rises from the shadows!");
-        broadcastSpawnBiome(world, base);
+        broadcastSpawnBiome(sourceWorld, base);
         return true;
     }
 
