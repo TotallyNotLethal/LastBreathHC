@@ -130,7 +130,7 @@ public class HollowColossusBoss extends BaseWorldBossController {
             world.spawnParticle(Particle.PORTAL, boss.getLocation(), 40, 1.2, 0.8, 1.2, 0.2);
         } else {
             world.playSound(boss.getLocation(), Sound.BLOCK_SCULK_CHARGE, 0.8f, 1.1f);
-            world.spawnParticle(Particle.SMOKE_LARGE, boss.getLocation(), 30, 1.0, 0.5, 1.0, 0.02);
+            world.spawnParticle(Particle.DUST_COLOR_TRANSITION, boss.getLocation(), 30, 1.0, 0.5, 1.0, 0.02);
         }
     }
 
@@ -150,9 +150,9 @@ public class HollowColossusBoss extends BaseWorldBossController {
             spawn.setY(world.getHighestBlockYAt(spawn));
             Zombie zombie = world.spawn(spawn, Zombie.class);
             zombie.setTarget(findNearestPlayer());
-            if (zombie.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
-                zombie.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(10 + difficultyBonus * 2.0);
-                zombie.setHealth(zombie.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+            if (zombie.getAttribute(Attribute.MAX_HEALTH) != null) {
+                zombie.getAttribute(Attribute.MAX_HEALTH).setBaseValue(10 + difficultyBonus * 2.0);
+                zombie.setHealth(zombie.getAttribute(Attribute.MAX_HEALTH).getValue());
             }
         }
         world.playSound(center, Sound.ENTITY_ZOMBIE_AMBIENT, 0.9f, 0.8f);
@@ -168,7 +168,7 @@ public class HollowColossusBoss extends BaseWorldBossController {
             fallingBlock.setDropItem(false);
             fallingBlock.setVelocity(new Vector(random.nextDouble() - 0.5, -0.4, random.nextDouble() - 0.5));
         }
-        world.spawnParticle(Particle.BLOCK_CRACK, center, 40, 2.0, 1.5, 2.0, Material.DEEPSLATE.createBlockData());
+        world.spawnParticle(Particle.DUST_PLUME, center, 40, 2.0, 1.5, 2.0, Material.DEEPSLATE.createBlockData());
     }
 
     private void triggerArenaCollapse() {
