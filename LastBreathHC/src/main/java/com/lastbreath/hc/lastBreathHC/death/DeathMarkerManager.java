@@ -102,7 +102,6 @@ public class DeathMarkerManager {
                 if (recipients.isEmpty()) {
                     return;
                 }
-                Particle.DustOptions dust = new Particle.DustOptions(Color.RED, 1.4f);
                 for (Player teammate : recipients) {
                     if (teammate == null || !teammate.isOnline()) {
                         if (teammate != null) {
@@ -122,8 +121,7 @@ public class DeathMarkerManager {
                             0.45,
                             0.45,
                             0.45,
-                            0.0,
-                            dust
+                            0.0
                     );
                 }
             }
@@ -150,7 +148,6 @@ public class DeathMarkerManager {
         if (maxDistance < 1.0) {
             return;
         }
-        Particle.DustOptions dust = new Particle.DustOptions(Color.RED, 1.2f);
         double step = 1.5;
         Location point = start.clone();
         for (double travelled = step; travelled <= maxDistance; travelled += step) {
@@ -162,8 +159,7 @@ public class DeathMarkerManager {
                     0.1,
                     0.1,
                     0.1,
-                    0.0,
-                    dust
+                    0.0
             );
         }
     }
