@@ -196,24 +196,33 @@ public class WorldBossManager implements Listener {
 
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
-        event.getChunk().getEntitiesByClass(LivingEntity.class).forEach(entity -> {
-            String bossTypeName = entity.getPersistentDataContainer().get(bossTypeKey, PersistentDataType.STRING);
-            if (bossTypeName == null) {
-                return;
+        for (org.bukkit.entity.Entity entity : event.getChunk().getEntities()) {
+            if (!(entity instanceof LivingEntity living)) {
+                continue;
             }
+
+            String bossTypeName = living.getPersistentDataContainer()
+                    .get(bossTypeKey, PersistentDataType.STRING);
+
+            if (bossTypeName == null) {
+                continue;
+            }
+
             WorldBossType type = WorldBossType.fromConfigKey(bossTypeName).orElse(null);
             if (type == null) {
-                return;
+                continue;
             }
-            if (activeBosses.containsKey(entity.getUniqueId())) {
-                return;
+
+            if (activeBosses.containsKey(living.getUniqueId())) {
+                continue;
             }
-            WorldBossController controller = createController(type, entity);
+
+            WorldBossController controller = createController(type, living);
             if (controller != null) {
                 controller.rebuildFromPersistent();
-                activeBosses.put(entity.getUniqueId(), controller);
+                activeBosses.put(living.getUniqueId(), controller);
             }
-        });
+        }
     }
 
     @EventHandler
