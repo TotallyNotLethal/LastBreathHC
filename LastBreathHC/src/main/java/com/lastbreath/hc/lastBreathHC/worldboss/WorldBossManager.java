@@ -694,6 +694,9 @@ public class WorldBossManager implements Listener {
     }
 
     private boolean spawnWorldBoss(World world, Location origin) {
+        if (!activeBosses.isEmpty()) {
+            return false;
+        }
         Location base = origin != null ? origin : pickRandomBaseLocation(world);
         if (base == null) {
             return false;
