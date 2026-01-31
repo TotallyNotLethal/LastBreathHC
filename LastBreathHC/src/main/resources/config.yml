@@ -245,6 +245,7 @@ worldBoss:
       entityType: WARDEN
       spawnRadius: 40
       despawnTimeoutSeconds: 600
+      safeRadius: 3.0
     StormHerald:
       entityType: WITHER
       spawnRadius: 50
@@ -254,6 +255,7 @@ worldBoss:
       entityType: RAVAGER
       spawnRadius: 45
       despawnTimeoutSeconds: 600
+      safeRadius: 3.0
 
 customEnchants:
   rarity: rare

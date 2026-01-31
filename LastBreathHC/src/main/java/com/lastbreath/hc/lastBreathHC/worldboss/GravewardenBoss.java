@@ -56,6 +56,9 @@ public class GravewardenBoss extends BaseWorldBossController {
             return;
         }
         gravestones.removeIf(location -> location.getBlock().getType() != GRAVESTONE_MATERIAL);
+        if (!gravestones.isEmpty()) {
+            spawnGravestoneSafeRings();
+        }
         if (PHASE_SHIELDED.equals(getPhase(PHASE_SHIELDED))) {
             if (gravestones.isEmpty()) {
                 transitionToUnsealed();
@@ -189,12 +192,17 @@ public class GravewardenBoss extends BaseWorldBossController {
     private void spawnArchers() {
         World world = boss.getWorld();
         Location center = boss.getLocation();
+        double safeRadiusSquared = getGravewardenSafeRadius();
+        safeRadiusSquared *= safeRadiusSquared;
         for (int i = 0; i < 2; i++) {
             Location spawn = center.clone().add(randomOffset(), 0, randomOffset());
             spawn.setY(world.getHighestBlockYAt(spawn));
             Skeleton skeleton = world.spawn(spawn, Skeleton.class);
             skeleton.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
-            skeleton.setTarget(findNearestPlayer());
+            Player target = findNearestPlayerOutsideSafeZone(safeRadiusSquared);
+            if (target != null) {
+                skeleton.setTarget(target);
+            }
         }
         world.playSound(center, Sound.ENTITY_SKELETON_AMBIENT, 0.9f, 0.8f);
     }
@@ -214,5 +222,65 @@ public class GravewardenBoss extends BaseWorldBossController {
             }
         }
         return nearest;
+    }
+
+    private Player findNearestPlayerOutsideSafeZone(double safeRadiusSquared) {
+        if (safeRadiusSquared <= 0.0) {
+            return findNearestPlayer();
+        }
+        Player nearest = null;
+        double closest = Double.MAX_VALUE;
+        for (Player player : boss.getWorld().getPlayers()) {
+            if (isPlayerInGravestoneSafeZone(player.getLocation(), safeRadiusSquared)) {
+                continue;
+            }
+            double distance = player.getLocation().distanceSquared(boss.getLocation());
+            if (distance < closest) {
+                closest = distance;
+                nearest = player;
+            }
+        }
+        return nearest;
+    }
+
+    private boolean isPlayerInGravestoneSafeZone(Location playerLocation, double safeRadiusSquared) {
+        if (gravestones.isEmpty()) {
+            return false;
+        }
+        for (Location gravestone : gravestones) {
+            if (!gravestone.getWorld().equals(playerLocation.getWorld())) {
+                continue;
+            }
+            if (playerLocation.distanceSquared(gravestone) <= safeRadiusSquared) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double getGravewardenSafeRadius() {
+        return Math.max(0.0, plugin.getConfig().getDouble("worldBoss.bosses.Gravewarden.safeRadius", 3.0));
+    }
+
+    private void spawnGravestoneSafeRings() {
+        double radius = getGravewardenSafeRadius();
+        if (radius <= 0.0) {
+            return;
+        }
+        World world = boss.getWorld();
+        int points = 16;
+        for (Location gravestone : gravestones) {
+            if (!gravestone.getWorld().equals(world)) {
+                continue;
+            }
+            Location center = gravestone.clone().add(0.5, 0.1, 0.5);
+            for (int i = 0; i < points; i++) {
+                double angle = (Math.PI * 2.0 / points) * i;
+                double x = Math.cos(angle) * radius;
+                double z = Math.sin(angle) * radius;
+                Location point = center.clone().add(x, 0.0, z);
+                world.spawnParticle(Particle.SOUL, point, 1, 0.05, 0.05, 0.05, 0.0);
+            }
+        }
     }
 }
