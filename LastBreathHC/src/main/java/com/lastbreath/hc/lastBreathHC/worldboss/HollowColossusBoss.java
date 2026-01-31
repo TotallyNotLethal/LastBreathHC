@@ -129,11 +129,21 @@ public class HollowColossusBoss extends BaseWorldBossController {
     private void telegraphPhaseShift() {
         World world = boss.getWorld();
         if (PHASE_CLOSED.equals(getPhase(PHASE_CLOSED))) {
-            world.playSound(boss.getLocation(), Sound.BLOCK_SCULK_SHRIEKER_SHRIEK, 0.9f, 1.3f);
-            world.spawnParticle(Particle.PORTAL, boss.getLocation(), 40, 1.2, 0.8, 1.2, 0.2);
+            for (Player player : world.getPlayers()) {
+                if (isTelegraphBlocked(player)) {
+                    continue;
+                }
+                player.playSound(boss.getLocation(), Sound.BLOCK_SCULK_SHRIEKER_SHRIEK, 0.9f, 1.3f);
+                player.spawnParticle(Particle.PORTAL, boss.getLocation(), 40, 1.2, 0.8, 1.2, 0.2);
+            }
         } else {
-            world.playSound(boss.getLocation(), Sound.BLOCK_SCULK_CHARGE, 0.8f, 1.1f);
-            world.spawnParticle(Particle.DUST_COLOR_TRANSITION, boss.getLocation(), 30, 1.0, 0.5, 1.0, 0.02);
+            for (Player player : world.getPlayers()) {
+                if (isTelegraphBlocked(player)) {
+                    continue;
+                }
+                player.playSound(boss.getLocation(), Sound.BLOCK_SCULK_CHARGE, 0.8f, 1.1f);
+                player.spawnParticle(Particle.DUST_COLOR_TRANSITION, boss.getLocation(), 30, 1.0, 0.5, 1.0, 0.02);
+            }
         }
     }
 

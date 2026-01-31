@@ -1,12 +1,14 @@
 package com.lastbreath.hc.lastBreathHC.worldboss;
 
+import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
+import com.lastbreath.hc.lastBreathHC.items.CustomEnchantments;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.WorldBorder;
+import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
@@ -90,6 +92,14 @@ public class GravewardenBoss extends BaseWorldBossController {
             return;
         }
         double healAmount = event.getFinalDamage() * 0.10;
+        if (event.getEntity() instanceof Player player) {
+            int pieces = Math.min(
+                    CustomEnchantments.countArmorPiecesWithEnchant(player, CustomEnchant.LIFESTEAL_WARD.getId()),
+                    4
+            );
+            double reduction = Math.min(1.0, pieces * 0.25);
+            healAmount *= (1.0 - reduction);
+        }
         double maxHealth = boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH) != null
                 ? boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue()
                 : boss.getHealth();
@@ -197,8 +207,13 @@ public class GravewardenBoss extends BaseWorldBossController {
 
     private void telegraphArchers() {
         World world = boss.getWorld();
-        world.spawnParticle(Particle.SQUID_INK, boss.getLocation(), 30, 1.2, 0.6, 1.2, 0.05);
-        world.playSound(boss.getLocation(), Sound.ENTITY_SKELETON_CONVERTED_TO_STRAY, 1.0f, 0.9f);
+        for (Player player : world.getPlayers()) {
+            if (isTelegraphBlocked(player)) {
+                continue;
+            }
+            player.spawnParticle(Particle.SQUID_INK, boss.getLocation(), 30, 1.2, 0.6, 1.2, 0.05);
+            player.playSound(boss.getLocation(), Sound.ENTITY_SKELETON_CONVERTED_TO_STRAY, 1.0f, 0.9f);
+        }
     }
 
     private void spawnArchers() {

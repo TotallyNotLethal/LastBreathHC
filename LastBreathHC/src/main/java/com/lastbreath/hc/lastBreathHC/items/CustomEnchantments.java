@@ -5,7 +5,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -119,6 +121,34 @@ public class CustomEnchantments {
             }
         }
         return List.copyOf(ids);
+    }
+
+    public static int countArmorPiecesWithEnchant(Player player, String enchantId) {
+        if (player == null || enchantId == null || enchantId.isBlank()) {
+            return 0;
+        }
+        ItemStack[] armor = player.getInventory().getArmorContents();
+        if (armor == null || armor.length == 0) {
+            return 0;
+        }
+        String normalized = enchantId.toLowerCase(Locale.ROOT);
+        int count = 0;
+        for (ItemStack item : armor) {
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+            ItemMeta meta = item.getItemMeta();
+            if (meta == null) {
+                continue;
+            }
+            for (String id : getEnchantIds(meta)) {
+                if (id != null && id.equalsIgnoreCase(normalized)) {
+                    count++;
+                    break;
+                }
+            }
+        }
+        return count;
     }
 
     private static void updateEnchantData(ItemMeta meta, List<String> ids) {

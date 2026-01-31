@@ -58,6 +58,7 @@ import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantBookRecipeListener;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemCraftListener;
 import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantAnvilListener;
+import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantDamageListener;
 import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantListener;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
@@ -174,6 +175,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new CustomEnchantListener(this), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new CustomEnchantDamageListener(), this
         );
         getServer().getPluginManager().registerEvents(
                 new CustomEnchantBookRecipeListener(), this
