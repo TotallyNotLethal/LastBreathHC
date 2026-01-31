@@ -19,6 +19,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class ReviveGUI implements Listener {
 
+    private final DeathListener deathListener;
+
+    public ReviveGUI(DeathListener deathListener) {
+        this.deathListener = deathListener;
+    }
+
     public static void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 9, "Use Revival Token?");
 
@@ -50,7 +56,7 @@ public class ReviveGUI implements Listener {
         if (e.getCurrentItem().getType() == Material.LIME_WOOL) {
             if (!ReviveTokenHelper.consumeToken(player)) {
                 player.sendMessage("§cNo revive token found to consume.");
-                DeathListener.banPlayer(player, "Revival token missing at time of death.", null);
+                deathListener.banPlayerForReviveDecision(player, "Revival token missing at time of death.");
                 return;
             }
             PlayerStats stats = StatsManager.get(player.getUniqueId());
@@ -72,7 +78,7 @@ public class ReviveGUI implements Listener {
 
             player.closeInventory();
         } else {
-            DeathListener.banPlayer(player, "Player declined revival.", null);
+            deathListener.banPlayerForReviveDecision(player, "Player declined revival.");
         }
     }
 
@@ -81,7 +87,7 @@ public class ReviveGUI implements Listener {
         if (!(e.getPlayer() instanceof Player p)) return;
         if (e.getView().getTitle().equals("Use Revival Token?")) {
             if (!ReviveStateManager.isRevivePending(p.getUniqueId())) {
-                DeathListener.banPlayer(p, "Player closed revive menu.", null);
+                deathListener.banPlayerForReviveDecision(p, "Player closed revive menu.");
             }
         }
     }
