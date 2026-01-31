@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.death;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyRecord;
+import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
@@ -30,10 +31,14 @@ public class DeathListener implements Listener {
     private static final String REVIVE_INTERCEPT_METADATA = "lastbreathhc.reviveIntercept";
     private final DeathMarkerManager deathMarkerManager;
     private final TeamChatService teamChatService;
+    private final DiscordWebhookService discordWebhookService;
 
-    public DeathListener(DeathMarkerManager deathMarkerManager, TeamChatService teamChatService) {
+    public DeathListener(DeathMarkerManager deathMarkerManager,
+                         TeamChatService teamChatService,
+                         DiscordWebhookService discordWebhookService) {
         this.deathMarkerManager = deathMarkerManager;
         this.teamChatService = teamChatService;
+        this.discordWebhookService = discordWebhookService;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -105,6 +110,14 @@ public class DeathListener implements Listener {
         }
 
         boolean hasToken = ReviveTokenHelper.hasToken(player);
+        discordWebhookService.sendDeathWebhook(
+                player,
+                stats,
+                formatDeathReason(player, deathMessage),
+                formatKillerLabel(player),
+                player.getLocation(),
+                hasToken
+        );
 
         // Stop vanilla behavior
         event.setDeathMessage(null);
@@ -290,5 +303,18 @@ public class DeathListener implements Listener {
             return deathMessage.substring(prefix.length()).trim();
         }
         return deathMessage.trim();
+    }
+
+    private static String formatKillerLabel(Player player) {
+        Player killer = player.getKiller();
+        if (killer != null) {
+            return killer.getName();
+        }
+        EntityDamageEvent lastDamage = player.getLastDamageCause();
+        if (lastDamage instanceof EntityDamageByEntityEvent byEntityEvent) {
+            String name = byEntityEvent.getDamager().getType().name().toLowerCase(Locale.US).replace('_', ' ');
+            return name;
+        }
+        return formatDamageCause(player.getLastDamageCause());
     }
 }
