@@ -110,14 +110,8 @@ public class DeathListener implements Listener {
         }
 
         boolean hasToken = ReviveTokenHelper.hasToken(player);
-        discordWebhookService.sendDeathWebhook(
-                player,
-                stats,
-                formatDeathReason(player, deathMessage),
-                formatKillerLabel(player),
-                player.getLocation(),
-                hasToken
-        );
+        String deathReason = formatDeathReason(player, deathMessage);
+        String killerLabel = formatKillerLabel(player);
 
         // Stop vanilla behavior
         event.setDeathMessage(null);
@@ -138,12 +132,26 @@ public class DeathListener implements Listener {
             public void run() {
                 if (hasToken) {
                     if (!ReviveTokenHelper.consumeToken(player)) {
-                        banPlayer(player, "Revival token missing at time of death.", deathMessage);
+                        banPlayer(
+                                player,
+                                "Revival token missing at time of death.",
+                                deathReason,
+                                stats,
+                                killerLabel,
+                                deathLocation
+                        );
                     } else {
                         triggerReviveFlow(player, deathMessage);
                     }
                 } else {
-                    banPlayer(player, "You died with no revival token.", deathMessage);
+                    banPlayer(
+                            player,
+                            "You died with no revival token.",
+                            deathReason,
+                            stats,
+                            killerLabel,
+                            deathLocation
+                    );
                 }
                 deathMarkerManager.spawnMarker(player, deathLocation);
             }
@@ -205,16 +213,32 @@ public class DeathListener implements Listener {
         );
     }
 
-    public static void banPlayer(Player player, String reason, String deathMessage) {
+    private void banPlayer(
+            Player player,
+            String reason,
+            String deathReason,
+            PlayerStats stats,
+            String killerLabel,
+            Location deathLocation
+    ) {
         Bukkit.broadcastMessage(
                 "§4☠ " + TitleManager.getTitleTag(player) + player.getName()
-                        + " has perished permanently. §7(" + formatDeathReason(player, deathMessage) + ")"
+                        + " has perished permanently. §7(" + deathReason + ")"
         );
 
         Bukkit.getBanList(BanList.Type.NAME)
                 .addBan(player.getName(), reason, null, null);
 
         player.kickPlayer("You have died.\nNo revival token was used.");
+
+        discordWebhookService.sendDeathWebhook(
+                player,
+                stats,
+                deathReason,
+                killerLabel,
+                deathLocation,
+                false
+        );
     }
 
     private void handleBountyClaim(Player victim, Player killer) {
