@@ -515,84 +515,84 @@ public class WorldBossManager implements Listener {
     }
 
     private void handleBossRewards(EntityDeathEvent event, WorldBossType type, Player killer) {
-    if (type == null) {
-        return;
-    }
-
-    String basePath = CONFIG_ROOT + ".rewards." + type.getConfigKey();
-    List<Map<?, ?>> dropMaps = plugin.getConfig().getMapList(basePath + ".drops");
-
-    for (Map<?, ?> map : dropMaps) {
-
-        Object itemObj = map.get("item");
-        if (itemObj == null) {
-            continue;
+        if (type == null) {
+            return;
         }
 
-        String itemName = itemObj.toString();
+        String basePath = CONFIG_ROOT + ".rewards." + type.getConfigKey();
+        List<Map<?, ?>> dropMaps = plugin.getConfig().getMapList(basePath + ".drops");
 
-        Material material;
-        try {
-            material = Material.valueOf(itemName.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ex) {
-            continue;
+        for (Map<?, ?> map : dropMaps) {
+
+            Object itemObj = map.get("item");
+            if (itemObj == null) {
+                continue;
+            }
+
+            String itemName = itemObj.toString();
+
+            Material material;
+            try {
+                material = Material.valueOf(itemName.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                continue;
+            }
+
+            double chance = parseDouble(map.get("chance"), 0.0);
+            if (random.nextDouble() > chance) {
+                continue;
+            }
+
+            int min = (int) parseDouble(map.get("min"), 1);
+            int max = (int) parseDouble(map.get("max"), min);
+
+            if (max < min) {
+                int tmp = min;
+                min = max;
+                max = tmp;
+            }
+
+            int amount = min + random.nextInt(max - min + 1);
+            event.getDrops().add(new ItemStack(material, amount));
         }
 
-        double chance = parseDouble(map.get("chance"), 0.0);
-        if (random.nextDouble() > chance) {
-            continue;
-        }
+        ConfigurationSection cosmeticsSection =
+                plugin.getConfig().getConfigurationSection(basePath + ".cosmetics");
 
-        int min = (int) parseDouble(map.get("min"), 1);
-        int max = (int) parseDouble(map.get("max"), min);
+        if (cosmeticsSection != null) {
+            double cosmeticChance = cosmeticsSection.getDouble("chance", 0.08);
 
-        if (max < min) {
-            int tmp = min;
-            min = max;
-            max = tmp;
-        }
+            for (String prefixId : cosmeticsSection.getStringList("prefixes")) {
+                BossPrefix prefix = BossPrefix.fromInput(prefixId);
+                if (prefix != null && random.nextDouble() <= cosmeticChance) {
+                    event.getDrops().add(CosmeticTokenHelper.createPrefixToken(prefix));
+                }
+            }
 
-        int amount = min + random.nextInt(max - min + 1);
-        event.getDrops().add(new ItemStack(material, amount));
-    }
+            for (String auraId : cosmeticsSection.getStringList("auras")) {
+                BossAura aura = BossAura.fromInput(auraId);
+                if (aura != null && random.nextDouble() <= cosmeticChance) {
+                    event.getDrops().add(CosmeticTokenHelper.createAuraToken(aura));
+                }
+            }
 
-    ConfigurationSection cosmeticsSection =
-            plugin.getConfig().getConfigurationSection(basePath + ".cosmetics");
-
-    if (cosmeticsSection != null) {
-        double cosmeticChance = cosmeticsSection.getDouble("chance", 0.08);
-
-        for (String prefixId : cosmeticsSection.getStringList("prefixes")) {
-            BossPrefix prefix = BossPrefix.fromInput(prefixId);
-            if (prefix != null && random.nextDouble() <= cosmeticChance) {
-                event.getDrops().add(CosmeticTokenHelper.createPrefixToken(prefix));
+            for (String messageId : cosmeticsSection.getStringList("killMessages")) {
+                BossKillMessage message = BossKillMessage.fromInput(messageId);
+                if (message != null && random.nextDouble() <= cosmeticChance) {
+                    event.getDrops().add(CosmeticTokenHelper.createKillMessageToken(message));
+                }
             }
         }
 
-        for (String auraId : cosmeticsSection.getStringList("auras")) {
-            BossAura aura = BossAura.fromInput(auraId);
-            if (aura != null && random.nextDouble() <= cosmeticChance) {
-                event.getDrops().add(CosmeticTokenHelper.createAuraToken(aura));
-            }
-        }
-
-        for (String messageId : cosmeticsSection.getStringList("killMessages")) {
-            BossKillMessage message = BossKillMessage.fromInput(messageId);
-            if (message != null && random.nextDouble() <= cosmeticChance) {
-                event.getDrops().add(CosmeticTokenHelper.createKillMessageToken(message));
+        String titleName = plugin.getConfig().getString(basePath + ".title");
+        if (killer != null && titleName != null && !titleName.isBlank()) {
+            Title title = Title.fromInput(titleName);
+            if (title != null) {
+                TitleManager.unlockTitle(killer, title,
+                        "You conquered " + type.getConfigKey() + ".");
             }
         }
     }
-
-    String titleName = plugin.getConfig().getString(basePath + ".title");
-    if (killer != null && titleName != null && !titleName.isBlank()) {
-        Title title = Title.fromInput(titleName);
-        if (title != null) {
-            TitleManager.unlockTitle(killer, title,
-                    "You conquered " + type.getConfigKey() + ".");
-        }
-    }
-}
 
     private double parseDouble(Object value, double fallback) {
         if (value instanceof Number number) {
