@@ -252,7 +252,14 @@ public class WorldBossManager implements Listener {
         if (!isTriggerEnabled(TriggerType.THUNDERSTORM)) {
             return;
         }
-        trySpawnTriggeredBoss(event.getWorld(), event.getWorld().getSpawnLocation(), TriggerType.THUNDERSTORM);
+        World world = event.getWorld();
+        if (world.getEnvironment() != World.Environment.NORMAL) {
+            return;
+        }
+        if (!getEligibleWorlds().contains(world)) {
+            return;
+        }
+        trySpawnTriggeredBoss(world, world.getSpawnLocation(), TriggerType.THUNDERSTORM);
     }
 
     @EventHandler
