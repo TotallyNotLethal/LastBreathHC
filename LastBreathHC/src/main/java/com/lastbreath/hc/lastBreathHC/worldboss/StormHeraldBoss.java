@@ -7,6 +7,7 @@ import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
+import org.bukkit.WorldBorder;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -155,11 +156,22 @@ public class StormHeraldBoss extends BaseWorldBossController {
         if (world == null) {
             return locations;
         }
+        WorldBorder border = world.getWorldBorder();
+        Location borderCenter = border.getCenter();
+        double maxRadius = Math.max(2.0, (border.getSize() / 2.0) - 2.0);
         int count = 4;
         double radius = 8.0;
         for (int i = 0; i < count; i++) {
             double angle = (Math.PI * 2 / count) * i;
             Location anchorBase = center.clone().add(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+            double dx = anchorBase.getX() - borderCenter.getX();
+            double dz = anchorBase.getZ() - borderCenter.getZ();
+            double distance = Math.hypot(dx, dz);
+            if (distance > maxRadius) {
+                double scale = maxRadius / distance;
+                anchorBase.setX(borderCenter.getX() + dx * scale);
+                anchorBase.setZ(borderCenter.getZ() + dz * scale);
+            }
             anchorBase.setY(world.getHighestBlockYAt(anchorBase));
             Location place = anchorBase.clone().add(0, 1, 0);
             if (!place.getBlock().getType().isAir()) {

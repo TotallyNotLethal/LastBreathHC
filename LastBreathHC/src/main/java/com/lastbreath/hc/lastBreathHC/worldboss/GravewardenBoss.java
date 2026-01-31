@@ -6,6 +6,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.WorldBorder;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
@@ -88,7 +89,7 @@ public class GravewardenBoss extends BaseWorldBossController {
         if (!PHASE_UNSEALED.equals(getPhase(PHASE_SHIELDED))) {
             return;
         }
-        double healAmount = event.getFinalDamage() * 0.35;
+        double healAmount = event.getFinalDamage() * 0.10;
         double maxHealth = boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH) != null
                 ? boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue()
                 : boss.getHealth();
@@ -150,11 +151,22 @@ public class GravewardenBoss extends BaseWorldBossController {
         if (world == null) {
             return locations;
         }
+        WorldBorder border = world.getWorldBorder();
+        Location borderCenter = border.getCenter();
+        double maxRadius = Math.max(2.0, (border.getSize() / 2.0) - 2.0);
         int count = 5;
         double radius = 6.0;
         for (int i = 0; i < count; i++) {
             double angle = (Math.PI * 2 / count) * i;
             Location location = center.clone().add(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+            double dx = location.getX() - borderCenter.getX();
+            double dz = location.getZ() - borderCenter.getZ();
+            double distance = Math.hypot(dx, dz);
+            if (distance > maxRadius) {
+                double scale = maxRadius / distance;
+                location.setX(borderCenter.getX() + dx * scale);
+                location.setZ(borderCenter.getZ() + dz * scale);
+            }
             Location base = location.clone();
             base.setY(world.getHighestBlockYAt(location));
             Location place = base.clone().add(0, 1, 0);

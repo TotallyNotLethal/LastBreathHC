@@ -10,6 +10,7 @@ import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.WorldCreator;
 import org.bukkit.WorldType;
+import org.bukkit.GameRule;
 import org.bukkit.block.Block;
 import org.bukkit.block.Biome;
 import org.bukkit.configuration.ConfigurationSection;
@@ -32,6 +33,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.block.BlockFace;
 
 import java.io.File;
 import java.time.Duration;
@@ -674,6 +676,7 @@ public class WorldBossManager implements Listener {
         WorldBorder worldBorder = world.getWorldBorder();
         worldBorder.setCenter(center);
         worldBorder.setSize(radius * 2.0);
+        world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
         createPortal(world, world.getSpawnLocation());
         createEscapePoint(world, world.getSpawnLocation());
     }
@@ -725,7 +728,7 @@ public class WorldBossManager implements Listener {
         Material innerMaterial = resolvePortalInnerMaterial(innerMaterialName);
 
         Location base = origin.clone().add(2, 0, 2);
-        int baseY = Math.max(world.getMinHeight() + 2, base.getBlockY());
+        int baseY = resolvePortalBaseY(world, base);
         base.setY(baseY);
 
         Set<Location> portalSet = portalBlocks.computeIfAbsent(world, ignored -> new HashSet<>());
@@ -745,6 +748,16 @@ public class WorldBossManager implements Listener {
 
         Location labelLocation = base.clone().add(1, PORTAL_HEIGHT, 0);
         labelLocation.getBlock().setType(Material.LANTERN);
+    }
+
+    private int resolvePortalBaseY(World world, Location base) {
+        int baseY = Math.max(world.getMinHeight() + 2, base.getBlockY());
+        Block baseBlock = world.getBlockAt(base.getBlockX(), base.getBlockY(), base.getBlockZ());
+        Block below = baseBlock.getRelative(BlockFace.DOWN);
+        if (baseBlock.getType().isAir() && below.getType().isSolid()) {
+            baseY = Math.max(world.getMinHeight() + 2, below.getY());
+        }
+        return baseY;
     }
 
     private void spawnPortalParticles() {
@@ -910,6 +923,17 @@ public class WorldBossManager implements Listener {
             }
         }
         return false;
+    }
+
+    public boolean isArenaBlockProtected(Block block) {
+        if (block == null) {
+            return false;
+        }
+        World arenaWorld = getLoadedArenaWorld();
+        if (arenaWorld == null || !arenaWorld.equals(block.getWorld())) {
+            return false;
+        }
+        return !isBreakableMechanicBlock(block);
     }
 
     private void deleteWorldFolder(File folder) {
