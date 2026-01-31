@@ -78,6 +78,7 @@ public class WorldBossManager implements Listener {
     private boolean enabled = true;
     private boolean arenaMarkedForDeletion;
     private String markedArenaWorldName;
+    private boolean bossDefeated;
 
     public WorldBossManager(Plugin plugin, BloodMoonManager bloodMoonManager) {
         this.plugin = plugin;
@@ -372,8 +373,7 @@ public class WorldBossManager implements Listener {
         if (controller != null) {
             controller.cleanup();
             antiCheese.clear(event.getEntity());
-            removeAllPortals();
-            markArenaForDeletionIfEmpty();
+            bossDefeated = true;
         }
     }
 
@@ -544,6 +544,7 @@ public class WorldBossManager implements Listener {
             plugin.getLogger().warning("World boss arena world could not be created.");
             return false;
         }
+        bossDefeated = false;
         arenaMarkedForDeletion = false;
         markedArenaWorldName = null;
         prepareArena(arenaWorld);
@@ -899,6 +900,10 @@ public class WorldBossManager implements Listener {
         World targetWorld;
         if (current.equals(arenaWorld)) {
             teleportPlayerToRespawn(player);
+            if (bossDefeated) {
+                removeAllPortals();
+                markArenaForDeletionIfEmpty();
+            }
             return;
         } else {
             targetWorld = arenaWorld;
