@@ -406,6 +406,7 @@ public class WorldBossManager implements Listener {
     public void onBossBlockBreak(BlockBreakEvent event) {
         World arenaWorld = getLoadedArenaWorld();
         if (arenaWorld != null && event.getBlock().getWorld().equals(arenaWorld)) {
+            event.setDropItems(false);
             if (!isBreakableMechanicBlock(event.getBlock())) {
                 event.setCancelled(true);
                 return;
