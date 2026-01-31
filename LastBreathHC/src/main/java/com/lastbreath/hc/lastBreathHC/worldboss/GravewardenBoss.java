@@ -5,6 +5,7 @@ import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
@@ -107,6 +108,14 @@ public class GravewardenBoss extends BaseWorldBossController {
                 transitionToUnsealed();
             }
         }
+    }
+
+    @Override
+    public boolean isBreakableMechanicBlock(Block block) {
+        if (block.getType() != GRAVESTONE_MATERIAL) {
+            return false;
+        }
+        return gravestones.contains(block.getLocation());
     }
 
     @Override
