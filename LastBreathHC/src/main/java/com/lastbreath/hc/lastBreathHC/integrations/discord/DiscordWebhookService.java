@@ -77,15 +77,15 @@ public class DiscordWebhookService {
         embed.put("fields", new Object[]{
                 Map.of("name", "Death Cause", "value", safeValue(deathReason), "inline", false),
                 Map.of("name", "Time Played", "value", timePlayed, "inline", true),
-                Map.of("name", "Deaths", "value", String.valueOf(stats.deaths), "inline", true),
-                Map.of("name", "Revives", "value", String.valueOf(stats.revives), "inline", true),
+                //Map.of("name", "Deaths", "value", String.valueOf(stats.deaths), "inline", true),
+                //Map.of("name", "Revives", "value", String.valueOf(stats.revives), "inline", true),
                 Map.of("name", "Mobs Slain", "value", String.valueOf(stats.mobsKilled), "inline", true),
                 Map.of("name", "Blocks Mined", "value", String.valueOf(stats.blocksMined), "inline", true),
-                Map.of("name", "Crops Harvested", "value", String.valueOf(stats.cropsHarvested), "inline", true),
-                Map.of("name", "Rare Ores", "value", String.valueOf(stats.rareOresMined), "inline", true),
-                Map.of("name", "Killer", "value", safeValue(killerLabel), "inline", true),
-                Map.of("name", "Revive Token", "value", reviveLabel, "inline", true),
-                Map.of("name", "Location", "value", locationLabel, "inline", false)
+                //Map.of("name", "Crops Harvested", "value", String.valueOf(stats.cropsHarvested), "inline", true),
+                //Map.of("name", "Rare Ores", "value", String.valueOf(stats.rareOresMined), "inline", true),
+                //Map.of("name", "Killer", "value", safeValue(killerLabel), "inline", true),
+                //Map.of("name", "Revive Token", "value", reviveLabel, "inline", true),
+                //Map.of("name", "Location", "value", locationLabel, "inline", false)
         });
         payload.put("embeds", new Object[]{embed});
 
