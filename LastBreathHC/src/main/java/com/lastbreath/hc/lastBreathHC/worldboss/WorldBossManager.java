@@ -809,7 +809,7 @@ public class WorldBossManager implements Listener {
         worldBorder.setCenter(center);
         worldBorder.setSize(radius * 2.0);
         world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
-        createPortal(world, world.getSpawnLocation());
+        createArenaPortal(world, center, radius);
         createEscapePoint(world, world.getSpawnLocation());
     }
 
@@ -860,6 +860,23 @@ public class WorldBossManager implements Listener {
         Material innerMaterial = resolvePortalInnerMaterial(innerMaterialName);
 
         Location base = origin.clone().add(2, 0, 2);
+        createPortalAtBase(world, base, frameMaterial, innerMaterial);
+    }
+
+    private void createArenaPortal(World world, Location center, int radius) {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".arena.portal.enabled", true)) {
+            return;
+        }
+        String frameMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.frameMaterial", "GLOWSTONE");
+        String innerMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "PARTICLE");
+        Material frameMaterial = resolveMaterial(frameMaterialName, Material.GLOWSTONE);
+        Material innerMaterial = resolvePortalInnerMaterial(innerMaterialName);
+
+        Location base = center.clone().add(0, 0, radius - 2);
+        createPortalAtBase(world, base, frameMaterial, innerMaterial);
+    }
+
+    private void createPortalAtBase(World world, Location base, Material frameMaterial, Material innerMaterial) {
         int baseY = resolvePortalBaseY(world, base);
         base.setY(baseY);
 
@@ -917,9 +934,26 @@ public class WorldBossManager implements Listener {
         for (Location location : escapeBlocks) {
             location.getBlock().setType(Material.AIR);
         }
+        removeArenaEscapeBlock();
         portalBlocks.clear();
         portalAnchors.clear();
         escapeBlocks.clear();
+    }
+
+    private void removeArenaEscapeBlock() {
+        World arenaWorld = getLoadedArenaWorld();
+        if (arenaWorld == null) {
+            return;
+        }
+        Location base = arenaWorld.getSpawnLocation().clone().add(-2, 0, -2);
+        int baseY = Math.max(arenaWorld.getMinHeight() + 2, base.getBlockY());
+        base.setY(baseY);
+        Location blockLocation = base.getBlock().getLocation();
+        String blockName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.escape.blockMaterial", "EMERALD_BLOCK");
+        Material blockMaterial = resolveMaterial(blockName, Material.EMERALD_BLOCK);
+        if (blockLocation.getBlock().getType() == blockMaterial) {
+            blockLocation.getBlock().setType(Material.AIR);
+        }
     }
 
     private boolean matchesPortalAt(World world, int baseX, int baseY, int baseZ, Material frameMaterial, Material innerMaterial) {
