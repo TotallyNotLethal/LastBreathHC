@@ -58,6 +58,7 @@ public class WorldBossManager implements Listener {
     private static final int DEFAULT_ARENA_WALL_HEIGHT = 6;
     private static final int PORTAL_WIDTH = 4;
     private static final int PORTAL_HEIGHT = 5;
+    private static final double BLOOD_MOON_SPAWN_RADIUS = 100.0;
 
     private final Plugin plugin;
     private final BloodMoonManager bloodMoonManager;
@@ -458,8 +459,18 @@ public class WorldBossManager implements Listener {
             public void run() {
                 boolean active = bloodMoonManager != null && bloodMoonManager.isActive();
                 if (active && !lastBloodMoonActive) {
-                    for (World world : getEligibleWorlds()) {
-                        trySpawnTriggeredBoss(world, world.getSpawnLocation(), TriggerType.BLOOD_MOON);
+                    Player targetPlayer = pickRandomEligiblePlayer();
+                    if (targetPlayer == null) {
+                        plugin.getLogger().warning("Blood moon world boss spawn skipped because no eligible players were online.");
+                    } else {
+                        Location base = findSpawnLocation(targetPlayer.getWorld(), targetPlayer.getLocation(), BLOOD_MOON_SPAWN_RADIUS, MAX_LOCATION_ATTEMPTS);
+                        if (base == null) {
+                            base = targetPlayer.getLocation();
+                        }
+                        if (trySpawnTriggeredBoss(targetPlayer.getWorld(), base, TriggerType.BLOOD_MOON)) {
+                            createPortalAt(base);
+                            logSpawnDetails("Blood moon world boss portal spawned near " + targetPlayer.getName(), targetPlayer.getWorld(), base);
+                        }
                     }
                 }
                 lastBloodMoonActive = active;
@@ -506,15 +517,17 @@ public class WorldBossManager implements Listener {
         }
     }
 
-    private void trySpawnTriggeredBoss(World world, Location origin, TriggerType triggerType) {
+    private boolean trySpawnTriggeredBoss(World world, Location origin, TriggerType triggerType) {
         if (!isTriggerOffCooldown(world, triggerType)) {
-            return;
+            return false;
         }
         if (spawnWorldBoss(world, origin)) {
             setTriggeredNow(world, triggerType);
+            return true;
         } else {
             plugin.getLogger().warning("World boss trigger failed for " + triggerType.name().toLowerCase(Locale.ROOT) + ".");
         }
+        return false;
     }
 
     private boolean spawnWorldBoss(World world, Location origin) {
@@ -1061,6 +1074,24 @@ public class WorldBossManager implements Listener {
         String formattedBiome = biome.name().toLowerCase(Locale.ROOT).replace('_', ' ');
         String display = formattedBiome.isEmpty() ? "wilderness" : formattedBiome;
         Bukkit.broadcastMessage("The ground trembles\u2026 something ancient stirs in the " + display + ".");
+    }
+
+    private void logSpawnDetails(String prefix, World world, Location location) {
+        Biome biome = world.getBiome(location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        String formattedBiome = biome.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+        String display = formattedBiome.isEmpty() ? "wilderness" : formattedBiome;
+        plugin.getLogger().info(prefix + " at [" + location.getBlockX() + ", " + location.getBlockY() + ", "
+                + location.getBlockZ() + "] in " + display + " (" + world.getName() + ").");
+    }
+
+    private Player pickRandomEligiblePlayer() {
+        List<Player> players = Bukkit.getOnlinePlayers().stream()
+                .filter(player -> getEligibleWorlds().contains(player.getWorld()))
+                .toList();
+        if (players.isEmpty()) {
+            return null;
+        }
+        return players.get(random.nextInt(players.size()));
     }
 
     private WorldBossController createController(WorldBossType type, LivingEntity bossEntity) {
