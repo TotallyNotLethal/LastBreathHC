@@ -114,6 +114,9 @@ public class WorldBossManager implements Listener {
     }
 
     public void start() {
+        if (createArenaWorld() == null) {
+            plugin.getLogger().warning("World boss arena world could not be created during startup.");
+        }
         loadPersistedPortals();
         prepareInstancePortals();
         scheduleNextRandomSpawn();
@@ -762,6 +765,11 @@ public class WorldBossManager implements Listener {
 
     private World resolveArenaWorld() {
         String worldName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.worldName", "world_boss_arena");
+        return Bukkit.getWorld(worldName);
+    }
+
+    private World createArenaWorld() {
+        String worldName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.worldName", "world_boss_arena");
         World existing = Bukkit.getWorld(worldName);
         if (existing != null) {
             return existing;
@@ -791,16 +799,17 @@ public class WorldBossManager implements Listener {
         center.setY(baseY);
         world.setSpawnLocation(center);
 
+        preloadArenaChunks(world, center, radius);
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 Location floorLocation = center.clone().add(x, -1, z);
-                floorLocation.getBlock().setType(floorMaterial);
+                floorLocation.getBlock().setType(floorMaterial, false);
                 for (int y = 0; y <= wallHeight; y++) {
                     Location clear = center.clone().add(x, y, z);
                     if (Math.abs(x) == radius || Math.abs(z) == radius) {
-                        clear.getBlock().setType(wallMaterial);
+                        clear.getBlock().setType(wallMaterial, false);
                     } else if (y > 0) {
-                        clear.getBlock().setType(Material.AIR);
+                        clear.getBlock().setType(Material.AIR, false);
                     }
                 }
             }
@@ -809,7 +818,7 @@ public class WorldBossManager implements Listener {
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 Location ceilingLocation = center.clone().add(x, roofHeight, z);
-                ceilingLocation.getBlock().setType(wallMaterial);
+                ceilingLocation.getBlock().setType(wallMaterial, false);
             }
         }
         WorldBorder worldBorder = world.getWorldBorder();
@@ -818,6 +827,22 @@ public class WorldBossManager implements Listener {
         world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
         createArenaPortal(world, center, radius);
         createEscapePoint(world, world.getSpawnLocation());
+    }
+
+    private void preloadArenaChunks(World world, Location center, int radius) {
+        int minBlockX = center.getBlockX() - radius;
+        int maxBlockX = center.getBlockX() + radius;
+        int minBlockZ = center.getBlockZ() - radius;
+        int maxBlockZ = center.getBlockZ() + radius;
+        int minChunkX = minBlockX >> 4;
+        int maxChunkX = maxBlockX >> 4;
+        int minChunkZ = minBlockZ >> 4;
+        int maxChunkZ = maxBlockZ >> 4;
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                world.loadChunk(chunkX, chunkZ);
+            }
+        }
     }
 
     private Location findArenaSpawnLocation(World world, double spawnRadius) {
