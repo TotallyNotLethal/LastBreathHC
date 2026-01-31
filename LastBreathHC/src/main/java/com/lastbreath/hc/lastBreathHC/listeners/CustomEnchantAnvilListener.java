@@ -41,6 +41,16 @@ public class CustomEnchantAnvilListener implements Listener {
             event.setResult(null);
             return;
         }
+        if (CustomEnchantments.hasExclusiveConflict(left, enchantId)) {
+            CustomEnchantments.logEnchantRejection(
+                    "Exclusive guard enchant already present.",
+                    left,
+                    enchantId,
+                    CustomEnchantments.getEnchantIds(left.getItemMeta())
+            );
+            event.setResult(null);
+            return;
+        }
 
         ItemStack result = CustomEnchantments.applyEnchant(left, enchantId);
         event.setResult(result);
@@ -72,6 +82,16 @@ public class CustomEnchantAnvilListener implements Listener {
             return;
         }
         if (!CustomEnchant.isAllowedForItem(enchantId, left.getType())) {
+            event.setCancelled(true);
+            return;
+        }
+        if (CustomEnchantments.hasExclusiveConflict(left, enchantId)) {
+            CustomEnchantments.logEnchantRejection(
+                    "Exclusive guard enchant already present.",
+                    left,
+                    enchantId,
+                    CustomEnchantments.getEnchantIds(left.getItemMeta())
+            );
             event.setCancelled(true);
             return;
         }
