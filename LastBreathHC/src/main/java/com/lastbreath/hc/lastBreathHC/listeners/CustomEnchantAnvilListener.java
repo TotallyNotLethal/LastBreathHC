@@ -32,17 +32,12 @@ public class CustomEnchantAnvilListener implements Listener {
         if (!CustomEnchantBook.isEnchantBook(right)) {
             return;
         }
-        if (!CustomEnchantments.isNetheriteTool(left.getType())) {
-            event.setResult(null);
-            return;
-        }
-
         String enchantId = CustomEnchantBook.getEnchantId(right);
         if (!CustomEnchant.isAllowedEnchantId(enchantId)) {
             event.setResult(null);
             return;
         }
-        if (!CustomEnchant.isAllowedForTool(enchantId, left.getType())) {
+        if (!CustomEnchant.isAllowedForItem(enchantId, left.getType())) {
             event.setResult(null);
             return;
         }
@@ -71,17 +66,12 @@ public class CustomEnchantAnvilListener implements Listener {
         if (!CustomEnchantBook.isEnchantBook(right)) {
             return;
         }
-        if (!CustomEnchantments.isNetheriteTool(left.getType())) {
-            event.setCancelled(true);
-            return;
-        }
-
         String enchantId = CustomEnchantBook.getEnchantId(right);
         if (!CustomEnchant.isAllowedEnchantId(enchantId)) {
             event.setCancelled(true);
             return;
         }
-        if (!CustomEnchant.isAllowedForTool(enchantId, left.getType())) {
+        if (!CustomEnchant.isAllowedForItem(enchantId, left.getType())) {
             event.setCancelled(true);
             return;
         }

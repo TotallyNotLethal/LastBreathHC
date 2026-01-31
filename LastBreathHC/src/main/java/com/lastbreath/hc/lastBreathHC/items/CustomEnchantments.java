@@ -5,7 +5,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -30,13 +29,6 @@ public class CustomEnchantments {
     private CustomEnchantments() {
     }
 
-    public static boolean isNetheriteTool(Material material) {
-        return material == Material.NETHERITE_PICKAXE
-                || material == Material.NETHERITE_SHOVEL
-                || material == Material.NETHERITE_AXE
-                || material == Material.NETHERITE_HOE;
-    }
-
     public static ItemStack applyEnchant(ItemStack tool, String enchantId) {
         if (tool == null || enchantId == null || enchantId.isBlank()) {
             return tool;
@@ -44,10 +36,7 @@ public class CustomEnchantments {
         if (!CustomEnchant.isAllowedEnchantId(enchantId)) {
             return tool;
         }
-        if (!isNetheriteTool(tool.getType())) {
-            return tool;
-        }
-        if (!CustomEnchant.isAllowedForTool(enchantId, tool.getType())) {
+        if (!CustomEnchant.isAllowedForItem(enchantId, tool.getType())) {
             return tool;
         }
         ItemStack result = tool.clone();
