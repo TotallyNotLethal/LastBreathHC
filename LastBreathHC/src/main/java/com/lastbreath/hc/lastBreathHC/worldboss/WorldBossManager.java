@@ -14,6 +14,8 @@ import org.bukkit.GameRule;
 import org.bukkit.block.Block;
 import org.bukkit.block.Biome;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -36,6 +38,7 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.block.BlockFace;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -61,6 +64,8 @@ public class WorldBossManager implements Listener {
     private static final int PORTAL_WIDTH = 4;
     private static final int PORTAL_HEIGHT = 5;
     private static final double BLOOD_MOON_SPAWN_RADIUS = 100.0;
+    private static final String PORTAL_DATA_FILE = "worldboss-portals.yml";
+    private static final String PORTAL_DATA_KEY = "portals";
 
     private final Plugin plugin;
     private final BloodMoonManager bloodMoonManager;
@@ -78,6 +83,8 @@ public class WorldBossManager implements Listener {
     private final Map<World, Set<Location>> portalBlocks = new HashMap<>();
     private final Map<UUID, Long> portalCooldowns = new HashMap<>();
     private final Set<Location> escapeBlocks = new HashSet<>();
+    private final Set<PortalBase> persistedPortalBases = new HashSet<>();
+    private final File portalDataFile;
     private boolean enabled = true;
     private boolean arenaMarkedForDeletion;
     private String markedArenaWorldName;
@@ -89,16 +96,18 @@ public class WorldBossManager implements Listener {
         this.bossTypeKey = new NamespacedKey(plugin, "world_boss_type");
         this.returnLocationKey = new NamespacedKey(plugin, "world_boss_return_location");
         this.antiCheese = new WorldBossAntiCheese(plugin);
+        this.portalDataFile = new File(plugin.getDataFolder(), PORTAL_DATA_FILE);
         for (TriggerType triggerType : TriggerType.values()) {
             lastTriggerTimes.put(triggerType, new HashMap<>());
         }
     }
 
     public void start() {
+        loadPersistedPortals();
+        prepareInstancePortals();
         scheduleNextRandomSpawn();
         scheduleBloodMoonChecks();
         startBossTick();
-        prepareInstancePortals();
     }
 
     public void shutdown() {
@@ -206,6 +215,7 @@ public class WorldBossManager implements Listener {
         int frameRemoved = 0;
         int innerRemoved = 0;
         int escapeRemoved = 0;
+        boolean portalDataDirty = false;
 
         for (World world : worldsToScan) {
             int minY = world.getMinHeight();
@@ -227,6 +237,9 @@ public class WorldBossManager implements Listener {
                             PortalPurgeResult removal = removePortalAt(world, x, y, z, frameMaterial, innerMaterial);
                             frameRemoved += removal.frameRemoved();
                             innerRemoved += removal.innerRemoved();
+                            if (removal.frameRemoved() > 0 || removal.innerRemoved() > 0) {
+                                portalDataDirty = removePersistedPortalBase(world, x, y, z) || portalDataDirty;
+                            }
                             if (escapeEnabled) {
                                 int escapeX = x - 4;
                                 int escapeZ = z - 4;
@@ -243,6 +256,9 @@ public class WorldBossManager implements Listener {
             }
         }
 
+        if (portalDataDirty) {
+            savePortalData();
+        }
         return new PortalPurgeResult(frameRemoved, innerRemoved, escapeRemoved);
     }
 
@@ -310,6 +326,19 @@ public class WorldBossManager implements Listener {
                 controller.rebuildFromPersistent();
                 activeBosses.put(living.getUniqueId(), controller);
             }
+        }
+
+        Material frameMaterial = resolveMaterial(
+                plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.frameMaterial", "GLOWSTONE"),
+                Material.GLOWSTONE
+        );
+        Material innerMaterial = resolvePortalInnerMaterial(
+                plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "PARTICLE")
+        );
+        rehydratePersistedPortalsInChunk(event.getChunk(), frameMaterial, innerMaterial);
+
+        if (plugin.getConfig().getBoolean(CONFIG_ROOT + ".arena.portal.scanOnChunkLoad", true)) {
+            scanChunkForPortals(event.getChunk(), frameMaterial, innerMaterial);
         }
     }
 
@@ -731,23 +760,9 @@ public class WorldBossManager implements Listener {
         int baseY = resolvePortalBaseY(world, base);
         base.setY(baseY);
 
-        Set<Location> portalSet = portalBlocks.computeIfAbsent(world, ignored -> new HashSet<>());
-
-        for (int y = 0; y < PORTAL_HEIGHT; y++) {
-            for (int x = 0; x < PORTAL_WIDTH; x++) {
-                Location target = base.clone().add(x, y, 0);
-                boolean frame = y == 0 || y == PORTAL_HEIGHT - 1 || x == 0 || x == PORTAL_WIDTH - 1;
-                if (frame) {
-                    target.getBlock().setType(frameMaterial);
-                } else {
-                    target.getBlock().setType(innerMaterial);
-                    portalSet.add(target.getBlock().getLocation());
-                }
-            }
-        }
-
-        Location labelLocation = base.clone().add(1, PORTAL_HEIGHT, 0);
-        labelLocation.getBlock().setType(Material.LANTERN);
+        buildPortalAtBase(world, base, frameMaterial, innerMaterial);
+        addPortalInnerBlocks(world, base);
+        persistPortalBase(base);
     }
 
     private int resolvePortalBaseY(World world, Location base) {
@@ -839,6 +854,190 @@ public class WorldBossManager implements Listener {
         }
 
         return new PortalPurgeResult(frameRemoved, innerRemoved, 0);
+    }
+
+    private void loadPersistedPortals() {
+        portalBlocks.clear();
+        persistedPortalBases.clear();
+        if (!portalDataFile.exists()) {
+            return;
+        }
+        FileConfiguration config = YamlConfiguration.loadConfiguration(portalDataFile);
+        for (Map<?, ?> entry : config.getMapList(PORTAL_DATA_KEY)) {
+            String worldName = entry.get("world") instanceof String value ? value : null;
+            int x = entry.get("x") instanceof Number value ? value.intValue() : Integer.MIN_VALUE;
+            int y = entry.get("y") instanceof Number value ? value.intValue() : Integer.MIN_VALUE;
+            int z = entry.get("z") instanceof Number value ? value.intValue() : Integer.MIN_VALUE;
+            if (worldName == null || x == Integer.MIN_VALUE || y == Integer.MIN_VALUE || z == Integer.MIN_VALUE) {
+                continue;
+            }
+            persistedPortalBases.add(new PortalBase(worldName, x, y, z));
+        }
+
+        Material frameMaterial = resolveMaterial(
+                plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.frameMaterial", "GLOWSTONE"),
+                Material.GLOWSTONE
+        );
+        Material innerMaterial = resolvePortalInnerMaterial(
+                plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "PARTICLE")
+        );
+        for (PortalBase portalBase : persistedPortalBases) {
+            World world = Bukkit.getWorld(portalBase.worldName);
+            if (world == null) {
+                continue;
+            }
+            Location base = new Location(world, portalBase.x, portalBase.y, portalBase.z);
+            if (!matchesPortalAt(world, portalBase.x, portalBase.y, portalBase.z, frameMaterial, innerMaterial)) {
+                buildPortalAtBase(world, base, frameMaterial, innerMaterial);
+            }
+            addPortalInnerBlocks(world, base);
+        }
+    }
+
+    private void persistPortalBase(Location base) {
+        PortalBase portalBase = new PortalBase(base.getWorld().getName(), base.getBlockX(), base.getBlockY(), base.getBlockZ());
+        if (!persistedPortalBases.add(portalBase)) {
+            return;
+        }
+        savePortalData();
+    }
+
+    private boolean removePersistedPortalBase(World world, int baseX, int baseY, int baseZ) {
+        PortalBase portalBase = new PortalBase(world.getName(), baseX, baseY, baseZ);
+        return persistedPortalBases.remove(portalBase);
+    }
+
+    private void savePortalData() {
+        if (portalDataFile.getParentFile() != null) {
+            portalDataFile.getParentFile().mkdirs();
+        }
+        FileConfiguration config = new YamlConfiguration();
+        List<Map<String, Object>> entries = new java.util.ArrayList<>();
+        for (PortalBase base : persistedPortalBases) {
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("world", base.worldName);
+            entry.put("x", base.x);
+            entry.put("y", base.y);
+            entry.put("z", base.z);
+            entries.add(entry);
+        }
+        config.set(PORTAL_DATA_KEY, entries);
+        try {
+            config.save(portalDataFile);
+        } catch (IOException e) {
+            plugin.getLogger().warning("Failed to save world boss portal locations.");
+        }
+    }
+
+    private void buildPortalAtBase(World world, Location base, Material frameMaterial, Material innerMaterial) {
+        for (int y = 0; y < PORTAL_HEIGHT; y++) {
+            for (int x = 0; x < PORTAL_WIDTH; x++) {
+                Location target = base.clone().add(x, y, 0);
+                boolean frame = y == 0 || y == PORTAL_HEIGHT - 1 || x == 0 || x == PORTAL_WIDTH - 1;
+                if (frame) {
+                    target.getBlock().setType(frameMaterial);
+                } else {
+                    target.getBlock().setType(innerMaterial);
+                }
+            }
+        }
+
+        Location labelLocation = base.clone().add(1, PORTAL_HEIGHT, 0);
+        labelLocation.getBlock().setType(Material.LANTERN);
+    }
+
+    private void addPortalInnerBlocks(World world, Location base) {
+        Set<Location> portalSet = portalBlocks.computeIfAbsent(world, ignored -> new HashSet<>());
+        for (int y = 0; y < PORTAL_HEIGHT; y++) {
+            for (int x = 0; x < PORTAL_WIDTH; x++) {
+                boolean frame = y == 0 || y == PORTAL_HEIGHT - 1 || x == 0 || x == PORTAL_WIDTH - 1;
+                if (!frame) {
+                    Location target = base.clone().add(x, y, 0);
+                    portalSet.add(target.getBlock().getLocation());
+                }
+            }
+        }
+    }
+
+    private void rehydratePersistedPortalsInChunk(org.bukkit.Chunk chunk, Material frameMaterial, Material innerMaterial) {
+        if (persistedPortalBases.isEmpty()) {
+            return;
+        }
+        World world = chunk.getWorld();
+        int startX = chunk.getX() << 4;
+        int startZ = chunk.getZ() << 4;
+        int endX = startX + 15;
+        int endZ = startZ + 15;
+        for (PortalBase base : persistedPortalBases) {
+            if (!base.worldName.equals(world.getName())) {
+                continue;
+            }
+            if (base.x < startX || base.x > endX || base.z < startZ || base.z > endZ) {
+                continue;
+            }
+            if (!matchesPortalAt(world, base.x, base.y, base.z, frameMaterial, innerMaterial)) {
+                continue;
+            }
+            addPortalInnerBlocks(world, new Location(world, base.x, base.y, base.z));
+        }
+    }
+
+    private void scanChunkForPortals(org.bukkit.Chunk chunk, Material frameMaterial, Material innerMaterial) {
+        World world = chunk.getWorld();
+        int minY = world.getMinHeight();
+        int maxY = world.getMaxHeight() - 1;
+        int maxBaseY = maxY - (PORTAL_HEIGHT - 1);
+        int startX = chunk.getX() << 4;
+        int startZ = chunk.getZ() << 4;
+        for (int x = startX; x < startX + 16; x++) {
+            for (int z = startZ; z < startZ + 16; z++) {
+                for (int y = minY; y <= maxBaseY; y++) {
+                    Block base = world.getBlockAt(x, y, z);
+                    if (base.getType() != frameMaterial) {
+                        continue;
+                    }
+                    if (!matchesPortalAt(world, x, y, z, frameMaterial, innerMaterial)) {
+                        continue;
+                    }
+                    persistPortalBase(base.getLocation());
+                    addPortalInnerBlocks(world, base.getLocation());
+                }
+            }
+        }
+    }
+
+    private static final class PortalBase {
+        private final String worldName;
+        private final int x;
+        private final int y;
+        private final int z;
+
+        private PortalBase(String worldName, int x, int y, int z) {
+            this.worldName = worldName;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof PortalBase base)) {
+                return false;
+            }
+            return x == base.x && y == base.y && z == base.z && worldName.equals(base.worldName);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = worldName.hashCode();
+            result = 31 * result + x;
+            result = 31 * result + y;
+            result = 31 * result + z;
+            return result;
+        }
     }
 
     public static class PortalPurgeResult {
