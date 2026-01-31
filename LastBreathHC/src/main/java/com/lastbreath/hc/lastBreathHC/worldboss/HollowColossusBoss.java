@@ -14,6 +14,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class HollowColossusBoss extends BaseWorldBossController {
@@ -52,6 +54,7 @@ public class HollowColossusBoss extends BaseWorldBossController {
 
     @Override
     public void tick() {
+        spawnSafeZoneMarkers();
         if (phaseTicksRemaining == 60) {
             telegraphPhaseShift();
         }
@@ -162,8 +165,13 @@ public class HollowColossusBoss extends BaseWorldBossController {
         World world = boss.getWorld();
         Location center = boss.getLocation();
         int debrisCount = 6 + difficultyBonus;
+        double safeRadiusSquared = getSafeRadius();
+        safeRadiusSquared *= safeRadiusSquared;
         for (int i = 0; i < debrisCount; i++) {
             Location spawn = center.clone().add(randomOffset(), 6 + random.nextDouble() * 3, randomOffset());
+            if (isInSafeZone(spawn, safeRadiusSquared)) {
+                continue;
+            }
             FallingBlock fallingBlock = world.spawnFallingBlock(spawn, Material.COBBLED_DEEPSLATE.createBlockData());
             fallingBlock.setDropItem(false);
             fallingBlock.setVelocity(new Vector(random.nextDouble() - 0.5, -0.4, random.nextDouble() - 0.5));
@@ -175,12 +183,17 @@ public class HollowColossusBoss extends BaseWorldBossController {
         World world = boss.getWorld();
         Location center = boss.getLocation();
         int radius = 5 + loopCount;
+        double safeRadiusSquared = getSafeRadius();
+        safeRadiusSquared *= safeRadiusSquared;
         for (int x = -radius; x <= radius; x++) {
             for (int z = -radius; z <= radius; z++) {
                 if (random.nextDouble() > 0.2) {
                     continue;
                 }
                 Location target = center.clone().add(x, -1, z);
+                if (isInSafeZone(target, safeRadiusSquared)) {
+                    continue;
+                }
                 if (!target.getBlock().getType().isSolid()) {
                     continue;
                 }
@@ -209,5 +222,63 @@ public class HollowColossusBoss extends BaseWorldBossController {
             }
         }
         return nearest;
+    }
+
+    private double getSafeRadius() {
+        return Math.max(0.0, plugin.getConfig().getDouble("worldBoss.bosses.HollowColossus.safeRadius", 3.0));
+    }
+
+    private List<Location> getSafeZoneCenters() {
+        List<Location> centers = new ArrayList<>();
+        Location base = boss.getLocation();
+        World world = base.getWorld();
+        if (world == null) {
+            return centers;
+        }
+        double offset = 6.0;
+        centers.add(base.clone().add(offset, 0.0, 0.0));
+        centers.add(base.clone().add(-offset, 0.0, 0.0));
+        centers.add(base.clone().add(0.0, 0.0, offset));
+        centers.add(base.clone().add(0.0, 0.0, -offset));
+        return centers;
+    }
+
+    private boolean isInSafeZone(Location location, double safeRadiusSquared) {
+        if (safeRadiusSquared <= 0.0) {
+            return false;
+        }
+        for (Location center : getSafeZoneCenters()) {
+            if (!center.getWorld().equals(location.getWorld())) {
+                continue;
+            }
+            double dx = location.getX() - center.getX();
+            double dz = location.getZ() - center.getZ();
+            if ((dx * dx + dz * dz) <= safeRadiusSquared) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void spawnSafeZoneMarkers() {
+        double radius = getSafeRadius();
+        if (radius <= 0.0) {
+            return;
+        }
+        World world = boss.getWorld();
+        int points = 16;
+        for (Location safeCenter : getSafeZoneCenters()) {
+            if (!safeCenter.getWorld().equals(world)) {
+                continue;
+            }
+            Location ringCenter = safeCenter.clone().add(0.5, 0.1, 0.5);
+            for (int i = 0; i < points; i++) {
+                double angle = (Math.PI * 2.0 / points) * i;
+                double x = Math.cos(angle) * radius;
+                double z = Math.sin(angle) * radius;
+                Location point = ringCenter.clone().add(x, 0.0, z);
+                world.spawnParticle(Particle.END_ROD, point, 1, 0.05, 0.05, 0.05, 0.0);
+            }
+        }
     }
 }
