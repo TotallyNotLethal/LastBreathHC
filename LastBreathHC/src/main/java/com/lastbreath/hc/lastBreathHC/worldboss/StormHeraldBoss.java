@@ -199,8 +199,7 @@ public class StormHeraldBoss extends BaseWorldBossController {
     private void triggerChainLightning() {
         World world = boss.getWorld();
         Location center = boss.getLocation();
-        world.playSound(center, Sound.BLOCK_BEACON_POWER_SELECT, 1.1f, 1.5f);
-        world.spawnParticle(Particle.ELECTRIC_SPARK, center, 30, 1.5, 1.0, 1.5, 0.2);
+        telegraphChainLightning(center);
         double safeRadius = getLightningSafeRadius();
         double safeRadiusSquared = safeRadius * safeRadius;
         for (Player player : world.getPlayers()) {
@@ -220,8 +219,7 @@ public class StormHeraldBoss extends BaseWorldBossController {
     private void triggerWindGust() {
         Location center = boss.getLocation();
         World world = boss.getWorld();
-        world.playSound(center, Sound.ENTITY_PHANTOM_FLAP, 1.2f, 1.4f);
-        world.spawnParticle(Particle.CLOUD, center, 20, 1.5, 0.6, 1.5, 0.1);
+        telegraphWindGust(center);
         for (Player player : world.getPlayers()) {
             double distance = player.getLocation().distance(center);
             if (distance > 12) {
@@ -234,6 +232,32 @@ public class StormHeraldBoss extends BaseWorldBossController {
         }
         world.playSound(center, Sound.ENTITY_PHANTOM_FLAP, 1.1f, 0.8f);
         world.spawnParticle(Particle.CLOUD, center, 50, 2.5, 0.8, 2.5, 0.2);
+    }
+
+    private void telegraphChainLightning(Location center) {
+        for (Player player : boss.getWorld().getPlayers()) {
+            if (isTelegraphBlocked(player)) {
+                continue;
+            }
+            if (player.getLocation().distanceSquared(center) > 225) {
+                continue;
+            }
+            player.playSound(center, Sound.BLOCK_BEACON_POWER_SELECT, 1.1f, 1.5f);
+            player.spawnParticle(Particle.ELECTRIC_SPARK, center, 30, 1.5, 1.0, 1.5, 0.2);
+        }
+    }
+
+    private void telegraphWindGust(Location center) {
+        for (Player player : boss.getWorld().getPlayers()) {
+            if (isTelegraphBlocked(player)) {
+                continue;
+            }
+            if (player.getLocation().distance(center) > 12) {
+                continue;
+            }
+            player.playSound(center, Sound.ENTITY_PHANTOM_FLAP, 1.2f, 1.4f);
+            player.spawnParticle(Particle.CLOUD, center, 20, 1.5, 0.6, 1.5, 0.1);
+        }
     }
 
     private boolean isPlayerInAnchorSafeZone(Location playerLocation, double safeRadiusSquared) {
