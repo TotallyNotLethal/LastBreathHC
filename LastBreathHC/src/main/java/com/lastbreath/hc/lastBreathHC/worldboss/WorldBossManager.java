@@ -1134,7 +1134,7 @@ public class WorldBossManager implements Listener {
     }
 
     private Player pickRandomEligiblePlayer() {
-        List<Player> players = Bukkit.getOnlinePlayers().stream()
+        List<Player> players = (List<Player>) Bukkit.getOnlinePlayers().stream()
                 .filter(player -> getEligibleWorlds().contains(player.getWorld()))
                 .toList();
         if (players.isEmpty()) {
