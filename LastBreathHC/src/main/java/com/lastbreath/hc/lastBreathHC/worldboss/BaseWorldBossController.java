@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.worldboss;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantments;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
@@ -165,5 +166,21 @@ public abstract class BaseWorldBossController implements WorldBossController {
 
     protected boolean isTelegraphBlocked(Player player) {
         return CustomEnchantments.countArmorPiecesWithEnchant(player, CustomEnchant.TELEGRAPH_NULL.getId()) > 0;
+    }
+
+    protected int findFloorY(World world, int blockX, int blockZ) {
+        int minHeight = world.getMinHeight();
+        int scanY = world.getHighestBlockYAt(blockX, blockZ);
+        for (int y = scanY; y >= minHeight; y--) {
+            Material material = world.getBlockAt(blockX, y, blockZ).getType();
+            if (!material.isSolid()) {
+                continue;
+            }
+            if (material.isTransparent()) {
+                continue;
+            }
+            return y;
+        }
+        return scanY;
     }
 }

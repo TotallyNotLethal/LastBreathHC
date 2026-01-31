@@ -172,7 +172,8 @@ public class StormHeraldBoss extends BaseWorldBossController {
                 anchorBase.setX(borderCenter.getX() + dx * scale);
                 anchorBase.setZ(borderCenter.getZ() + dz * scale);
             }
-            anchorBase.setY(world.getHighestBlockYAt(anchorBase));
+            int floorY = findFloorY(world, anchorBase.getBlockX(), anchorBase.getBlockZ());
+            anchorBase.setY(floorY);
             Location place = anchorBase.clone().add(0, 1, 0);
             if (!place.getBlock().getType().isAir()) {
                 continue;
