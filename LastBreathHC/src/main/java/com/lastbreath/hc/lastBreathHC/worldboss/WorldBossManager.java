@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.WorldCreator;
@@ -182,9 +183,8 @@ public class WorldBossManager implements Listener {
                 plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.frameMaterial", "GLOWSTONE"),
                 Material.GLOWSTONE
         );
-        Material innerMaterial = resolveMaterial(
-                plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "WATER"),
-                Material.WATER
+        Material innerMaterial = resolvePortalInnerMaterial(
+                plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "PARTICLE")
         );
         Material escapeMaterial = resolveMaterial(
                 plugin.getConfig().getString(CONFIG_ROOT + ".arena.escape.blockMaterial", "EMERALD_BLOCK"),
@@ -487,6 +487,7 @@ public class WorldBossManager implements Listener {
                     return false;
                 });
                 tickBeaconAndCompass();
+                spawnPortalParticles();
                 markArenaForDeletionIfEmpty();
                 checkArenaForDeletion();
             }
@@ -664,6 +665,10 @@ public class WorldBossManager implements Listener {
         }
     }
 
+    private Material resolvePortalInnerMaterial(String name) {
+        return Material.AIR;
+    }
+
     private void prepareInstancePortals() {
         List<World> worlds = getEligibleWorlds();
         for (World world : worlds) {
@@ -676,9 +681,9 @@ public class WorldBossManager implements Listener {
             return;
         }
         String frameMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.frameMaterial", "GLOWSTONE");
-        String innerMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "WATER");
+        String innerMaterialName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "PARTICLE");
         Material frameMaterial = resolveMaterial(frameMaterialName, Material.GLOWSTONE);
-        Material innerMaterial = resolveMaterial(innerMaterialName, Material.WATER);
+        Material innerMaterial = resolvePortalInnerMaterial(innerMaterialName);
 
         Location base = origin.clone().add(2, 0, 2);
         int baseY = Math.max(world.getMinHeight() + 2, base.getBlockY());
@@ -693,11 +698,7 @@ public class WorldBossManager implements Listener {
                 if (frame) {
                     target.getBlock().setType(frameMaterial);
                 } else {
-                    if (innerMaterial == Material.WATER) {
-                        target.getBlock().setType(innerMaterial, false);
-                    } else {
-                        target.getBlock().setType(innerMaterial);
-                    }
+                    target.getBlock().setType(innerMaterial);
                     portalSet.add(target.getBlock().getLocation());
                 }
             }
@@ -705,6 +706,22 @@ public class WorldBossManager implements Listener {
 
         Location labelLocation = base.clone().add(1, PORTAL_HEIGHT, 0);
         labelLocation.getBlock().setType(Material.LANTERN);
+    }
+
+    private void spawnPortalParticles() {
+        if (portalBlocks.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<World, Set<Location>> entry : portalBlocks.entrySet()) {
+            World world = entry.getKey();
+            if (world == null) {
+                continue;
+            }
+            for (Location location : entry.getValue()) {
+                Location particleLocation = location.clone().add(0.5, 0.5, 0.5);
+                world.spawnParticle(Particle.END_ROD, particleLocation, 2, 0.2, 0.2, 0.2, 0.01);
+            }
+        }
     }
 
     private void createEscapePoint(World world, Location origin) {
