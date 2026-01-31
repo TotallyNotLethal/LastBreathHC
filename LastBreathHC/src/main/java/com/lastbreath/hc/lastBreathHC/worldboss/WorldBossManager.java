@@ -465,7 +465,8 @@ public class WorldBossManager implements Listener {
                     } else {
                         Location base = findSpawnLocation(targetPlayer.getWorld(), targetPlayer.getLocation(), BLOOD_MOON_SPAWN_RADIUS, MAX_LOCATION_ATTEMPTS);
                         if (base == null) {
-                            base = targetPlayer.getLocation();
+                            plugin.getLogger().warning("Blood moon world boss spawn skipped because no eligible location was found near " + targetPlayer.getName() + ".");
+                            return;
                         }
                         if (trySpawnTriggeredBoss(targetPlayer.getWorld(), base, TriggerType.BLOOD_MOON)) {
                             createPortalAt(base);
@@ -521,13 +522,30 @@ public class WorldBossManager implements Listener {
         if (!isTriggerOffCooldown(world, triggerType)) {
             return false;
         }
-        if (spawnWorldBoss(world, origin)) {
+        Location spawnLocation = resolveTriggeredSpawnLocation(world, origin);
+        if (spawnLocation == null) {
+            plugin.getLogger().warning("World boss trigger skipped for " + triggerType.name().toLowerCase(Locale.ROOT)
+                    + " because no eligible location was found.");
+            return false;
+        }
+        if (spawnWorldBoss(world, spawnLocation)) {
             setTriggeredNow(world, triggerType);
             return true;
         } else {
             plugin.getLogger().warning("World boss trigger failed for " + triggerType.name().toLowerCase(Locale.ROOT) + ".");
         }
         return false;
+    }
+
+    private Location resolveTriggeredSpawnLocation(World world, Location origin) {
+        if (origin == null) {
+            return pickRandomBaseLocation(world);
+        }
+        Biome originBiome = world.getBiome(origin.getBlockX(), origin.getBlockY(), origin.getBlockZ());
+        if (isBiomeEligible(originBiome)) {
+            return origin;
+        }
+        return findSpawnLocation(world, origin, DEFAULT_FALLBACK_RADIUS, MAX_LOCATION_ATTEMPTS);
     }
 
     private boolean spawnWorldBoss(World world, Location origin) {
@@ -1130,31 +1148,36 @@ public class WorldBossManager implements Listener {
         }
         int minHeight = world.getMinHeight();
         int maxHeight = world.getMaxHeight() - 1;
-        for (int attempt = 0; attempt < attempts; attempt++) {
-            double angle = random.nextDouble() * Math.PI * 2.0;
-            double distance = Math.sqrt(random.nextDouble()) * radius;
-            double x = base.getX() + Math.cos(angle) * distance;
-            double z = base.getZ() + Math.sin(angle) * distance;
-            int blockX = (int) Math.floor(x);
-            int blockZ = (int) Math.floor(z);
-            int y = world.getHighestBlockYAt(blockX, blockZ);
-            if (y < minHeight || y >= maxHeight) {
-                continue;
+        double searchRadius = radius;
+        double maxRadius = world.getWorldBorder().getSize() / 2.0;
+        while (searchRadius <= maxRadius) {
+            for (int attempt = 0; attempt < attempts; attempt++) {
+                double angle = random.nextDouble() * Math.PI * 2.0;
+                double distance = Math.sqrt(random.nextDouble()) * searchRadius;
+                double x = base.getX() + Math.cos(angle) * distance;
+                double z = base.getZ() + Math.sin(angle) * distance;
+                int blockX = (int) Math.floor(x);
+                int blockZ = (int) Math.floor(z);
+                int y = world.getHighestBlockYAt(blockX, blockZ);
+                if (y < minHeight || y >= maxHeight) {
+                    continue;
+                }
+                Material ground = world.getBlockAt(blockX, y, blockZ).getType();
+                if (!ground.isSolid() || ground.isAir()) {
+                    continue;
+                }
+                Material above = world.getBlockAt(blockX, y + 1, blockZ).getType();
+                if (!above.isAir()) {
+                    continue;
+                }
+                Location candidate = new Location(world, blockX + 0.5, y + 1, blockZ + 0.5);
+                Biome candidateBiome = world.getBiome(candidate.getBlockX(), candidate.getBlockY(), candidate.getBlockZ());
+                if (!isBiomeEligible(candidateBiome)) {
+                    continue;
+                }
+                return candidate;
             }
-            Material ground = world.getBlockAt(blockX, y, blockZ).getType();
-            if (!ground.isSolid() || ground.isAir()) {
-                continue;
-            }
-            Material above = world.getBlockAt(blockX, y + 1, blockZ).getType();
-            if (!above.isAir()) {
-                continue;
-            }
-            Location candidate = new Location(world, blockX + 0.5, y + 1, blockZ + 0.5);
-            Biome candidateBiome = world.getBiome(candidate.getBlockX(), candidate.getBlockY(), candidate.getBlockZ());
-            if (!isBiomeEligible(candidateBiome)) {
-                continue;
-            }
-            return candidate;
+            searchRadius += 1000.0;
         }
         return null;
     }
