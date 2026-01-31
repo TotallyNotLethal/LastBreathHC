@@ -19,10 +19,10 @@ public class WorldBossCommand implements BasicCommand {
         if (!source.getSender().isOp()) {
             return List.of();
         }
-        if (args.length == 0) {
-            return List.of("spawn", "portal", "enable", "disable");
+        if (args.length <= 1) {
+            return List.of("spawn", "portal", "enable", "disable", "cleanup");
         }
-        if ("spawn".equalsIgnoreCase(args[0]) && args.length == 1) {
+        if ("spawn".equalsIgnoreCase(args[0]) && args.length == 2) {
             return List.of("Gravewarden", "StormHerald", "HollowColossus");
         }
         return List.of();
@@ -41,7 +41,7 @@ public class WorldBossCommand implements BasicCommand {
             return;
         }
         if (args.length == 0) {
-            sender.sendMessage("§cUsage: /worldboss <spawn|portal|enable|disable> [type]");
+            sender.sendMessage("§cUsage: /worldboss <spawn|portal|enable|disable|cleanup> [type]");
             return;
         }
         String sub = args[0].toLowerCase(Locale.ROOT);
@@ -85,7 +85,14 @@ public class WorldBossCommand implements BasicCommand {
                 manager.disableBosses();
                 sender.sendMessage("§eWorld bosses disabled and existing bosses removed.");
             }
-            default -> sender.sendMessage("§cUsage: /worldboss <spawn|portal|enable|disable> [type]");
+            case "cleanup" -> {
+                WorldBossManager.PortalPurgeResult result = manager.purgeLegacyPortals();
+                sender.sendMessage("§aWorld boss cleanup complete. Removed "
+                        + result.frameRemoved() + " frame blocks, "
+                        + result.innerRemoved() + " portal blocks, "
+                        + result.escapeRemoved() + " escape blocks.");
+            }
+            default -> sender.sendMessage("§cUsage: /worldboss <spawn|portal|enable|disable|cleanup> [type]");
         }
     }
 }

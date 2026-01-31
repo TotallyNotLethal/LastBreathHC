@@ -55,6 +55,8 @@ public class WorldBossManager implements Listener {
     private static final double DEFAULT_FALLBACK_RADIUS = 40.0;
     private static final int DEFAULT_ARENA_RADIUS = 24;
     private static final int DEFAULT_ARENA_WALL_HEIGHT = 6;
+    private static final int PORTAL_WIDTH = 4;
+    private static final int PORTAL_HEIGHT = 5;
 
     private final Plugin plugin;
     private final BloodMoonManager bloodMoonManager;
@@ -173,6 +175,71 @@ public class WorldBossManager implements Listener {
             return;
         }
         createPortal(origin.getWorld(), origin);
+    }
+
+    public PortalPurgeResult purgeLegacyPortals() {
+        Material frameMaterial = resolveMaterial(
+                plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.frameMaterial", "GLOWSTONE"),
+                Material.GLOWSTONE
+        );
+        Material innerMaterial = resolveMaterial(
+                plugin.getConfig().getString(CONFIG_ROOT + ".arena.portal.innerMaterial", "WATER"),
+                Material.WATER
+        );
+        Material escapeMaterial = resolveMaterial(
+                plugin.getConfig().getString(CONFIG_ROOT + ".arena.escape.blockMaterial", "EMERALD_BLOCK"),
+                Material.EMERALD_BLOCK
+        );
+
+        boolean escapeEnabled = plugin.getConfig().getBoolean(CONFIG_ROOT + ".arena.escape.enabled", true);
+
+        Set<World> worldsToScan = new java.util.LinkedHashSet<>(getEligibleWorlds());
+        World arenaWorld = resolveArenaWorld();
+        if (arenaWorld != null) {
+            worldsToScan.add(arenaWorld);
+        }
+
+        int frameRemoved = 0;
+        int innerRemoved = 0;
+        int escapeRemoved = 0;
+
+        for (World world : worldsToScan) {
+            int minY = world.getMinHeight();
+            int maxY = world.getMaxHeight() - 1;
+            int maxBaseY = maxY - (PORTAL_HEIGHT - 1);
+            for (org.bukkit.Chunk chunk : world.getLoadedChunks()) {
+                int startX = chunk.getX() << 4;
+                int startZ = chunk.getZ() << 4;
+                for (int x = startX; x < startX + 16; x++) {
+                    for (int z = startZ; z < startZ + 16; z++) {
+                        for (int y = minY; y <= maxBaseY; y++) {
+                            Block base = world.getBlockAt(x, y, z);
+                            if (base.getType() != frameMaterial) {
+                                continue;
+                            }
+                            if (!matchesPortalAt(world, x, y, z, frameMaterial, innerMaterial)) {
+                                continue;
+                            }
+                            PortalPurgeResult removal = removePortalAt(world, x, y, z, frameMaterial, innerMaterial);
+                            frameRemoved += removal.frameRemoved();
+                            innerRemoved += removal.innerRemoved();
+                            if (escapeEnabled) {
+                                int escapeX = x - 4;
+                                int escapeZ = z - 4;
+                                Block escapeBlock = world.getBlockAt(escapeX, y, escapeZ);
+                                if (escapeBlock.getType() == escapeMaterial) {
+                                    escapeBlock.setType(Material.AIR);
+                                    escapeRemoved++;
+                                    escapeBlocks.remove(escapeBlock.getLocation());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return new PortalPurgeResult(frameRemoved, innerRemoved, escapeRemoved);
     }
 
     @EventHandler
@@ -618,15 +685,11 @@ public class WorldBossManager implements Listener {
         base.setY(baseY);
 
         Set<Location> portalSet = portalBlocks.computeIfAbsent(world, ignored -> new HashSet<>());
-        int width = 4;
-        int height = 5;
-        int innerWidth = 2;
-        int innerHeight = 3;
 
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
+        for (int y = 0; y < PORTAL_HEIGHT; y++) {
+            for (int x = 0; x < PORTAL_WIDTH; x++) {
                 Location target = base.clone().add(x, y, 0);
-                boolean frame = y == 0 || y == height - 1 || x == 0 || x == width - 1;
+                boolean frame = y == 0 || y == PORTAL_HEIGHT - 1 || x == 0 || x == PORTAL_WIDTH - 1;
                 if (frame) {
                     target.getBlock().setType(frameMaterial);
                 } else {
@@ -640,7 +703,7 @@ public class WorldBossManager implements Listener {
             }
         }
 
-        Location labelLocation = base.clone().add(1, height, 0);
+        Location labelLocation = base.clone().add(1, PORTAL_HEIGHT, 0);
         labelLocation.getBlock().setType(Material.LANTERN);
     }
 
@@ -669,6 +732,68 @@ public class WorldBossManager implements Listener {
         }
         portalBlocks.clear();
         escapeBlocks.clear();
+    }
+
+    private boolean matchesPortalAt(World world, int baseX, int baseY, int baseZ, Material frameMaterial, Material innerMaterial) {
+        for (int y = 0; y < PORTAL_HEIGHT; y++) {
+            for (int x = 0; x < PORTAL_WIDTH; x++) {
+                boolean isFrame = y == 0 || y == PORTAL_HEIGHT - 1 || x == 0 || x == PORTAL_WIDTH - 1;
+                Material expected = isFrame ? frameMaterial : innerMaterial;
+                if (world.getBlockAt(baseX + x, baseY + y, baseZ).getType() != expected) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private PortalPurgeResult removePortalAt(World world, int baseX, int baseY, int baseZ, Material frameMaterial, Material innerMaterial) {
+        int frameRemoved = 0;
+        int innerRemoved = 0;
+        Set<Location> portalSet = portalBlocks.get(world);
+
+        for (int y = 0; y < PORTAL_HEIGHT; y++) {
+            for (int x = 0; x < PORTAL_WIDTH; x++) {
+                boolean isFrame = y == 0 || y == PORTAL_HEIGHT - 1 || x == 0 || x == PORTAL_WIDTH - 1;
+                Block block = world.getBlockAt(baseX + x, baseY + y, baseZ);
+                if (isFrame && block.getType() == frameMaterial) {
+                    block.setType(Material.AIR);
+                    frameRemoved++;
+                } else if (!isFrame && block.getType() == innerMaterial) {
+                    block.setType(Material.AIR);
+                    innerRemoved++;
+                    if (portalSet != null) {
+                        portalSet.remove(block.getLocation());
+                    }
+                }
+            }
+        }
+
+        return new PortalPurgeResult(frameRemoved, innerRemoved, 0);
+    }
+
+    public static class PortalPurgeResult {
+        private final int frameRemoved;
+        private final int innerRemoved;
+        private final int escapeRemoved;
+
+        public PortalPurgeResult(int frameRemoved, int innerRemoved, int escapeRemoved) {
+            this.frameRemoved = frameRemoved;
+            this.innerRemoved = innerRemoved;
+            this.escapeRemoved = escapeRemoved;
+        }
+
+        public int frameRemoved() {
+            return frameRemoved;
+        }
+
+        public int innerRemoved() {
+            return innerRemoved;
+        }
+
+        public int escapeRemoved() {
+            return escapeRemoved;
+        }
     }
 
     private void markArenaForDeletionIfEmpty() {
