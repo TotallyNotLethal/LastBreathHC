@@ -6,6 +6,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -115,6 +116,14 @@ public class StormHeraldBoss extends BaseWorldBossController {
                 dropShield();
             }
         }
+    }
+
+    @Override
+    public boolean isBreakableMechanicBlock(Block block) {
+        if (block.getType() != ANCHOR_MATERIAL) {
+            return false;
+        }
+        return anchors.contains(block.getLocation());
     }
 
     @Override

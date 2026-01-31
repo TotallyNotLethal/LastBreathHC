@@ -18,6 +18,10 @@ public interface WorldBossController {
 
     void handleBlockBreak(BlockBreakEvent event);
 
+    default boolean isBreakableMechanicBlock(org.bukkit.block.Block block) {
+        return false;
+    }
+
     void cleanup();
 
     void rebuildFromPersistent();

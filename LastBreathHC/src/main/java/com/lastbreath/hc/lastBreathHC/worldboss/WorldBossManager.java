@@ -287,6 +287,13 @@ public class WorldBossManager implements Listener {
 
     @EventHandler
     public void onBossBlockBreak(BlockBreakEvent event) {
+        World arenaWorld = getLoadedArenaWorld();
+        if (arenaWorld != null && event.getBlock().getWorld().equals(arenaWorld)) {
+            if (!isBreakableMechanicBlock(event.getBlock())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
         for (WorldBossController controller : activeBosses.values()) {
             controller.handleBlockBreak(event);
         }
@@ -713,6 +720,15 @@ public class WorldBossManager implements Listener {
             antiCheese.clear(boss);
             iterator.remove();
         }
+    }
+
+    private boolean isBreakableMechanicBlock(Block block) {
+        for (WorldBossController controller : activeBosses.values()) {
+            if (controller.isBreakableMechanicBlock(block)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void deleteWorldFolder(File folder) {
