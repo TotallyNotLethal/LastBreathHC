@@ -16,6 +16,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class CustomEnchantments {
 
@@ -25,6 +26,12 @@ public class CustomEnchantments {
     private static final Component LORE_HEADER = Component.text("Custom Enchants")
             .color(NamedTextColor.DARK_PURPLE)
             .decoration(TextDecoration.ITALIC, false);
+
+    private static final Set<String> EXCLUSIVE_GUARD_ENCHANTS = Set.of(
+            "lb:wither_guard",
+            "lb:storm_guard",
+            "lb:lifesteal_ward"
+    );
 
     private CustomEnchantments() {
     }
@@ -42,6 +49,10 @@ public class CustomEnchantments {
         ItemStack result = tool.clone();
         ItemMeta meta = result.getItemMeta();
         List<String> ids = new ArrayList<>(getEnchantIds(meta));
+        if (hasExclusiveConflict(ids, enchantId)) {
+            logEnchantRejection("Exclusive guard enchant already present.", tool, enchantId, ids);
+            return tool;
+        }
         if (!ids.contains(enchantId)) {
             ids.add(enchantId);
         }
@@ -49,6 +60,45 @@ public class CustomEnchantments {
         updateLore(meta, ids);
         result.setItemMeta(meta);
         return result;
+    }
+
+    public static boolean hasExclusiveConflict(ItemStack tool, String enchantId) {
+        if (tool == null) {
+            return false;
+        }
+        return hasExclusiveConflict(getEnchantIds(tool.getItemMeta()), enchantId);
+    }
+
+    public static void logEnchantRejection(String reason, ItemStack tool, String enchantId, List<String> existingIds) {
+        String itemType = tool == null ? "unknown" : tool.getType().name();
+        String existingSummary = existingIds == null
+                ? "none"
+                : existingIds.stream()
+                        .filter(CustomEnchantments::isExclusiveGuardEnchant)
+                        .collect(Collectors.joining(","));
+        LastBreathHC.getInstance().getLogger().fine(
+                "[CustomEnchants] Rejected enchant '" + enchantId + "' on " + itemType + ": " + reason
+                        + " Existing exclusive enchants: " + existingSummary
+        );
+    }
+
+    private static boolean hasExclusiveConflict(List<String> existingIds, String enchantId) {
+        if (!isExclusiveGuardEnchant(enchantId) || existingIds == null || existingIds.isEmpty()) {
+            return false;
+        }
+        for (String existingId : existingIds) {
+            if (isExclusiveGuardEnchant(existingId) && !existingId.equalsIgnoreCase(enchantId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isExclusiveGuardEnchant(String id) {
+        if (id == null) {
+            return false;
+        }
+        return EXCLUSIVE_GUARD_ENCHANTS.contains(id.toLowerCase(Locale.ROOT));
     }
 
     public static List<String> getEnchantIds(ItemMeta meta) {
