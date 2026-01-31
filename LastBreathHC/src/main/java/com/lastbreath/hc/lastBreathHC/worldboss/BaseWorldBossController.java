@@ -176,7 +176,7 @@ public abstract class BaseWorldBossController implements WorldBossController {
             if (!material.isSolid()) {
                 continue;
             }
-            if (material.isTransparent()) {
+            if (!material.isOccluding()) {
                 continue;
             }
             return y;
