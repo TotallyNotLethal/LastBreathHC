@@ -1347,7 +1347,69 @@ public class WorldBossManager implements Listener {
         } else {
             targetWorld = arenaWorld;
         }
+        if (!hasActiveBossInWorld(arenaWorld)) {
+            spawnBossForPortalEntry(player);
+        }
         player.teleport(targetWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5));
+    }
+
+    private boolean hasActiveBossInWorld(World world) {
+        if (world == null) {
+            return false;
+        }
+        for (WorldBossController controller : activeBosses.values()) {
+            LivingEntity boss = controller.getBoss();
+            if (boss == null) {
+                continue;
+            }
+            if (!boss.isValid() || boss.isDead()) {
+                continue;
+            }
+            if (world.equals(boss.getWorld())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void spawnBossForPortalEntry(Player player) {
+        if (!enabled || player == null) {
+            return;
+        }
+        World sourceWorld = player.getWorld();
+        Location base = resolvePortalSpawnBase(sourceWorld, player.getLocation());
+        if (base == null) {
+            plugin.getLogger().warning("World boss portal entry skipped because no eligible location was found.");
+            return;
+        }
+        Biome baseBiome = sourceWorld.getBiome(base.getBlockX(), base.getBlockY(), base.getBlockZ());
+        WorldBossType bossType = resolveBossType(baseBiome)
+                .orElseGet(() -> getFallbackBossType().orElse(null));
+        if (bossType == null) {
+            plugin.getLogger().warning("World boss portal entry skipped because no boss type could be resolved.");
+            return;
+        }
+        if (!spawnBossInArena(sourceWorld, base, bossType)) {
+            plugin.getLogger().warning("World boss portal entry failed to spawn a boss.");
+        }
+    }
+
+    private Location resolvePortalSpawnBase(World world, Location origin) {
+        if (world == null) {
+            return null;
+        }
+        Location candidate = resolveTriggeredSpawnLocation(world, origin);
+        if (candidate != null) {
+            return candidate;
+        }
+        for (int attempt = 0; attempt < MAX_LOCATION_ATTEMPTS; attempt++) {
+            Location base = pickRandomBaseLocation(world);
+            Biome baseBiome = world.getBiome(base.getBlockX(), base.getBlockY(), base.getBlockZ());
+            if (isBiomeEligible(baseBiome)) {
+                return base;
+            }
+        }
+        return null;
     }
 
     private void teleportToExit(Player player) {
