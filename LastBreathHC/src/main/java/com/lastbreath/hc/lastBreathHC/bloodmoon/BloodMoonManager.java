@@ -70,9 +70,11 @@ public class BloodMoonManager {
         for (World world : Bukkit.getWorlds()) {
             int monsterSpawnLimit = world.getMonsterSpawnLimit();
             worldStates.put(world.getUID(), new WorldState(world.getTime(), world.hasStorm(), world.isThundering(), monsterSpawnLimit));
-            world.setTime(18000L);
-            world.setStorm(true);
-            world.setThundering(true);
+            if (world.getEnvironment() == World.Environment.NORMAL) {
+                world.setTime(18000L);
+                world.setStorm(true);
+                world.setThundering(true);
+            }
             if (monsterSpawnLimit > 0) {
                 int boostedLimit = (int) Math.round(monsterSpawnLimit * MONSTER_SPAWN_LIMIT_MULTIPLIER);
                 world.setMonsterSpawnLimit(Math.max(monsterSpawnLimit, boostedLimit));
@@ -108,13 +110,13 @@ public class BloodMoonManager {
         }
 
         for (World world : Bukkit.getWorlds()) {
-            world.setStorm(false);
-            world.setThundering(false);
             WorldState state = worldStates.get(world.getUID());
             if (state != null) {
-                world.setTime(state.time());
-                world.setStorm(state.storm());
-                world.setThundering(state.thunder());
+                if (world.getEnvironment() == World.Environment.NORMAL) {
+                    world.setTime(state.time());
+                    world.setStorm(state.storm());
+                    world.setThundering(state.thunder());
+                }
                 world.setMonsterSpawnLimit(state.monsterSpawnLimit());
             }
         }
