@@ -44,6 +44,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.block.BlockFace;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
@@ -292,6 +293,9 @@ public class WorldBossManager implements Listener {
 
     @EventHandler
     public void onStructureInteract(PlayerInteractEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
@@ -690,6 +694,9 @@ public class WorldBossManager implements Listener {
     }
 
     private boolean spawnWorldBoss(World world, Location origin) {
+        if (!activeBosses.isEmpty()) {
+            return false;
+        }
         Location base = origin != null ? origin : pickRandomBaseLocation(world);
         if (base == null) {
             return false;
