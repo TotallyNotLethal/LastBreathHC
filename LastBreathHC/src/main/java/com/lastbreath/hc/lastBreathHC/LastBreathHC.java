@@ -130,8 +130,9 @@ public final class LastBreathHC extends JavaPlugin {
         int deathMarkerDurationSeconds = getConfig().getInt("deathMarker.durationSeconds", 180);
         deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
 
+        DeathListener deathListener = new DeathListener(deathMarkerManager, teamChatService, discordWebhookService);
         getServer().getPluginManager().registerEvents(
-                new DeathListener(deathMarkerManager, teamChatService, discordWebhookService), this
+                deathListener, this
         );
         getServer().getPluginManager().registerEvents(
                 new DeathRejoinListener(), this
@@ -140,7 +141,7 @@ public final class LastBreathHC extends JavaPlugin {
                 new HeadListener(), this
         );
         getServer().getPluginManager().registerEvents(
-                new ReviveGUI(), this
+                new ReviveGUI(deathListener), this
         );
         getServer().getPluginManager().registerEvents(
                 new ReviveNameGUI(), this

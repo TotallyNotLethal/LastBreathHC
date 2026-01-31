@@ -247,6 +247,13 @@ public class DeathListener implements Listener {
         );
     }
 
+    public void banPlayerForReviveDecision(Player player, String reason) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        String killerLabel = formatKillerLabel(player);
+        Location deathLocation = player.getLocation().clone();
+        banPlayer(player, reason, reason, stats, killerLabel, deathLocation);
+    }
+
     private void handleBountyClaim(Player victim, Player killer) {
         BountyRecord record = BountyManager.claimBounty(
                 victim.getUniqueId(),
