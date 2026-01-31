@@ -178,7 +178,8 @@ public class GravewardenBoss extends BaseWorldBossController {
                 location.setZ(borderCenter.getZ() + dz * scale);
             }
             Location base = location.clone();
-            base.setY(world.getHighestBlockYAt(location));
+            int floorY = findFloorY(world, location.getBlockX(), location.getBlockZ());
+            base.setY(floorY);
             Location place = base.clone().add(0, 1, 0);
             if (!place.getBlock().getType().isAir()) {
                 continue;
