@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.worldboss;
 
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
+import com.lastbreath.hc.lastBreathHC.items.WorldBossPortalCompass;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -81,6 +82,7 @@ public class WorldBossManager implements Listener {
     private boolean lastBloodMoonActive;
     private int beaconTickCounter;
     private final Map<World, Set<Location>> portalBlocks = new HashMap<>();
+    private final Map<World, Set<Location>> portalAnchors = new HashMap<>();
     private final Map<UUID, Long> portalCooldowns = new HashMap<>();
     private final Set<Location> escapeBlocks = new HashSet<>();
     private final Set<PortalBase> persistedPortalBases = new HashSet<>();
@@ -815,6 +817,7 @@ public class WorldBossManager implements Listener {
             location.getBlock().setType(Material.AIR);
         }
         portalBlocks.clear();
+        portalAnchors.clear();
         escapeBlocks.clear();
     }
 
@@ -853,6 +856,7 @@ public class WorldBossManager implements Listener {
             }
         }
 
+        removePortalAnchor(world, baseX, baseY, baseZ);
         return new PortalPurgeResult(frameRemoved, innerRemoved, 0);
     }
 
@@ -957,6 +961,38 @@ public class WorldBossManager implements Listener {
                 }
             }
         }
+        addPortalAnchor(world, base);
+    }
+
+    private void addPortalAnchor(World world, Location base) {
+        if (world == null || base == null) {
+            return;
+        }
+        Set<Location> anchors = portalAnchors.computeIfAbsent(world, ignored -> new HashSet<>());
+        anchors.add(resolvePortalAnchor(base));
+    }
+
+    private void removePortalAnchor(World world, int baseX, int baseY, int baseZ) {
+        if (world == null) {
+            return;
+        }
+        Set<Location> anchors = portalAnchors.get(world);
+        if (anchors == null) {
+            return;
+        }
+        Location base = new Location(world, baseX, baseY, baseZ);
+        anchors.remove(resolvePortalAnchor(base));
+        if (anchors.isEmpty()) {
+            portalAnchors.remove(world);
+        }
+    }
+
+    private Location resolvePortalAnchor(Location base) {
+        World world = base.getWorld();
+        double anchorX = base.getBlockX() + (PORTAL_WIDTH - 1) / 2.0;
+        double anchorY = base.getBlockY() + (PORTAL_HEIGHT - 1) / 2.0;
+        double anchorZ = base.getBlockZ() + 0.5;
+        return new Location(world, anchorX, anchorY, anchorZ);
     }
 
     private void rehydratePersistedPortalsInChunk(org.bukkit.Chunk chunk, Material frameMaterial, Material innerMaterial) {
@@ -1276,12 +1312,49 @@ public class WorldBossManager implements Listener {
         }
         if (compassEnabled) {
             for (Player player : Bukkit.getOnlinePlayers()) {
+                if (isHoldingWorldBossPortalCompass(player)) {
+                    Location portal = findNearestPortalAnchor(player);
+                    if (portal != null) {
+                        player.setCompassTarget(portal);
+                        continue;
+                    }
+                }
                 LivingEntity nearest = findNearestBoss(player, bosses);
                 if (nearest != null) {
                     player.setCompassTarget(nearest.getLocation());
                 }
             }
         }
+    }
+
+    private boolean isHoldingWorldBossPortalCompass(Player player) {
+        if (player == null) {
+            return false;
+        }
+        return WorldBossPortalCompass.isWorldBossPortalCompass(player.getInventory().getItemInMainHand())
+                || WorldBossPortalCompass.isWorldBossPortalCompass(player.getInventory().getItemInOffHand());
+    }
+
+    private Location findNearestPortalAnchor(Player player) {
+        if (portalAnchors.isEmpty() || player == null) {
+            return null;
+        }
+        World world = player.getWorld();
+        Set<Location> anchors = portalAnchors.get(world);
+        if (anchors == null || anchors.isEmpty()) {
+            return null;
+        }
+        Location playerLocation = player.getLocation();
+        double closest = Double.MAX_VALUE;
+        Location nearest = null;
+        for (Location anchor : anchors) {
+            double distance = anchor.distanceSquared(playerLocation);
+            if (distance < closest) {
+                closest = distance;
+                nearest = anchor;
+            }
+        }
+        return nearest;
     }
 
     private void spawnBeaconParticles(LivingEntity boss, double intensity) {

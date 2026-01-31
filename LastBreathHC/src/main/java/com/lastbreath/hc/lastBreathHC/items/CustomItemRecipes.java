@@ -14,6 +14,7 @@ public class CustomItemRecipes {
         registerCustomEnchantBook();
         registerEnhancedGrindstone();
         registerTotemOfLife();
+        registerWorldBossPortalCompass();
         registerRebirthStone();
         registerGracestone();
     }
@@ -82,6 +83,21 @@ public class CustomItemRecipes {
         recipe.setIngredient('G', Material.NETHER_STAR);
         recipe.setIngredient('H', Material.DRAGON_BREATH);
         recipe.setIngredient('T', Material.TOTEM_OF_UNDYING);
+        Bukkit.addRecipe(recipe);
+    }
+
+    private static void registerWorldBossPortalCompass() {
+        NamespacedKey key = new NamespacedKey(
+                LastBreathHC.getInstance(), "world_boss_portal_compass"
+        );
+        ShapedRecipe recipe = new ShapedRecipe(key, WorldBossPortalCompass.create());
+        recipe.shape(
+                "EEE",
+                "ECE",
+                "EEE"
+        );
+        recipe.setIngredient('E', Material.ENDER_EYE);
+        recipe.setIngredient('C', Material.COMPASS);
         Bukkit.addRecipe(recipe);
     }
 
