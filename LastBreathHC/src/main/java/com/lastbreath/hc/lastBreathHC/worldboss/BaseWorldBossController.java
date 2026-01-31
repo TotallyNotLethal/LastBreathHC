@@ -1,9 +1,12 @@
 package com.lastbreath.hc.lastBreathHC.worldboss;
 
+import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
+import com.lastbreath.hc.lastBreathHC.items.CustomEnchantments;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -158,5 +161,9 @@ public abstract class BaseWorldBossController implements WorldBossController {
             }
         }
         return values;
+    }
+
+    protected boolean isTelegraphBlocked(Player player) {
+        return CustomEnchantments.countArmorPiecesWithEnchant(player, CustomEnchant.TELEGRAPH_NULL.getId()) > 0;
     }
 }
