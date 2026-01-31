@@ -69,6 +69,10 @@ public class CustomEnchantListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
+        var worldBossManager = plugin.getWorldBossManager();
+        if (worldBossManager != null && worldBossManager.isArenaBlockProtected(block)) {
+            return;
+        }
         if (processing.contains(block.getLocation())) {
             return;
         }
