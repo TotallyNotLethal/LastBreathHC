@@ -221,6 +221,12 @@ public class DeathListener implements Listener {
             String killerLabel,
             Location deathLocation
     ) {
+        LastBreathHC.getInstance().getLogger().info(
+                "Permanent death ban issued. player=" + player.getName()
+                        + " reason=" + reason
+                        + " deathReason=" + deathReason
+                        + " sendingDiscordWebhook=true"
+        );
         Bukkit.broadcastMessage(
                 "§4☠ " + TitleManager.getTitleTag(player) + player.getName()
                         + " has perished permanently. §7(" + deathReason + ")"

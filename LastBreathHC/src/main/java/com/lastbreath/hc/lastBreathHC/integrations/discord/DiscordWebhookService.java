@@ -8,6 +8,7 @@ import org.bukkit.Statistic;
 import org.bukkit.entity.Player;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -15,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.logging.Level;
 
 public class DiscordWebhookService {
 
@@ -33,12 +35,21 @@ public class DiscordWebhookService {
                                  Location location,
                                  boolean hasReviveToken) {
         if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".enabled", false)) {
+            plugin.getLogger().info("Discord webhook disabled; skipping death notification. player="
+                    + player.getName());
             return;
         }
         String webhookUrl = plugin.getConfig().getString(CONFIG_ROOT + ".url", "").trim();
         if (webhookUrl.isEmpty()) {
+            plugin.getLogger().info("Discord webhook URL empty; skipping death notification. player="
+                    + player.getName());
             return;
         }
+
+        boolean isPermanentDeath = !hasReviveToken;
+        plugin.getLogger().info("Discord webhook send started. player=" + player.getName()
+                + " deathReason=" + safeValue(deathReason)
+                + " permanentDeath=" + isPermanentDeath);
 
         String username = plugin.getConfig().getString(CONFIG_ROOT + ".username", "Charon");
         String avatarUrl = plugin.getConfig().getString(CONFIG_ROOT + ".avatarUrl", "").trim();
@@ -99,14 +110,35 @@ public class DiscordWebhookService {
 
             int code = connection.getResponseCode();
             if (code < 200 || code >= 300) {
-                plugin.getLogger().warning("Discord webhook returned HTTP " + code + " for death payload.");
+                String responseBody = readResponseBody(connection, code);
+                plugin.getLogger().warning("Discord webhook responded with non-2xx status. code=" + code
+                        + " body=" + responseBody);
+            } else {
+                String responseBody = readResponseBody(connection, code);
+                plugin.getLogger().info("Discord webhook responded. code=" + code + " body=" + responseBody);
             }
         } catch (IOException e) {
-            plugin.getLogger().warning("Failed to deliver Discord webhook: " + e.getMessage());
+            plugin.getLogger().log(Level.SEVERE, "Failed to deliver Discord webhook.", e);
         } finally {
             if (connection != null) {
                 connection.disconnect();
             }
+        }
+    }
+
+    private String readResponseBody(HttpURLConnection connection, int code) throws IOException {
+        InputStream stream = code >= 200 && code < 300
+                ? connection.getInputStream()
+                : connection.getErrorStream();
+        if (stream == null) {
+            return "";
+        }
+        try (InputStream responseStream = stream) {
+            byte[] bytes = responseStream.readAllBytes();
+            if (bytes.length == 0) {
+                return "";
+            }
+            return new String(bytes, StandardCharsets.UTF_8);
         }
     }
 
