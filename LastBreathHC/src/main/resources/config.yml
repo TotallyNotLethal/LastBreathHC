@@ -214,7 +214,7 @@ worldBoss:
     floorMaterial: STONE
     wallMaterial: GLASS
     escape:
-      enabled: true
+      enabled: false
       blockMaterial: EMERALD_BLOCK
     portal:
       enabled: true
