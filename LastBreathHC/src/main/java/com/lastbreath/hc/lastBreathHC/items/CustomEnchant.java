@@ -18,16 +18,35 @@ public enum CustomEnchant {
     FERTILE_HARVEST("lb:fertile_harvest", false, EnumSet.of(Material.NETHERITE_HOE)),
     SMELTER_TOUCH("lb:smelter_touch", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
     SWIFT_TILLER("lb:swift_tiller", false, EnumSet.of(Material.NETHERITE_HOE)),
-    PROSPECTOR("lb:prospector", false, EnumSet.of(Material.NETHERITE_PICKAXE));
+    PROSPECTOR("lb:prospector", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
+    WITHER_GUARD("lb:wither_guard", false, EnumSet.of(
+            Material.NETHERITE_HELMET,
+            Material.NETHERITE_CHESTPLATE,
+            Material.NETHERITE_LEGGINGS,
+            Material.NETHERITE_BOOTS
+    )),
+    STORM_GUARD("lb:storm_guard", false, EnumSet.of(
+            Material.NETHERITE_HELMET,
+            Material.NETHERITE_CHESTPLATE,
+            Material.NETHERITE_LEGGINGS,
+            Material.NETHERITE_BOOTS
+    )),
+    LIFESTEAL_WARD("lb:lifesteal_ward", false, EnumSet.of(
+            Material.NETHERITE_HELMET,
+            Material.NETHERITE_CHESTPLATE,
+            Material.NETHERITE_LEGGINGS,
+            Material.NETHERITE_BOOTS
+    )),
+    TELEGRAPH_NULL("lb:telegraph_null", false, EnumSet.of(Material.ELYTRA));
 
     private final String id;
     private final boolean pvp;
-    private final Set<Material> allowedTools;
+    private final Set<Material> allowedMaterials;
 
-    CustomEnchant(String id, boolean pvp, Set<Material> allowedTools) {
+    CustomEnchant(String id, boolean pvp, Set<Material> allowedMaterials) {
         this.id = id;
         this.pvp = pvp;
-        this.allowedTools = allowedTools;
+        this.allowedMaterials = allowedMaterials;
     }
 
     public String getId() {
@@ -38,8 +57,8 @@ public enum CustomEnchant {
         return pvp;
     }
 
-    public boolean isAllowedTool(Material material) {
-        return material != null && allowedTools.contains(material);
+    public boolean isAllowedItem(Material material) {
+        return material != null && allowedMaterials.contains(material);
     }
 
     public static CustomEnchant fromId(String id) {
@@ -60,9 +79,9 @@ public enum CustomEnchant {
         return enchant != null && !enchant.isPvp();
     }
 
-    public static boolean isAllowedForTool(String id, Material material) {
+    public static boolean isAllowedForItem(String id, Material material) {
         CustomEnchant enchant = fromId(id);
-        return enchant != null && !enchant.isPvp() && enchant.isAllowedTool(material);
+        return enchant != null && !enchant.isPvp() && enchant.isAllowedItem(material);
     }
 
     public static List<String> filterAllowedIds(Iterable<String> ids) {

@@ -127,6 +127,10 @@ asteroid:
         - "lb:smelter_touch"
         - "lb:swift_tiller"
         - "lb:prospector"
+        - "lb:wither_guard"
+        - "lb:storm_guard"
+        - "lb:lifesteal_ward"
+        - "lb:telegraph_null"
   worlds:
     - world
   tiers:
