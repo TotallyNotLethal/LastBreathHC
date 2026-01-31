@@ -1,6 +1,9 @@
 package com.lastbreath.hc.lastBreathHC.stats;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossKillMessage;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossPrefix;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import org.bukkit.configuration.ConfigurationSection;
@@ -113,6 +116,51 @@ public class StatsManager {
             if (equippedName != null && !equippedName.isBlank()) {
                 playerStats.equippedTitle = Title.fromInput(equippedName);
             }
+
+            List<String> unlockedPrefixes = config.getStringList(base + ".unlockedPrefixes");
+            Set<BossPrefix> prefixSet = new HashSet<>();
+            for (String prefixName : unlockedPrefixes) {
+                BossPrefix prefix = BossPrefix.fromInput(prefixName);
+                if (prefix != null) {
+                    prefixSet.add(prefix);
+                }
+            }
+            playerStats.unlockedPrefixes = prefixSet;
+
+            String equippedPrefixName = config.getString(base + ".equippedPrefix");
+            if (equippedPrefixName != null && !equippedPrefixName.isBlank()) {
+                playerStats.equippedPrefix = BossPrefix.fromInput(equippedPrefixName);
+            }
+
+            List<String> unlockedAuras = config.getStringList(base + ".unlockedAuras");
+            Set<BossAura> auraSet = new HashSet<>();
+            for (String auraName : unlockedAuras) {
+                BossAura aura = BossAura.fromInput(auraName);
+                if (aura != null) {
+                    auraSet.add(aura);
+                }
+            }
+            playerStats.unlockedAuras = auraSet;
+
+            String equippedAuraName = config.getString(base + ".equippedAura");
+            if (equippedAuraName != null && !equippedAuraName.isBlank()) {
+                playerStats.equippedAura = BossAura.fromInput(equippedAuraName);
+            }
+
+            List<String> unlockedKillMessages = config.getStringList(base + ".unlockedKillMessages");
+            Set<BossKillMessage> killMessageSet = new HashSet<>();
+            for (String messageName : unlockedKillMessages) {
+                BossKillMessage message = BossKillMessage.fromInput(messageName);
+                if (message != null) {
+                    killMessageSet.add(message);
+                }
+            }
+            playerStats.unlockedKillMessages = killMessageSet;
+
+            String equippedKillMessageName = config.getString(base + ".equippedKillMessage");
+            if (equippedKillMessageName != null && !equippedKillMessageName.isBlank()) {
+                playerStats.equippedKillMessage = BossKillMessage.fromInput(equippedKillMessageName);
+            }
         }
 
         TitleManager.initialize(playerStats);
@@ -149,6 +197,21 @@ public class StatsManager {
                 .sorted()
                 .collect(Collectors.toList()));
         config.set(base + ".equippedTitle", playerStats.equippedTitle != null ? playerStats.equippedTitle.name() : null);
+        config.set(base + ".unlockedPrefixes", playerStats.unlockedPrefixes.stream()
+                .map(BossPrefix::name)
+                .sorted()
+                .collect(Collectors.toList()));
+        config.set(base + ".equippedPrefix", playerStats.equippedPrefix != null ? playerStats.equippedPrefix.name() : null);
+        config.set(base + ".unlockedAuras", playerStats.unlockedAuras.stream()
+                .map(BossAura::name)
+                .sorted()
+                .collect(Collectors.toList()));
+        config.set(base + ".equippedAura", playerStats.equippedAura != null ? playerStats.equippedAura.name() : null);
+        config.set(base + ".unlockedKillMessages", playerStats.unlockedKillMessages.stream()
+                .map(BossKillMessage::name)
+                .sorted()
+                .collect(Collectors.toList()));
+        config.set(base + ".equippedKillMessage", playerStats.equippedKillMessage != null ? playerStats.equippedKillMessage.name() : null);
     }
 
     private static File getFile() {

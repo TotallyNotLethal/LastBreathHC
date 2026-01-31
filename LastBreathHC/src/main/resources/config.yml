@@ -261,6 +261,76 @@ worldBoss:
       spawnRadius: 45
       despawnTimeoutSeconds: 600
       safeRadius: 3.0
+  rewards:
+    Gravewarden:
+      drops:
+        - item: NETHERITE_SCRAP
+          min: 1
+          max: 2
+          chance: 0.12
+        - item: ECHO_SHARD
+          min: 2
+          max: 4
+          chance: 0.25
+        - item: ENCHANTED_GOLDEN_APPLE
+          min: 1
+          max: 1
+          chance: 0.05
+      cosmetics:
+        chance: 0.08
+        prefixes:
+          - GRAVEBORN
+        auras:
+          - SOUL_FLAME
+        killMessages:
+          - GRAVEWARDEN
+      title: GRAVEWARDEN_BANE
+    StormHerald:
+      drops:
+        - item: NETHER_STAR
+          min: 1
+          max: 1
+          chance: 0.08
+        - item: HEART_OF_THE_SEA
+          min: 1
+          max: 1
+          chance: 0.15
+        - item: ENCHANTED_GOLDEN_APPLE
+          min: 1
+          max: 1
+          chance: 0.05
+      cosmetics:
+        chance: 0.08
+        prefixes:
+          - STORMFORGED
+        auras:
+          - STORM_SPARK
+        killMessages:
+          - STORM_HERALD
+      title: STORM_HERALD
+    HollowColossus:
+      drops:
+        - item: ANCIENT_DEBRIS
+          min: 1
+          max: 2
+          chance: 0.12
+        - item: NETHERITE_INGOT
+          min: 1
+          max: 1
+          chance: 0.04
+        - item: MUSIC_DISC_OTHERSIDE
+          min: 1
+          max: 1
+          chance: 0.08
+      cosmetics:
+        chance: 0.08
+        prefixes:
+          - HOLLOWED
+        auras:
+          - DUSTVEIL
+        killMessages:
+          - HOLLOW_COLOSSUS
+      title: HOLLOW_COLOSSUS
 
 customEnchants:
   rarity: rare

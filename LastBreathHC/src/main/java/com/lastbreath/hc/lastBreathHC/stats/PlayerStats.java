@@ -1,5 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.stats;
 
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossKillMessage;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossPrefix;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 
 import java.util.HashSet;
@@ -19,6 +22,12 @@ public class PlayerStats {
     public String nickname;
     public Set<Title> unlockedTitles = new HashSet<>();
     public Title equippedTitle;
+    public Set<BossPrefix> unlockedPrefixes = new HashSet<>();
+    public BossPrefix equippedPrefix;
+    public Set<BossAura> unlockedAuras = new HashSet<>();
+    public BossAura equippedAura;
+    public Set<BossKillMessage> unlockedKillMessages = new HashSet<>();
+    public BossKillMessage equippedKillMessage;
 
     public PlayerStats(UUID uuid) {
         this.uuid = uuid;

@@ -1,7 +1,14 @@
 package com.lastbreath.hc.lastBreathHC.worldboss;
 
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossKillMessage;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossPrefix;
+import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticManager;
+import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenHelper;
 import com.lastbreath.hc.lastBreathHC.items.WorldBossPortalCompass;
+import com.lastbreath.hc.lastBreathHC.titles.Title;
+import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -37,6 +44,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.block.BlockFace;
+import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;
@@ -415,6 +423,12 @@ public class WorldBossManager implements Listener {
             controller.cleanup();
             antiCheese.clear(event.getEntity());
             bossDefeated = true;
+            WorldBossType type = getBossType(event.getEntity());
+            Player killer = event.getEntity().getKiller();
+            if (killer != null && type != null) {
+                Bukkit.broadcastMessage(CosmeticManager.formatKillMessage(killer, type.getConfigKey()));
+            }
+            handleBossRewards(event, type, killer);
         }
     }
 
@@ -482,6 +496,92 @@ public class WorldBossManager implements Listener {
                 remainingSeconds--;
             }
         }.runTaskTimer(plugin, 0L, 20L);
+    }
+
+    private WorldBossType getBossType(LivingEntity boss) {
+        if (boss == null) {
+            return null;
+        }
+        String bossTypeName = boss.getPersistentDataContainer().get(bossTypeKey, PersistentDataType.STRING);
+        return WorldBossType.fromConfigKey(bossTypeName).orElse(null);
+    }
+
+    private void handleBossRewards(EntityDeathEvent event, WorldBossType type, Player killer) {
+        if (type == null) {
+            return;
+        }
+        String basePath = CONFIG_ROOT + ".rewards." + type.getConfigKey();
+        List<Map<?, ?>> dropMaps = plugin.getConfig().getMapList(basePath + ".drops");
+        for (Map<?, ?> map : dropMaps) {
+            String itemName = map.getOrDefault("item", "").toString();
+            if (itemName.isBlank()) {
+                continue;
+            }
+            Material material;
+            try {
+                material = Material.valueOf(itemName.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ex) {
+                continue;
+            }
+            double chance = parseDouble(map.get("chance"), 0.0);
+            if (random.nextDouble() > chance) {
+                continue;
+            }
+            int min = (int) parseDouble(map.get("min"), 1);
+            int max = (int) parseDouble(map.get("max"), min);
+            if (max < min) {
+                int swap = min;
+                min = max;
+                max = swap;
+            }
+            int amount = min + random.nextInt(max - min + 1);
+            event.getDrops().add(new ItemStack(material, amount));
+        }
+
+        ConfigurationSection cosmeticsSection = plugin.getConfig().getConfigurationSection(basePath + ".cosmetics");
+        if (cosmeticsSection != null) {
+            double cosmeticChance = cosmeticsSection.getDouble("chance", 0.08);
+            for (String prefixId : cosmeticsSection.getStringList("prefixes")) {
+                BossPrefix prefix = BossPrefix.fromInput(prefixId);
+                if (prefix != null && random.nextDouble() <= cosmeticChance) {
+                    event.getDrops().add(CosmeticTokenHelper.createPrefixToken(prefix));
+                }
+            }
+            for (String auraId : cosmeticsSection.getStringList("auras")) {
+                BossAura aura = BossAura.fromInput(auraId);
+                if (aura != null && random.nextDouble() <= cosmeticChance) {
+                    event.getDrops().add(CosmeticTokenHelper.createAuraToken(aura));
+                }
+            }
+            for (String messageId : cosmeticsSection.getStringList("killMessages")) {
+                BossKillMessage message = BossKillMessage.fromInput(messageId);
+                if (message != null && random.nextDouble() <= cosmeticChance) {
+                    event.getDrops().add(CosmeticTokenHelper.createKillMessageToken(message));
+                }
+            }
+        }
+
+        String titleName = plugin.getConfig().getString(basePath + ".title");
+        if (killer != null && titleName != null && !titleName.isBlank()) {
+            Title title = Title.fromInput(titleName);
+            if (title != null) {
+                TitleManager.unlockTitle(killer, title, "You conquered " + type.getConfigKey() + ".");
+            }
+        }
+    }
+
+    private double parseDouble(Object value, double fallback) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        if (value instanceof String text) {
+            try {
+                return Double.parseDouble(text);
+            } catch (NumberFormatException ignored) {
+                return fallback;
+            }
+        }
+        return fallback;
     }
 
     private void scheduleBloodMoonChecks() {

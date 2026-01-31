@@ -26,7 +26,10 @@ public enum Title {
     ANGLER("Angler", "Angl"),
     SKYBOUND("Skybound", "Sky"),
     STARFORGED("Starforged", "Star"),
-    AGELESS("Ageless", "Ages");
+    AGELESS("Ageless", "Ages"),
+    GRAVEWARDEN_BANE("Gravewarden Bane", "Grave"),
+    STORM_HERALD("Storm Herald", "Storm"),
+    HOLLOW_COLOSSUS("Hollow Colossus", "Hollow");
 
     private final String displayName;
     private final String tabTag;

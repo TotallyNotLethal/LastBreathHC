@@ -8,10 +8,14 @@ import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonScheduler;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
+import com.lastbreath.hc.lastBreathHC.chat.ChatPrefixListener;
 import com.lastbreath.hc.lastBreathHC.commands.*;
 import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
+import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticAuraService;
+import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
+import com.lastbreath.hc.lastBreathHC.gui.CosmeticsGUI;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TeamManagementGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TitlesGUI;
@@ -96,11 +100,13 @@ public final class LastBreathHC extends JavaPlugin {
     private CustomPotionEffectRegistry customPotionEffectRegistry;
     private CustomPotionEffectManager customPotionEffectManager;
     private EffectsStatusGUI effectsStatusGUI;
+    private CosmeticsGUI cosmeticsGUI;
     private TitlesGUI titlesGUI;
     private TabMenuRefreshScheduler tabMenuRefreshScheduler;
     private TeamWaypointManager teamWaypointManager;
     private TeamManager teamManager;
     private WorldBossManager worldBossManager;
+    private CosmeticAuraService cosmeticAuraService;
 
     @Override
     public void onEnable() {
@@ -229,6 +235,8 @@ public final class LastBreathHC extends JavaPlugin {
         customPotionEffectManager = new CustomPotionEffectManager(this, potionDefinitionRegistry, customPotionEffectRegistry);
         effectsStatusGUI = new EffectsStatusGUI(customPotionEffectManager, customPotionEffectRegistry);
         titlesGUI = new TitlesGUI();
+        cosmeticsGUI = new CosmeticsGUI();
+        cosmeticAuraService = new CosmeticAuraService();
         getServer().getPluginManager().registerEvents(
                 customPotionEffectManager, this
         );
@@ -240,6 +248,15 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 titlesGUI, this
+        );
+        getServer().getPluginManager().registerEvents(
+                cosmeticsGUI, this
+        );
+        getServer().getPluginManager().registerEvents(
+                new CosmeticTokenListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new ChatPrefixListener(), this
         );
         worldBossManager = new WorldBossManager(this, bloodMoonManager);
         getServer().getPluginManager().registerEvents(
@@ -254,6 +271,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleBloodMoonChecks();
         scheduleTitleEffects();
         scheduleTabMenuRefresh();
+        cosmeticAuraService.start(this);
         worldBossManager.start();
 
         getLifecycleManager().registerEventHandler(
@@ -272,6 +290,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("team", new TeamCommand(teamManager, teamManagementGUI));
                     event.registrar().register("waypoint", new WaypointCommand(this, teamManager, teamWaypointManager));
                     event.registrar().register("worldboss", new WorldBossCommand());
+                    event.registrar().register("cosmetics", new CosmeticsCommand(cosmeticsGUI));
                 }
         );
     }
@@ -301,6 +320,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (tabMenuRefreshScheduler != null) {
             tabMenuRefreshScheduler.stop();
             tabMenuRefreshScheduler = null;
+        }
+        if (cosmeticAuraService != null) {
+            cosmeticAuraService.stop();
+            cosmeticAuraService = null;
         }
         if (worldBossManager != null) {
             worldBossManager.shutdown();
