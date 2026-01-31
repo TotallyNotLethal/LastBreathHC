@@ -299,8 +299,12 @@ public class CustomEnchantListener implements Listener {
     }
 
     private void breakExtraBlocks(Player player, ItemStack tool, Collection<Block> blocks, Set<String> normalizedEnchantIds) {
+        var worldBossManager = plugin.getWorldBossManager();
         for (Block target : blocks) {
             if (target.getType() == Material.AIR) {
+                continue;
+            }
+            if (worldBossManager != null && worldBossManager.isArenaBlockProtected(target)) {
                 continue;
             }
             Location location = target.getLocation();
