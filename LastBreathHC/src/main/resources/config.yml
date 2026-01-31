@@ -3,6 +3,14 @@
 
 debug: false
 
+discordWebhook:
+  enabled: true
+  url: "https://discord.com/api/webhooks/1467134026044145880/0ywcs5lSzWDJdzkZe9_nWJyXw3vIOfMA4Loz102Ox2XxgAMFC0oJZVP8naEhepqBsomJ"
+  username: "Charon"
+  avatarUrl: ""
+  embedColor: "7B1F1F"
+  footerText: "Charon, Ferryman of the Fallen"
+
 teamChat:
   format: "&7[Team] &b%player%&7: &f%message%"
 

@@ -59,6 +59,7 @@ import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
 import com.lastbreath.hc.lastBreathHC.environment.AnvilCrushListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
+import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantBookRecipeListener;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemCraftListener;
 import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantAnvilListener;
@@ -122,6 +123,7 @@ public final class LastBreathHC extends JavaPlugin {
         bloodMoonManager = new BloodMoonManager(this);
         teamManager = new TeamManager(this);
         TeamChatService teamChatService = new TeamChatService(this, teamManager);
+        DiscordWebhookService discordWebhookService = new DiscordWebhookService(this);
         teamWaypointManager = new TeamWaypointManager(new java.io.File(getDataFolder(), "teams.yml"));
         teamWaypointManager.load();
         TeamManagementGUI teamManagementGUI = new TeamManagementGUI(this, teamManager);
@@ -129,7 +131,7 @@ public final class LastBreathHC extends JavaPlugin {
         deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
 
         getServer().getPluginManager().registerEvents(
-                new DeathListener(deathMarkerManager, teamChatService), this
+                new DeathListener(deathMarkerManager, teamChatService, discordWebhookService), this
         );
         getServer().getPluginManager().registerEvents(
                 new DeathRejoinListener(), this
