@@ -215,7 +215,8 @@ worldBoss:
     portal:
       enabled: true
       frameMaterial: GLOWSTONE
-      innerMaterial: WATER
+      # innerMaterial is deprecated; portals now render with AIR and particles only.
+      innerMaterial: PARTICLE
       exitWorld: world
   worlds:
     - world
