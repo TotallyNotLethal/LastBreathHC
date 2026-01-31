@@ -73,6 +73,7 @@ public class DiscordWebhookService {
         embed.put("description", "**" + player.getName() + "** has fallen.");
         embed.put("color", embedColor);
         embed.put("timestamp", Instant.now().toString());
+        embed.put("thumbnail", Map.of("url", "https://render.crafty.gg/3d/bust/" + player.getName()));
         embed.put("footer", Map.of("text", footerText));
         embed.put("fields", new Object[]{
                 Map.of("name", "Death Cause", "value", safeValue(deathReason), "inline", false),
