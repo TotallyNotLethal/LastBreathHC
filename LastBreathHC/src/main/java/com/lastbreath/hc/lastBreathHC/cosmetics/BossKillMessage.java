@@ -8,7 +8,8 @@ import org.bukkit.Material;
 public enum BossKillMessage {
     GRAVEWARDEN("Gravewarden's Dirge", "%player% %color%banished%gray% the %boss% beyond the veil.", ChatColor.DARK_PURPLE, Material.SCULK_CATALYST),
     STORM_HERALD("Storm Herald's Wrath", "%player% %color%shattered%gray% the %boss% with lightning.", ChatColor.AQUA, Material.HEART_OF_THE_SEA),
-    HOLLOW_COLOSSUS("Hollow Colossus' End", "%player% %color%crushed%gray% the %boss% into dust.", ChatColor.GRAY, Material.ANCIENT_DEBRIS);
+    HOLLOW_COLOSSUS("Hollow Colossus' End", "%player% %color%crushed%gray% the %boss% into dust.", ChatColor.GRAY, Material.ANCIENT_DEBRIS),
+    ASHEN_ORACLE("Ashen Oracle's Prophecy", "%player% %color%foretold%gray% the fall of %boss%.", ChatColor.GOLD, Material.FIRE_CHARGE);
 
     private final String displayName;
     private final String template;

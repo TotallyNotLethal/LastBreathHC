@@ -29,7 +29,8 @@ public enum Title {
     AGELESS("Ageless", "Ages"),
     GRAVEWARDEN_BANE("Gravewarden Bane", "Grave"),
     STORM_HERALD("Storm Herald", "Storm"),
-    HOLLOW_COLOSSUS("Hollow Colossus", "Hollow");
+    HOLLOW_COLOSSUS("Hollow Colossus", "Hollow"),
+    ASHEN_ORACLE("Ashen Oracle", "Ashen");
 
     private final String displayName;
     private final String tabTag;
