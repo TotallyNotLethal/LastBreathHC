@@ -1372,9 +1372,9 @@ public class WorldBossManager implements Listener {
     }
 
     private void teleportViaPortal(Player player) {
-        World arenaWorld = createArenaWorld();
+        World arenaWorld = resolveArenaWorld();
         if (arenaWorld == null) {
-            return;
+            arenaWorld = createArenaWorld();
         }
         World current = player.getWorld();
         World targetWorld;
