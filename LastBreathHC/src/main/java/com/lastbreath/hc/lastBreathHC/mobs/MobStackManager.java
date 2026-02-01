@@ -6,6 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.entity.EntityType;
@@ -22,13 +23,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MobStackManager {
@@ -46,6 +41,8 @@ public class MobStackManager {
     private final NamespacedKey aiEnabledKey;
     private final NamespacedKey stackRadiusKey;
     private final NamespacedKey aiRadiusKey;
+    private final NamespacedKey aiFrozenKey;
+
     private BukkitTask scanTask;
 
     public MobStackManager(LastBreathHC plugin) {
@@ -55,6 +52,7 @@ public class MobStackManager {
         this.aiEnabledKey = new NamespacedKey(plugin, "ai_enabled");
         this.stackRadiusKey = new NamespacedKey(plugin, "stack_radius");
         this.aiRadiusKey = new NamespacedKey(plugin, "ai_radius");
+        this.aiFrozenKey = new NamespacedKey(plugin, "ai_frozen");
     }
 
     public void start() {
@@ -300,30 +298,29 @@ public class MobStackManager {
     }
 
     private void applyAiSetting(LivingEntity entity, boolean aiEnabled) {
-        if (!(entity instanceof Mob mob)) {
-            return;
-        }
+        if (!(entity instanceof Mob mob)) return;
+
         if (aiEnabled) {
-            if (!mob.hasAI()) {
-                mob.setAI(true);
-            }
-            if (!mob.isAware()) {
-                mob.setAware(true);
-            }
+            mob.setAI(true);
+            mob.setAware(true);
             return;
         }
 
-        if (!mob.hasAI()) {
-            mob.setAI(true);
-        }
-        if (mob.isAware()) {
-            mob.setAware(false);
-        }
+        // KEEP AI ENABLED
+        mob.setAI(true);
+
+        // Prevent behavior
         mob.setTarget(null);
-        if (mob instanceof org.bukkit.entity.Aggressive aggressive) {
-            aggressive.setAggressive(false);
-        }
+        mob.setSilent(true);
+
+        // Stop movement without freezing physics
+        mob.getAttribute(Attribute.MOVEMENT_SPEED)
+                .setBaseValue(0.0);
+
+        mob.getAttribute(Attribute.FOLLOW_RANGE)
+                .setBaseValue(0.0);
     }
+
 
     private List<ItemStack> getDropsForKill(LivingEntity entity, Player killer) {
         if (entity instanceof Lootable lootable) {
@@ -333,7 +330,7 @@ public class MobStackManager {
                 builder.lootedEntity(entity);
                 double luck = 0.0;
                 if (killer != null) {
-                    var attr = killer.getAttribute(org.bukkit.attribute.Attribute.LUCK);
+                    var attr = killer.getAttribute(Attribute.LUCK);
                     if (attr != null) {
                         luck = attr.getValue();
                     }
@@ -427,10 +424,10 @@ public class MobStackManager {
         return clusters;
     }
 
-    private record BlockKey(java.util.UUID worldId, int x, int y, int z) {
+    private record BlockKey(UUID worldId, int x, int y, int z) {
         public static BlockKey from(Location location) {
             return new BlockKey(
-                    location.getWorld() == null ? new java.util.UUID(0L, 0L) : location.getWorld().getUID(),
+                    location.getWorld() == null ? new UUID(0L, 0L) : location.getWorld().getUID(),
                     location.getBlockX(),
                     location.getBlockY(),
                     location.getBlockZ()
