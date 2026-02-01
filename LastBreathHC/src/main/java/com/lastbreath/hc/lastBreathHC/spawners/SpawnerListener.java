@@ -1,6 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.spawners;
 
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
 import org.bukkit.enchantments.Enchantment;
@@ -10,8 +12,15 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 public class SpawnerListener implements Listener {
+
+    private final NamespacedKey playerPlacedSpawnerKey;
+
+    public SpawnerListener(LastBreathHC plugin) {
+        this.playerPlacedSpawnerKey = new NamespacedKey(plugin, SpawnerTags.PLAYER_PLACED_SPAWNER_KEY);
+    }
 
     @EventHandler
     public void onSpawnerBreak(BlockBreakEvent event) {
@@ -60,6 +69,7 @@ public class SpawnerListener implements Listener {
         }
 
         applySpawnerData(spawnerMeta, placedSpawner);
+        placedSpawner.getPersistentDataContainer().set(playerPlacedSpawnerKey, PersistentDataType.BYTE, (byte) 1);
         placedSpawner.update();
     }
 
