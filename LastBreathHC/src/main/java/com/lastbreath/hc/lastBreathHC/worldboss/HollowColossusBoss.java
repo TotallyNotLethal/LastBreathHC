@@ -1,5 +1,6 @@
 package com.lastbreath.hc.lastBreathHC.worldboss;
 
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -142,7 +143,12 @@ public class HollowColossusBoss extends BaseWorldBossController {
                     continue;
                 }
                 player.playSound(boss.getLocation(), Sound.BLOCK_SCULK_CHARGE, 0.8f, 1.1f);
-                player.spawnParticle(Particle.DUST_COLOR_TRANSITION, boss.getLocation(), 30, 1.0, 0.5, 1.0, 0.02);
+                Particle.DustTransition dustTransition = new Particle.DustTransition(
+                        Color.fromRGB(120, 20, 160),
+                        Color.fromRGB(30, 200, 220),
+                        1.3f
+                );
+                player.spawnParticle(Particle.DUST_COLOR_TRANSITION, boss.getLocation(), 30, 1.0, 0.5, 1.0, 0.02, dustTransition);
             }
         }
     }
