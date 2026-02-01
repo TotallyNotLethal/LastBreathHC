@@ -20,6 +20,7 @@ import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TeamManagementGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TitlesGUI;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
+import com.lastbreath.hc.lastBreathHC.mobs.MobStackSignListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
@@ -165,6 +166,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new MobScalingListener(bloodMoonManager), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new MobStackSignListener(this), this
         );
         getServer().getPluginManager().registerEvents(
                 new BountyListener(), this
