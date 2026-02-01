@@ -259,16 +259,52 @@ worldBoss:
       spawnRadius: 40
       despawnTimeoutSeconds: 600
       safeRadius: 3.0
+      gravestoneCount: 6
+      archerCooldownTicks: 160
+      archerCount: 3
+      revenantThreshold: 0.35
+      wraithCooldownTicks: 140
+      wraithStrikeDamage: 5.0
+      wraithStrikeRadius: 3.5
     StormHerald:
       entityType: WITHER
       spawnRadius: 50
       despawnTimeoutSeconds: 600
       lightningSafeRadius: 3.0
+      tempestThreshold: 0.3
+      lightningCooldownTicks: 120
+      windGustCooldownTicks: 160
+      chainLightningDamage: 5.0
+      windGustDamage: 2.5
+      windGustRadius: 12.0
+      windGustKnockback: 1.3
+      tempestBonusDamage: 3.0
+      tempestRadiusBonus: 3.0
+      tempestStormCooldownTicks: 140
+      tempestStormRadius: 14.0
+      tempestStormDamage: 4.5
     HollowColossus:
       entityType: RAVAGER
       spawnRadius: 45
       despawnTimeoutSeconds: 600
       safeRadius: 3.0
+      closedTicks: 240
+      exposedTicks: 120
+      rampagingTicks: 100
+      difficultyBonusStep: 1
+      minionBaseCount: 4
+      minionBaseHealth: 12.0
+      minionHealthPerBonus: 2.5
+      debrisBaseCount: 7
+      debrisPerBonus: 2
+      collapseBaseChance: 0.2
+      collapseChancePerBonus: 0.03
+      shockwaveCooldownTicks: 80
+      shockwaveDamage: 4.0
+      shockwaveDamagePerBonus: 0.5
+      shockwaveRadius: 10.0
+      targetedDebrisCooldownTicks: 100
+      targetedDebrisCount: 4
   rewards:
     Gravewarden:
       drops:
