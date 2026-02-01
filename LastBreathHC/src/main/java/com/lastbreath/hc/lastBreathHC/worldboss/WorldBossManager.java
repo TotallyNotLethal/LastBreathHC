@@ -96,6 +96,7 @@ public class WorldBossManager implements Listener {
     private final Set<Location> escapeBlocks = new HashSet<>();
     private final Set<PortalBase> persistedPortalBases = new HashSet<>();
     private final File portalDataFile;
+    private boolean purgePortalsOnChunkLoad = true;
     private boolean enabled = true;
     private boolean arenaMarkedForDeletion;
     private String markedArenaWorldName;
@@ -117,8 +118,8 @@ public class WorldBossManager implements Listener {
         if (createArenaWorld() == null) {
             plugin.getLogger().warning("World boss arena world could not be created during startup.");
         }
-        loadPersistedPortals();
-        prepareInstancePortals();
+        clearPortalPersistenceOnStartup();
+        purgeLegacyPortals();
         scheduleNextRandomSpawn();
         scheduleBloodMoonChecks();
         startBossTick();
@@ -274,6 +275,16 @@ public class WorldBossManager implements Listener {
             savePortalData();
         }
         return new PortalPurgeResult(frameRemoved, innerRemoved, escapeRemoved);
+    }
+
+    private void clearPortalPersistenceOnStartup() {
+        portalBlocks.clear();
+        portalAnchors.clear();
+        escapeBlocks.clear();
+        persistedPortalBases.clear();
+        if (portalDataFile.exists() && !portalDataFile.delete()) {
+            plugin.getLogger().warning("Failed to delete world boss portal persistence file on startup.");
+        }
     }
 
     @EventHandler
@@ -1048,6 +1059,26 @@ public class WorldBossManager implements Listener {
         return new PortalPurgeResult(frameRemoved, innerRemoved, 0);
     }
 
+    private boolean isPersistedPortalBase(World world, int baseX, int baseY, int baseZ) {
+        if (world == null) {
+            return false;
+        }
+        return persistedPortalBases.contains(new PortalBase(world.getName(), baseX, baseY, baseZ));
+    }
+
+    private void removeEscapeBlockForBase(World world, int baseX, int baseY, int baseZ) {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".arena.escape.enabled", true)) {
+            return;
+        }
+        String blockName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.escape.blockMaterial", "EMERALD_BLOCK");
+        Material blockMaterial = resolveMaterial(blockName, Material.EMERALD_BLOCK);
+        Block escapeBlock = world.getBlockAt(baseX - 4, baseY, baseZ - 4);
+        if (escapeBlock.getType() == blockMaterial) {
+            escapeBlock.setType(Material.AIR);
+            escapeBlocks.remove(escapeBlock.getLocation());
+        }
+    }
+
     private void loadPersistedPortals() {
         portalBlocks.clear();
         persistedPortalBases.clear();
@@ -1223,7 +1254,14 @@ public class WorldBossManager implements Listener {
                     if (!matchesPortalAt(world, x, y, z, frameMaterial, innerMaterial)) {
                         continue;
                     }
-                    persistPortalBase(base.getLocation());
+                    if (purgePortalsOnChunkLoad && !isPersistedPortalBase(world, x, y, z)) {
+                        removePortalAt(world, x, y, z, frameMaterial, innerMaterial);
+                        removeEscapeBlockForBase(world, x, y, z);
+                        continue;
+                    }
+                    if (!isPersistedPortalBase(world, x, y, z)) {
+                        persistPortalBase(base.getLocation());
+                    }
                     addPortalInnerBlocks(world, base.getLocation());
                 }
             }
