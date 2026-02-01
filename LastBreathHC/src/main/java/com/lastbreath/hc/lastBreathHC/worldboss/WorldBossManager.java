@@ -1708,6 +1708,7 @@ public class WorldBossManager implements Listener {
             case GRAVEWARDEN -> new GravewardenBoss(plugin, bossEntity);
             case STORM_HERALD -> new StormHeraldBoss(plugin, bossEntity);
             case HOLLOW_COLOSSUS -> new HollowColossusBoss(plugin, bossEntity);
+            case ASHEN_ORACLE -> new AshenOracleBoss(plugin, bossEntity);
         };
     }
 

@@ -9,7 +9,8 @@ import org.bukkit.Particle;
 public enum BossAura {
     SOUL_FLAME("Soul Flame", Particle.SOUL_FIRE_FLAME, ChatColor.DARK_PURPLE, Material.SOUL_TORCH),
     STORM_SPARK("Storm Spark", Particle.ELECTRIC_SPARK, ChatColor.AQUA, Material.LIGHTNING_ROD),
-    DUSTVEIL("Dustveil", Particle.ASH, ChatColor.GRAY, Material.GRAY_DYE);
+    DUSTVEIL("Dustveil", Particle.ASH, ChatColor.GRAY, Material.GRAY_DYE),
+    CINDER_VEIL("Cinder Veil", Particle.FLAME, ChatColor.GOLD, Material.FIRE_CHARGE);
 
     private final String displayName;
     private final Particle particle;

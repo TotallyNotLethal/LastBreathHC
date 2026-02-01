@@ -8,7 +8,8 @@ import org.bukkit.Material;
 public enum BossPrefix {
     GRAVEBORN("Graveborn", "Grave", "Grv", ChatColor.DARK_PURPLE, Material.ECHO_SHARD),
     STORMFORGED("Stormforged", "Storm", "Str", ChatColor.AQUA, Material.PRISMARINE_SHARD),
-    HOLLOWED("Hollowed", "Hollow", "Hol", ChatColor.GRAY, Material.BONE);
+    HOLLOWED("Hollowed", "Hollow", "Hol", ChatColor.GRAY, Material.BONE),
+    ASHEN("Ashen", "Ashen", "Ash", ChatColor.DARK_RED, Material.BLAZE_POWDER);
 
     private final String displayName;
     private final String chatTag;

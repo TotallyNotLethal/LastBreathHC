@@ -269,6 +269,15 @@ worldBoss:
       spawnRadius: 45
       despawnTimeoutSeconds: 600
       safeRadius: 3.0
+    AshenOracle:
+      entityType: WITHER_SKELETON
+      spawnRadius: 45
+      despawnTimeoutSeconds: 600
+      omenSafeRadius: 4.0
+      ashBurstRadius: 10.0
+      ritualRelicCount: 4
+      ritualRelicRadius: 7.0
+      cataclysmThreshold: 0.35
   rewards:
     Gravewarden:
       drops:
@@ -339,6 +348,29 @@ worldBoss:
         killMessages:
           - HOLLOW_COLOSSUS
       title: HOLLOW_COLOSSUS
+    AshenOracle:
+      drops:
+        - item: BLAZE_ROD
+          min: 2
+          max: 4
+          chance: 0.18
+        - item: CRYING_OBSIDIAN
+          min: 2
+          max: 3
+          chance: 0.14
+        - item: FIRE_CHARGE
+          min: 1
+          max: 2
+          chance: 0.12
+      cosmetics:
+        chance: 0.08
+        prefixes:
+          - ASHEN
+        auras:
+          - CINDER_VEIL
+        killMessages:
+          - ASHEN_ORACLE
+      title: ASHEN_ORACLE
 
 customEnchants:
   rarity: rare

@@ -6,7 +6,8 @@ import java.util.Optional;
 public enum WorldBossType {
     GRAVEWARDEN("Gravewarden"),
     STORM_HERALD("StormHerald"),
-    HOLLOW_COLOSSUS("HollowColossus");
+    HOLLOW_COLOSSUS("HollowColossus"),
+    ASHEN_ORACLE("AshenOracle");
 
     private final String configKey;
 
