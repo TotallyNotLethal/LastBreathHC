@@ -174,12 +174,14 @@ public class MobStackManager {
             Set<LivingEntity> processed = new HashSet<>();
 
             for (List<LivingEntity> entities : grouped.values()) {
-                int totalCount = getTotalStackCount(entities);
-                if (totalCount < ONE_BY_ONE_THRESHOLD || entities.size() <= 1) {
-                    continue;
+                for (List<LivingEntity> yCluster : splitByYWithinOne(entities)) {
+                    int totalCount = getTotalStackCount(yCluster);
+                    if (totalCount < ONE_BY_ONE_THRESHOLD || yCluster.size() <= 1) {
+                        continue;
+                    }
+                    mergeEntities(yCluster, totalCount);
+                    processed.addAll(yCluster);
                 }
-                mergeEntities(entities, totalCount);
-                processed.addAll(entities);
             }
 
             for (Map.Entry<StackGroupKey, List<LivingEntity>> entry : grouped.entrySet()) {
@@ -188,7 +190,6 @@ public class MobStackManager {
                     continue;
                 }
                 List<LivingEntity> region = new ArrayList<>();
-                int totalCount = 0;
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dz = -1; dz <= 1; dz++) {
                         StackGroupKey neighbor = new StackGroupKey(center.type(), center.x() + dx, center.z() + dz);
@@ -201,16 +202,18 @@ public class MobStackManager {
                                 continue;
                             }
                             region.add(entity);
-                            totalCount += getStackCount(entity);
                         }
                     }
                 }
 
-                if (totalCount < THREE_BY_THREE_THRESHOLD || region.size() <= 1) {
-                    continue;
+                for (List<LivingEntity> yCluster : splitByYWithinOne(region)) {
+                    int clusterCount = getTotalStackCount(yCluster);
+                    if (clusterCount < THREE_BY_THREE_THRESHOLD || yCluster.size() <= 1) {
+                        continue;
+                    }
+                    mergeEntities(yCluster, clusterCount);
+                    processed.addAll(yCluster);
                 }
-                mergeEntities(region, totalCount);
-                processed.addAll(region);
             }
         }
     }
@@ -244,10 +247,7 @@ public class MobStackManager {
 
     private boolean resolveStackingAllowed(Location location) {
         Boolean state = findSignState(location, stackEnabledKey);
-        if (state == null) {
-            return true;
-        }
-        return state;
+        return state != null && state;
     }
 
     private boolean resolveAiEnabled(Location location) {
@@ -284,7 +284,10 @@ public class MobStackManager {
                     if (!container.has(key, PersistentDataType.BYTE)) {
                         continue;
                     }
-                    int radius = resolveSignRadius(container, key);
+                    Integer radius = resolveSignRadius(container, key, key.equals(stackEnabledKey));
+                    if (radius == null) {
+                        continue;
+                    }
                     if (distanceSquared > radius * radius) {
                         continue;
                     }
@@ -300,8 +303,25 @@ public class MobStackManager {
         if (!(entity instanceof Mob mob)) {
             return;
         }
-        if (mob.hasAI() != aiEnabled) {
-            mob.setAI(aiEnabled);
+        if (aiEnabled) {
+            if (!mob.hasAI()) {
+                mob.setAI(true);
+            }
+            if (!mob.isAware()) {
+                mob.setAware(true);
+            }
+            return;
+        }
+
+        if (!mob.hasAI()) {
+            mob.setAI(true);
+        }
+        if (mob.isAware()) {
+            mob.setAware(false);
+        }
+        mob.setTarget(null);
+        if (mob instanceof org.bukkit.entity.Aggressive aggressive) {
+            aggressive.setAggressive(false);
         }
     }
 
@@ -360,11 +380,11 @@ public class MobStackManager {
         return builder.toString();
     }
 
-    private int resolveSignRadius(PersistentDataContainer container, NamespacedKey stateKey) {
+    private Integer resolveSignRadius(PersistentDataContainer container, NamespacedKey stateKey, boolean requireStored) {
         NamespacedKey radiusKey = stateKey.equals(stackEnabledKey) ? stackRadiusKey : aiRadiusKey;
         Integer stored = container.get(radiusKey, PersistentDataType.INTEGER);
         if (stored == null) {
-            return SEARCH_RADIUS;
+            return requireStored ? null : SEARCH_RADIUS;
         }
         return clampRadius(stored);
     }
@@ -377,6 +397,34 @@ public class MobStackManager {
             return MAX_SIGN_RADIUS;
         }
         return radius;
+    }
+
+    private List<List<LivingEntity>> splitByYWithinOne(List<LivingEntity> entities) {
+        if (entities.size() <= 1) {
+            return List.of(entities);
+        }
+        List<LivingEntity> sorted = new ArrayList<>(entities);
+        sorted.sort((a, b) -> Integer.compare(a.getLocation().getBlockY(), b.getLocation().getBlockY()));
+        List<List<LivingEntity>> clusters = new ArrayList<>();
+        int index = 0;
+        while (index < sorted.size()) {
+            LivingEntity start = sorted.get(index);
+            int baseY = start.getLocation().getBlockY();
+            List<LivingEntity> cluster = new ArrayList<>();
+            cluster.add(start);
+            index++;
+            while (index < sorted.size()) {
+                LivingEntity current = sorted.get(index);
+                int currentY = current.getLocation().getBlockY();
+                if (currentY > baseY + 1) {
+                    break;
+                }
+                cluster.add(current);
+                index++;
+            }
+            clusters.add(cluster);
+        }
+        return clusters;
     }
 
     private record BlockKey(java.util.UUID worldId, int x, int y, int z) {
