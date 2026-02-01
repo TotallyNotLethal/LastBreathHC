@@ -291,7 +291,10 @@ public class WorldBossManager implements Listener {
         if (!getEligibleWorlds().contains(world)) {
             return;
         }
-        trySpawnTriggeredBoss(world, world.getSpawnLocation(), TriggerType.THUNDERSTORM);
+        Location spawnBase = trySpawnTriggeredBoss(world, world.getSpawnLocation(), TriggerType.THUNDERSTORM);
+        if (spawnBase != null) {
+            createPortalAt(spawnBase);
+        }
     }
 
     @EventHandler
@@ -632,9 +635,11 @@ public class WorldBossManager implements Listener {
                             plugin.getLogger().warning("Blood moon world boss spawn skipped because no eligible location was found near " + targetPlayer.getName() + ".");
                             return;
                         }
-                        if (trySpawnTriggeredBoss(targetPlayer.getWorld(), base, TriggerType.BLOOD_MOON)) {
-                            createPortalAt(base);
-                            logSpawnDetails("Blood moon world boss portal spawned near " + targetPlayer.getName(), targetPlayer.getWorld(), base);
+                        Location spawnBase = trySpawnTriggeredBoss(targetPlayer.getWorld(), base, TriggerType.BLOOD_MOON);
+                        if (spawnBase != null) {
+                            createPortalAt(spawnBase);
+                            logSpawnDetails("Blood moon world boss portal spawned near " + targetPlayer.getName(),
+                                    targetPlayer.getWorld(), spawnBase);
                         }
                     }
                 }
@@ -682,23 +687,23 @@ public class WorldBossManager implements Listener {
         }
     }
 
-    private boolean trySpawnTriggeredBoss(World world, Location origin, TriggerType triggerType) {
+    private Location trySpawnTriggeredBoss(World world, Location origin, TriggerType triggerType) {
         if (!isTriggerOffCooldown(world, triggerType)) {
-            return false;
+            return null;
         }
         Location spawnLocation = resolveTriggeredSpawnLocation(world, origin);
         if (spawnLocation == null) {
             plugin.getLogger().warning("World boss trigger skipped for " + triggerType.name().toLowerCase(Locale.ROOT)
                     + " because no eligible location was found.");
-            return false;
+            return null;
         }
         if (spawnWorldBoss(world, spawnLocation)) {
             setTriggeredNow(world, triggerType);
-            return true;
+            return spawnLocation;
         } else {
             plugin.getLogger().warning("World boss trigger failed for " + triggerType.name().toLowerCase(Locale.ROOT) + ".");
         }
-        return false;
+        return null;
     }
 
     private Location resolveTriggeredSpawnLocation(World world, Location origin) {
