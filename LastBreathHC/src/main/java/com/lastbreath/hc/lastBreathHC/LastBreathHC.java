@@ -23,6 +23,7 @@ import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
+import com.lastbreath.hc.lastBreathHC.spawners.SpawnerSpawnListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.BossTitleLandingListener;
@@ -172,7 +173,10 @@ public final class LastBreathHC extends JavaPlugin {
                 new BountyBoardGUI(), this
         );
         getServer().getPluginManager().registerEvents(
-                new SpawnerListener(), this
+                new SpawnerListener(this), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new SpawnerSpawnListener(this), this
         );
         getServer().getPluginManager().registerEvents(
                 new StatsListener(), this
