@@ -299,24 +299,36 @@ public class MobStackManager {
             if (table != null) {
                 LootContext.Builder builder = new LootContext.Builder(entity.getLocation());
                 builder.lootedEntity(entity);
+                double luck = 0.0;
                 if (killer != null) {
-                    builder.killer(killer);
-                    builder.luck(killer.getLuck());
+                    var attr = killer.getAttribute(org.bukkit.attribute.Attribute.LUCK);
+                    if (attr != null) {
+                        luck = attr.getValue();
+                    }
                 }
-                return table.populateLoot(ThreadLocalRandom.current(), builder.build());
+                builder.luck((float) luck);
+
+                return new ArrayList<>(table.populateLoot(
+                        ThreadLocalRandom.current(),
+                        builder.build()
+                ));
             }
         }
         return List.of();
     }
 
     private void dropExperience(LivingEntity entity) {
-        int exp = entity.getExpToDrop();
-        if (exp <= 0) {
+        if (!(entity instanceof Mob mob)) {
             return;
         }
+
+        int exp = mob.getPossibleExperienceReward();
+        if (exp <= 0) return;
+
         ExperienceOrb orb = entity.getWorld().spawn(entity.getLocation(), ExperienceOrb.class);
         orb.setExperience(exp);
     }
+
 
     private String formatEntityName(EntityType type) {
         String[] words = type.name().toLowerCase(Locale.US).split("_");

@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 
 public class MobStackCombatListener implements Listener {
 
@@ -29,7 +30,7 @@ public class MobStackCombatListener implements Listener {
             return;
         }
 
-        if (event.isSweepAttack()) {
+        if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK) {
             handleSweepAttack(event, entity, player, stackCount);
             return;
         }
@@ -74,7 +75,7 @@ public class MobStackCombatListener implements Listener {
     }
 
     private double getMaxHealth(LivingEntity entity) {
-        AttributeInstance attribute = entity.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        AttributeInstance attribute = entity.getAttribute(Attribute.MAX_HEALTH);
         if (attribute == null) {
             return entity.getHealth();
         }
