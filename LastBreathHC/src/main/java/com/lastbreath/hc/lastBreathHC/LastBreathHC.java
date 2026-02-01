@@ -20,6 +20,8 @@ import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TeamManagementGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TitlesGUI;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
+import com.lastbreath.hc.lastBreathHC.mobs.MobStackCombatListener;
+import com.lastbreath.hc.lastBreathHC.mobs.MobStackManager;
 import com.lastbreath.hc.lastBreathHC.mobs.MobStackSignListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
@@ -111,6 +113,7 @@ public final class LastBreathHC extends JavaPlugin {
     private TeamManager teamManager;
     private WorldBossManager worldBossManager;
     private CosmeticAuraService cosmeticAuraService;
+    private MobStackManager mobStackManager;
 
     @Override
     public void onEnable() {
@@ -169,6 +172,10 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new MobStackSignListener(this), this
+        );
+        mobStackManager = new MobStackManager(this);
+        getServer().getPluginManager().registerEvents(
+                new MobStackCombatListener(mobStackManager), this
         );
         getServer().getPluginManager().registerEvents(
                 new BountyListener(), this
@@ -288,6 +295,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleTabMenuRefresh();
         cosmeticAuraService.start(this);
         worldBossManager.start();
+        mobStackManager.start();
 
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS,
@@ -339,6 +347,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (cosmeticAuraService != null) {
             cosmeticAuraService.stop();
             cosmeticAuraService = null;
+        }
+        if (mobStackManager != null) {
+            mobStackManager.stop();
+            mobStackManager = null;
         }
         if (worldBossManager != null) {
             worldBossManager.shutdown();
