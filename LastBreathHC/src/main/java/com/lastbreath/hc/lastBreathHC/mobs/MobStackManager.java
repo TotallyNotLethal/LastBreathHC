@@ -34,6 +34,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public class MobStackManager {
 
     private static final int SEARCH_RADIUS = 10;
+    private static final int MAX_SIGN_RADIUS = 16;
+    private static final int MIN_SIGN_RADIUS = 1;
     private static final int ONE_BY_ONE_THRESHOLD = 5;
     private static final int THREE_BY_THREE_THRESHOLD = 45;
     private static final long SCAN_INTERVAL_TICKS = 100L;
@@ -42,6 +44,8 @@ public class MobStackManager {
     private final NamespacedKey stackCountKey;
     private final NamespacedKey stackEnabledKey;
     private final NamespacedKey aiEnabledKey;
+    private final NamespacedKey stackRadiusKey;
+    private final NamespacedKey aiRadiusKey;
     private BukkitTask scanTask;
 
     public MobStackManager(LastBreathHC plugin) {
@@ -49,6 +53,8 @@ public class MobStackManager {
         this.stackCountKey = new NamespacedKey(plugin, "mob_stack_count");
         this.stackEnabledKey = new NamespacedKey(plugin, "stack_enabled");
         this.aiEnabledKey = new NamespacedKey(plugin, "ai_enabled");
+        this.stackRadiusKey = new NamespacedKey(plugin, "stack_radius");
+        this.aiRadiusKey = new NamespacedKey(plugin, "ai_radius");
     }
 
     public void start() {
@@ -259,12 +265,12 @@ public class MobStackManager {
         int originX = origin.getBlockX();
         int originY = origin.getBlockY();
         int originZ = origin.getBlockZ();
-        int radiusSquared = SEARCH_RADIUS * SEARCH_RADIUS;
+        int radiusSquared = MAX_SIGN_RADIUS * MAX_SIGN_RADIUS;
         World world = origin.getWorld();
 
-        for (int x = originX - SEARCH_RADIUS; x <= originX + SEARCH_RADIUS; x++) {
-            for (int y = originY - SEARCH_RADIUS; y <= originY + SEARCH_RADIUS; y++) {
-                for (int z = originZ - SEARCH_RADIUS; z <= originZ + SEARCH_RADIUS; z++) {
+        for (int x = originX - MAX_SIGN_RADIUS; x <= originX + MAX_SIGN_RADIUS; x++) {
+            for (int y = originY - MAX_SIGN_RADIUS; y <= originY + MAX_SIGN_RADIUS; y++) {
+                for (int z = originZ - MAX_SIGN_RADIUS; z <= originZ + MAX_SIGN_RADIUS; z++) {
                     Block block = world.getBlockAt(x, y, z);
                     if (origin.distanceSquared(block.getLocation()) > radiusSquared) {
                         continue;
@@ -274,6 +280,10 @@ public class MobStackManager {
                     }
                     PersistentDataContainer container = sign.getPersistentDataContainer();
                     if (!container.has(key, PersistentDataType.BYTE)) {
+                        continue;
+                    }
+                    int radius = resolveSignRadius(container, key);
+                    if (origin.distanceSquared(block.getLocation()) > radius * radius) {
                         continue;
                     }
                     Byte value = container.get(key, PersistentDataType.BYTE);
@@ -346,6 +356,25 @@ public class MobStackManager {
             }
         }
         return builder.toString();
+    }
+
+    private int resolveSignRadius(PersistentDataContainer container, NamespacedKey stateKey) {
+        NamespacedKey radiusKey = stateKey.equals(stackEnabledKey) ? stackRadiusKey : aiRadiusKey;
+        Integer stored = container.get(radiusKey, PersistentDataType.INTEGER);
+        if (stored == null) {
+            return SEARCH_RADIUS;
+        }
+        return clampRadius(stored);
+    }
+
+    private int clampRadius(int radius) {
+        if (radius < MIN_SIGN_RADIUS) {
+            return MIN_SIGN_RADIUS;
+        }
+        if (radius > MAX_SIGN_RADIUS) {
+            return MAX_SIGN_RADIUS;
+        }
+        return radius;
     }
 
     private record BlockKey(java.util.UUID worldId, int x, int y, int z) {

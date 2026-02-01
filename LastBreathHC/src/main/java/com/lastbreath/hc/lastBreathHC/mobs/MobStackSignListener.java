@@ -27,10 +27,14 @@ public class MobStackSignListener implements Listener {
 
     private static final PlainTextComponentSerializer PLAIN_TEXT = PlainTextComponentSerializer.plainText();
     private static final int SEARCH_RADIUS = 10;
+    private static final int MIN_RADIUS = 1;
+    private static final int MAX_RADIUS = 16;
 
     private final NamespacedKey playerPlacedSpawnerKey;
     private final NamespacedKey stackEnabledKey;
     private final NamespacedKey aiEnabledKey;
+    private final NamespacedKey stackRadiusKey;
+    private final NamespacedKey aiRadiusKey;
     private final Map<SignKey, SignState> signCache = new HashMap<>();
 
     /**
@@ -41,6 +45,8 @@ public class MobStackSignListener implements Listener {
         this.playerPlacedSpawnerKey = new NamespacedKey(plugin, SpawnerTags.PLAYER_PLACED_SPAWNER_KEY);
         this.stackEnabledKey = new NamespacedKey(plugin, "stack_enabled");
         this.aiEnabledKey = new NamespacedKey(plugin, "ai_enabled");
+        this.stackRadiusKey = new NamespacedKey(plugin, "stack_radius");
+        this.aiRadiusKey = new NamespacedKey(plugin, "ai_radius");
     }
 
     @EventHandler
@@ -50,6 +56,7 @@ public class MobStackSignListener implements Listener {
             return;
         }
 
+        RadiusData radiusData = parseRadius(event.line(3));
         if (!hasNearbyPlayerPlacedSpawner(event.getBlock())) {
             return;
         }
@@ -59,8 +66,8 @@ public class MobStackSignListener implements Listener {
             enabled = false;
         }
 
-        setSignLines(event, signType, enabled);
-        updateSignState(event.getBlock(), signType, enabled);
+        setSignLines(event, signType, enabled, radiusData);
+        updateSignState(event.getBlock(), signType, enabled, radiusData);
     }
 
     @EventHandler
@@ -84,7 +91,7 @@ public class MobStackSignListener implements Listener {
         }
 
         boolean newEnabled = !state.enabled();
-        updateSignState(block, state.type(), newEnabled);
+        updateSignState(block, state.type(), newEnabled, null);
     }
 
     @EventHandler
@@ -114,7 +121,7 @@ public class MobStackSignListener implements Listener {
     }
 
     private boolean hasOnlyFirstLine(SignChangeEvent event) {
-        for (int i = 1; i < 4; i++) {
+        for (int i = 1; i < 3; i++) {
             String line = PLAIN_TEXT.serialize(event.line(i));
             if (!line.trim().isEmpty()) {
                 return false;
@@ -157,11 +164,14 @@ public class MobStackSignListener implements Listener {
         return false;
     }
 
-    private void setSignLines(SignChangeEvent event, SignType signType, boolean enabled) {
+    private void setSignLines(SignChangeEvent event, SignType signType, boolean enabled, RadiusData radiusData) {
         Component label = Component.text(signType.label(), enabled ? NamedTextColor.GREEN : NamedTextColor.RED);
         event.line(0, label);
-        for (int i = 1; i < 4; i++) {
+        for (int i = 1; i < 3; i++) {
             event.line(i, Component.empty());
+        }
+        if (radiusData != null && radiusData.shouldUpdateLine()) {
+            event.line(3, Component.text(String.valueOf(radiusData.radius())));
         }
     }
 
@@ -177,24 +187,33 @@ public class MobStackSignListener implements Listener {
         return signCache.get(key);
     }
 
-    private void updateSignState(Block block, SignType type, boolean enabled) {
+    private void updateSignState(Block block, SignType type, boolean enabled, RadiusData radiusOverride) {
         if (!(block.getState() instanceof Sign sign)) {
             return;
         }
 
         PersistentDataContainer container = sign.getPersistentDataContainer();
+        RadiusData radiusData = radiusOverride == null ? parseRadius(sign.line(3)) : radiusOverride;
+        int radius = clampRadius(radiusData.radius());
         if (type == SignType.STACK) {
             container.set(stackEnabledKey, PersistentDataType.BYTE, enabled ? (byte) 1 : (byte) 0);
             container.remove(aiEnabledKey);
+            container.set(stackRadiusKey, PersistentDataType.INTEGER, radius);
+            container.remove(aiRadiusKey);
         } else {
             container.set(aiEnabledKey, PersistentDataType.BYTE, enabled ? (byte) 1 : (byte) 0);
             container.remove(stackEnabledKey);
+            container.set(aiRadiusKey, PersistentDataType.INTEGER, radius);
+            container.remove(stackRadiusKey);
         }
 
         Component label = Component.text(type.label(), enabled ? NamedTextColor.GREEN : NamedTextColor.RED);
         sign.line(0, label);
-        for (int i = 1; i < 4; i++) {
+        for (int i = 1; i < 3; i++) {
             sign.line(i, Component.empty());
+        }
+        if (radiusData.shouldUpdateLine()) {
+            sign.line(3, Component.text(String.valueOf(radius)));
         }
         sign.update();
 
@@ -204,6 +223,30 @@ public class MobStackSignListener implements Listener {
     private boolean isEnabled(PersistentDataContainer container, NamespacedKey key) {
         Byte value = container.get(key, PersistentDataType.BYTE);
         return value != null && value > 0;
+    }
+
+    private RadiusData parseRadius(Component line) {
+        String raw = PLAIN_TEXT.serialize(line).trim();
+        if (raw.isEmpty()) {
+            return new RadiusData(SEARCH_RADIUS, false);
+        }
+        try {
+            int parsed = Integer.parseInt(raw);
+            int clamped = clampRadius(parsed);
+            return new RadiusData(clamped, clamped != parsed);
+        } catch (NumberFormatException ex) {
+            return new RadiusData(SEARCH_RADIUS, false);
+        }
+    }
+
+    private int clampRadius(int radius) {
+        if (radius < MIN_RADIUS) {
+            return MIN_RADIUS;
+        }
+        if (radius > MAX_RADIUS) {
+            return MAX_RADIUS;
+        }
+        return radius;
     }
 
     private enum SignType {
@@ -222,6 +265,9 @@ public class MobStackSignListener implements Listener {
     }
 
     private record SignState(SignType type, boolean enabled) {
+    }
+
+    private record RadiusData(int radius, boolean shouldUpdateLine) {
     }
 
     private record SignKey(UUID worldId, int x, int y, int z) {
