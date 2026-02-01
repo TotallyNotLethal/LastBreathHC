@@ -272,10 +272,12 @@ public class MobStackManager {
             for (int y = originY - MAX_SIGN_RADIUS; y <= originY + MAX_SIGN_RADIUS; y++) {
                 for (int z = originZ - MAX_SIGN_RADIUS; z <= originZ + MAX_SIGN_RADIUS; z++) {
                     Block block = world.getBlockAt(x, y, z);
-                    if (origin.distanceSquared(block.getLocation()) > radiusSquared) {
+                    if (!(block.getState() instanceof Sign sign)) {
                         continue;
                     }
-                    if (!(block.getState() instanceof Sign sign)) {
+                    Location signLocation = block.getLocation();
+                    double distanceSquared = origin.distanceSquared(signLocation);
+                    if (distanceSquared > radiusSquared) {
                         continue;
                     }
                     PersistentDataContainer container = sign.getPersistentDataContainer();
@@ -283,7 +285,7 @@ public class MobStackManager {
                         continue;
                     }
                     int radius = resolveSignRadius(container, key);
-                    if (origin.distanceSquared(block.getLocation()) > radius * radius) {
+                    if (distanceSquared > radius * radius) {
                         continue;
                     }
                     Byte value = container.get(key, PersistentDataType.BYTE);
