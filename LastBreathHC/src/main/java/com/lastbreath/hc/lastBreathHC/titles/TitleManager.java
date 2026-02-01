@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.titles;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import org.bukkit.Bukkit;
@@ -62,7 +63,10 @@ public class TitleManager {
             Map.entry(Title.ANGLER, List.of("Custom: Movement speed +2%")),
             Map.entry(Title.SKYBOUND, List.of("Custom: Knockback resistance +5%")),
             Map.entry(Title.STARFORGED, List.of("Custom: Armor +2")),
-            Map.entry(Title.AGELESS, List.of("Custom: Attack damage +0.5"))
+            Map.entry(Title.AGELESS, List.of("Custom: Attack damage +0.5")),
+            Map.entry(Title.GRAVEWARDEN_BANE, List.of("Custom: Max health +2", "Custom: Boss landing aura")),
+            Map.entry(Title.STORM_HERALD, List.of("Custom: Movement speed +3%", "Custom: Boss landing aura")),
+            Map.entry(Title.HOLLOW_COLOSSUS, List.of("Custom: Armor +2", "Custom: Boss landing aura"))
     );
     private static final Map<Title, List<AttributeModifierSpec>> TITLE_ATTRIBUTE_MODIFIERS = Map.ofEntries(
             Map.entry(Title.THE_FALLEN, List.of(
@@ -152,7 +156,24 @@ public class TitleManager {
             Map.entry(Title.AGELESS, List.of(
                     new AttributeModifierSpec(Attribute.ATTACK_DAMAGE, UUID.fromString("fb47bcb6-1d1b-4ff8-9b6e-32a9d2a44273"),
                             "title_ageless_damage", 0.5, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.GRAVEWARDEN_BANE, List.of(
+                    new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("e4cbf3c7-4a69-4f6b-8d5a-0ea72df99c2b"),
+                            "title_gravewarden_bane_health", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.STORM_HERALD, List.of(
+                    new AttributeModifierSpec(Attribute.MOVEMENT_SPEED, UUID.fromString("7d9dc40b-3a38-4c49-b9cd-6e1b280f9a4c"),
+                            "title_storm_herald_speed", 0.03, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
+            )),
+            Map.entry(Title.HOLLOW_COLOSSUS, List.of(
+                    new AttributeModifierSpec(Attribute.ARMOR, UUID.fromString("fd3e8afc-6ef0-4f0c-8a35-1d0fef4e7f82"),
+                            "title_hollow_colossus_armor", 2.0, AttributeModifier.Operation.ADD_NUMBER)
             ))
+    );
+    private static final Map<Title, BossAura> BOSS_TITLE_AURAS = Map.of(
+            Title.GRAVEWARDEN_BANE, BossAura.SOUL_FLAME,
+            Title.STORM_HERALD, BossAura.STORM_SPARK,
+            Title.HOLLOW_COLOSSUS, BossAura.DUSTVEIL
     );
     private static final Set<UUID> TITLE_MODIFIER_IDS = collectModifierIds();
 
@@ -216,6 +237,13 @@ public class TitleManager {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         initialize(stats);
         return stats.equippedTitle;
+    }
+
+    public static BossAura getBossTitleAura(Title title) {
+        if (title == null) {
+            return null;
+        }
+        return BOSS_TITLE_AURAS.get(title);
     }
 
     public static List<String> getTitleEffects(Title title) {
