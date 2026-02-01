@@ -1681,6 +1681,9 @@ public class WorldBossManager implements Listener {
             double z = minZ + random.nextDouble() * (maxZ - minZ);
             int blockX = (int) Math.floor(x);
             int blockZ = (int) Math.floor(z);
+            if (!world.isChunkLoaded(blockX >> 4, blockZ >> 4)) {
+                continue;
+            }
             int y = world.getHighestBlockYAt(blockX, blockZ);
             Location candidate = new Location(world, blockX + 0.5, y, blockZ + 0.5);
             if (border.isInside(candidate)) {
@@ -1706,6 +1709,9 @@ public class WorldBossManager implements Listener {
                 double z = base.getZ() + Math.sin(angle) * distance;
                 int blockX = (int) Math.floor(x);
                 int blockZ = (int) Math.floor(z);
+                if (!world.isChunkLoaded(blockX >> 4, blockZ >> 4)) {
+                    continue;
+                }
                 int y = world.getHighestBlockYAt(blockX, blockZ);
                 if (y < minHeight || y >= maxHeight) {
                     continue;
