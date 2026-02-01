@@ -737,7 +737,7 @@ public class WorldBossManager implements Listener {
 
     private boolean spawnBossInArena(World sourceWorld, Location base, WorldBossType bossType) {
         BossSettings settings = getBossSettings(bossType);
-        World arenaWorld = resolveArenaWorld();
+        World arenaWorld = createArenaWorld();
         if (arenaWorld == null) {
             plugin.getLogger().warning("World boss arena world could not be created.");
             return false;
@@ -1372,7 +1372,7 @@ public class WorldBossManager implements Listener {
     }
 
     private void teleportViaPortal(Player player) {
-        World arenaWorld = resolveArenaWorld();
+        World arenaWorld = createArenaWorld();
         if (arenaWorld == null) {
             return;
         }
