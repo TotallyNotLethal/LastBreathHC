@@ -25,6 +25,7 @@ import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
+import com.lastbreath.hc.lastBreathHC.titles.BossTitleLandingListener;
 import com.lastbreath.hc.lastBreathHC.titles.TitleListener;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.team.TeamChatListener;
@@ -157,6 +158,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new TitleListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new BossTitleLandingListener(), this
         );
         getServer().getPluginManager().registerEvents(
                 new MobScalingListener(bloodMoonManager), this
