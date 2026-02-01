@@ -26,10 +26,12 @@ public class GravewardenBoss extends BaseWorldBossController {
 
     private static final String PHASE_SHIELDED = "shielded";
     private static final String PHASE_UNSEALED = "unsealed";
+    private static final String PHASE_REVENANT = "revenant";
     private static final Material GRAVESTONE_MATERIAL = Material.CHISELED_DEEPSLATE;
 
     private final Set<Location> gravestones = new HashSet<>();
     private int archerCooldownTicks;
+    private int wraithCooldownTicks;
 
     public GravewardenBoss(Plugin plugin, LivingEntity boss) {
         super(plugin, boss, "world_boss_gravewarden_phase", "world_boss_gravewarden_stones", "world_boss_gravewarden_data");
@@ -49,7 +51,16 @@ public class GravewardenBoss extends BaseWorldBossController {
         }
         storeBlockLocations(gravestones);
         boolean shielded = !gravestones.isEmpty();
-        setPhase(shielded ? PHASE_SHIELDED : PHASE_UNSEALED);
+        if (shielded) {
+            setPhase(PHASE_SHIELDED);
+        } else {
+            String phase = getPhase(PHASE_UNSEALED);
+            if (PHASE_REVENANT.equals(phase)) {
+                setPhase(PHASE_REVENANT);
+            } else {
+                setPhase(PHASE_UNSEALED);
+            }
+        }
         boss.setInvulnerable(shielded);
     }
 
@@ -70,11 +81,19 @@ public class GravewardenBoss extends BaseWorldBossController {
             }
             return;
         }
+        if (PHASE_UNSEALED.equals(getPhase(PHASE_SHIELDED)) && shouldEnterRevenant()) {
+            transitionToRevenant();
+        }
         archerCooldownTicks = Math.max(0, archerCooldownTicks - 20);
+        wraithCooldownTicks = Math.max(0, wraithCooldownTicks - 20);
         if (archerCooldownTicks <= 0) {
             telegraphArchers();
             spawnArchers();
-            archerCooldownTicks = 200;
+            archerCooldownTicks = getArcherCooldownTicks();
+        }
+        if (PHASE_REVENANT.equals(getPhase(PHASE_SHIELDED)) && wraithCooldownTicks <= 0) {
+            triggerWraithStrike();
+            wraithCooldownTicks = getWraithCooldownTicks();
         }
     }
 
@@ -88,7 +107,7 @@ public class GravewardenBoss extends BaseWorldBossController {
 
     @Override
     public void handleBossAttack(EntityDamageByEntityEvent event) {
-        if (!PHASE_UNSEALED.equals(getPhase(PHASE_SHIELDED))) {
+        if (PHASE_SHIELDED.equals(getPhase(PHASE_SHIELDED))) {
             return;
         }
         double healAmount = event.getFinalDamage() * 0.10;
@@ -105,7 +124,8 @@ public class GravewardenBoss extends BaseWorldBossController {
                 : boss.getHealth();
         boss.setHealth(Math.min(maxHealth, boss.getHealth() + healAmount));
         if (event.getEntity() instanceof Player player) {
-            player.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 40, 0));
+            int witherAmplifier = PHASE_REVENANT.equals(getPhase(PHASE_SHIELDED)) ? 1 : 0;
+            player.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 60, witherAmplifier));
         }
     }
 
@@ -164,7 +184,7 @@ public class GravewardenBoss extends BaseWorldBossController {
         WorldBorder border = world.getWorldBorder();
         Location borderCenter = border.getCenter();
         double maxRadius = Math.max(2.0, (border.getSize() / 2.0) - 2.0);
-        int count = 5;
+        int count = Math.max(1, getGravestoneCount());
         double radius = 6.0;
         for (int i = 0; i < count; i++) {
             double angle = (Math.PI * 2 / count) * i;
@@ -200,6 +220,15 @@ public class GravewardenBoss extends BaseWorldBossController {
         boss.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 40, 0));
     }
 
+    private void transitionToRevenant() {
+        setPhase(PHASE_REVENANT);
+        World world = boss.getWorld();
+        world.playSound(boss.getLocation(), Sound.ENTITY_WARDEN_ANGER, 1.4f, 0.6f);
+        world.spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), 120, 2.5, 1.2, 2.5, 0.02);
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 0));
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 200, 0));
+    }
+
     private void pulseShield() {
         World world = boss.getWorld();
         world.spawnParticle(Particle.CRIT, boss.getLocation(), 12, 1.2, 0.8, 1.2, 0.1);
@@ -222,7 +251,11 @@ public class GravewardenBoss extends BaseWorldBossController {
         Location center = boss.getLocation();
         double safeRadiusSquared = getGravewardenSafeRadius();
         safeRadiusSquared *= safeRadiusSquared;
-        for (int i = 0; i < 2; i++) {
+        int count = Math.max(1, getArcherCount());
+        if (PHASE_REVENANT.equals(getPhase(PHASE_SHIELDED))) {
+            count += 1;
+        }
+        for (int i = 0; i < count; i++) {
             Location spawn = center.clone().add(randomOffset(), 0, randomOffset());
             spawn.setY(world.getHighestBlockYAt(spawn));
             Skeleton skeleton = world.spawn(spawn, Skeleton.class);
@@ -233,6 +266,28 @@ public class GravewardenBoss extends BaseWorldBossController {
             }
         }
         world.playSound(center, Sound.ENTITY_SKELETON_AMBIENT, 0.9f, 0.8f);
+    }
+
+    private void triggerWraithStrike() {
+        World world = boss.getWorld();
+        Player target = findNearestPlayer();
+        if (target == null) {
+            return;
+        }
+        Location strikeLocation = target.getLocation();
+        double radius = Math.max(1.0, getWraithStrikeRadius());
+        double radiusSquared = radius * radius;
+        world.spawnParticle(Particle.SOUL, strikeLocation, 40, 1.0, 0.5, 1.0, 0.05);
+        world.playSound(strikeLocation, Sound.ENTITY_GHAST_SCREAM, 1.1f, 0.6f);
+        for (Player player : world.getPlayers()) {
+            if (!player.getWorld().equals(world)) {
+                continue;
+            }
+            if (player.getLocation().distanceSquared(strikeLocation) <= radiusSquared) {
+                player.damage(getWraithStrikeDamage(), boss);
+                player.addPotionEffect(new PotionEffect(PotionEffectType.WEAKNESS, 80, 0));
+            }
+        }
     }
 
     private double randomOffset() {
@@ -286,8 +341,48 @@ public class GravewardenBoss extends BaseWorldBossController {
         return false;
     }
 
+    private boolean shouldEnterRevenant() {
+        double maxHealth = boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH) != null
+                ? boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue()
+                : boss.getHealth();
+        double threshold = Math.max(0.0, Math.min(1.0, getRevenantThreshold()));
+        return maxHealth > 0 && (boss.getHealth() / maxHealth) <= threshold;
+    }
+
     private double getGravewardenSafeRadius() {
         return Math.max(0.0, plugin.getConfig().getDouble("worldBoss.bosses.Gravewarden.safeRadius", 3.0));
+    }
+
+    private int getGravestoneCount() {
+        return plugin.getConfig().getInt("worldBoss.bosses.Gravewarden.gravestoneCount", 6);
+    }
+
+    private int getArcherCooldownTicks() {
+        int base = plugin.getConfig().getInt("worldBoss.bosses.Gravewarden.archerCooldownTicks", 160);
+        if (PHASE_REVENANT.equals(getPhase(PHASE_SHIELDED))) {
+            return Math.max(60, (int) Math.round(base * 0.75));
+        }
+        return base;
+    }
+
+    private int getArcherCount() {
+        return plugin.getConfig().getInt("worldBoss.bosses.Gravewarden.archerCount", 3);
+    }
+
+    private double getRevenantThreshold() {
+        return plugin.getConfig().getDouble("worldBoss.bosses.Gravewarden.revenantThreshold", 0.35);
+    }
+
+    private int getWraithCooldownTicks() {
+        return plugin.getConfig().getInt("worldBoss.bosses.Gravewarden.wraithCooldownTicks", 140);
+    }
+
+    private double getWraithStrikeDamage() {
+        return Math.max(0.0, plugin.getConfig().getDouble("worldBoss.bosses.Gravewarden.wraithStrikeDamage", 5.0));
+    }
+
+    private double getWraithStrikeRadius() {
+        return Math.max(0.0, plugin.getConfig().getDouble("worldBoss.bosses.Gravewarden.wraithStrikeRadius", 3.5));
     }
 
     private void spawnGravestoneSafeRings() {
