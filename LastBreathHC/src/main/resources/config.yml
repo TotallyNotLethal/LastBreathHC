@@ -310,7 +310,9 @@ worldBoss:
       spawnRadius: 45
       despawnTimeoutSeconds: 600
       omenSafeRadius: 4.0
+      omenCooldownTicks: 160
       ashBurstRadius: 10.0
+      ashBurstCooldownTicks: 140
       ritualRelicCount: 4
       ritualRelicRadius: 7.0
       cataclysmThreshold: 0.35

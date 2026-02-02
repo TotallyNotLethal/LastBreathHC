@@ -66,7 +66,8 @@ public class TitleManager {
             Map.entry(Title.AGELESS, List.of("Custom: Attack damage +0.5")),
             Map.entry(Title.GRAVEWARDEN_BANE, List.of("Custom: Max health +2", "Custom: Boss landing aura")),
             Map.entry(Title.STORM_HERALD, List.of("Custom: Movement speed +3%", "Custom: Boss landing aura")),
-            Map.entry(Title.HOLLOW_COLOSSUS, List.of("Custom: Armor +2", "Custom: Boss landing aura"))
+            Map.entry(Title.HOLLOW_COLOSSUS, List.of("Custom: Armor +2", "Custom: Boss landing aura")),
+            Map.entry(Title.ASHEN_ORACLE, List.of("Custom: Attack damage +1", "Custom: Boss landing aura"))
     );
     private static final Map<Title, List<AttributeModifierSpec>> TITLE_ATTRIBUTE_MODIFIERS = Map.ofEntries(
             Map.entry(Title.THE_FALLEN, List.of(
@@ -168,12 +169,17 @@ public class TitleManager {
             Map.entry(Title.HOLLOW_COLOSSUS, List.of(
                     new AttributeModifierSpec(Attribute.ARMOR, UUID.fromString("fd3e8afc-6ef0-4f0c-8a35-1d0fef4e7f82"),
                             "title_hollow_colossus_armor", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.ASHEN_ORACLE, List.of(
+                    new AttributeModifierSpec(Attribute.ATTACK_DAMAGE, UUID.fromString("b2b31c2a-2b85-4f4b-a24c-3d3f1311a792"),
+                            "title_ashen_oracle_damage", 1.0, AttributeModifier.Operation.ADD_NUMBER)
             ))
     );
     private static final Map<Title, BossAura> BOSS_TITLE_AURAS = Map.of(
             Title.GRAVEWARDEN_BANE, BossAura.SOUL_FLAME,
             Title.STORM_HERALD, BossAura.STORM_SPARK,
-            Title.HOLLOW_COLOSSUS, BossAura.DUSTVEIL
+            Title.HOLLOW_COLOSSUS, BossAura.DUSTVEIL,
+            Title.ASHEN_ORACLE, BossAura.CINDER_VEIL
     );
     private static final Set<UUID> TITLE_MODIFIER_IDS = collectModifierIds();
 

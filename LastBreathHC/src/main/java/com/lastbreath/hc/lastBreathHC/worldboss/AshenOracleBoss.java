@@ -45,9 +45,11 @@ public class AshenOracleBoss extends BaseWorldBossController {
     @Override
     public void rebuildFromPersistent() {
         String phase = getPhase(PHASE_RITUAL);
-        int[] data = parseInts(getData(serializeInts(DEFAULT_OMEN_COOLDOWN, DEFAULT_ASH_BURST_COOLDOWN)), 2);
-        omenCooldownTicks = data[0] > 0 ? data[0] : DEFAULT_OMEN_COOLDOWN;
-        ashBurstCooldownTicks = data[1] > 0 ? data[1] : DEFAULT_ASH_BURST_COOLDOWN;
+        int defaultOmenCooldown = getOmenCooldownTicks();
+        int defaultAshBurstCooldown = getAshBurstCooldownTicks();
+        int[] data = parseInts(getData(serializeInts(defaultOmenCooldown, defaultAshBurstCooldown)), 2);
+        omenCooldownTicks = data[0] > 0 ? data[0] : defaultOmenCooldown;
+        ashBurstCooldownTicks = data[1] > 0 ? data[1] : defaultAshBurstCooldown;
 
         relics.clear();
         relics.addAll(loadBlockLocations());
@@ -93,14 +95,14 @@ public class AshenOracleBoss extends BaseWorldBossController {
         omenCooldownTicks = Math.max(0, omenCooldownTicks - 20);
         if (omenCooldownTicks <= 0) {
             triggerOmen(PHASE_CATACLYSM.equals(phase));
-            omenCooldownTicks = PHASE_CATACLYSM.equals(phase) ? DEFAULT_ASH_BURST_COOLDOWN : DEFAULT_OMEN_COOLDOWN;
+            omenCooldownTicks = PHASE_CATACLYSM.equals(phase) ? getAshBurstCooldownTicks() : getOmenCooldownTicks();
         }
 
         if (PHASE_CATACLYSM.equals(phase)) {
             ashBurstCooldownTicks = Math.max(0, ashBurstCooldownTicks - 20);
             if (ashBurstCooldownTicks <= 0) {
                 triggerAshBurst();
-                ashBurstCooldownTicks = DEFAULT_ASH_BURST_COOLDOWN;
+                ashBurstCooldownTicks = getAshBurstCooldownTicks();
             }
         }
         updatePersistentData();
@@ -162,8 +164,8 @@ public class AshenOracleBoss extends BaseWorldBossController {
         storeBlockLocations(relics);
         setPhase(PHASE_RITUAL);
         boss.setInvulnerable(!relics.isEmpty());
-        omenCooldownTicks = DEFAULT_OMEN_COOLDOWN;
-        ashBurstCooldownTicks = DEFAULT_ASH_BURST_COOLDOWN;
+        omenCooldownTicks = getOmenCooldownTicks();
+        ashBurstCooldownTicks = getAshBurstCooldownTicks();
         updatePersistentData();
     }
 
@@ -205,7 +207,7 @@ public class AshenOracleBoss extends BaseWorldBossController {
     private void transitionToProphecy() {
         setPhase(PHASE_PROPHECY);
         boss.setInvulnerable(false);
-        omenCooldownTicks = DEFAULT_OMEN_COOLDOWN;
+        omenCooldownTicks = getOmenCooldownTicks();
         updatePersistentData();
         World world = boss.getWorld();
         world.playSound(boss.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 1.2f, 0.9f);
@@ -215,8 +217,8 @@ public class AshenOracleBoss extends BaseWorldBossController {
 
     private void transitionToCataclysm() {
         setPhase(PHASE_CATACLYSM);
-        omenCooldownTicks = DEFAULT_ASH_BURST_COOLDOWN;
-        ashBurstCooldownTicks = DEFAULT_ASH_BURST_COOLDOWN;
+        omenCooldownTicks = getAshBurstCooldownTicks();
+        ashBurstCooldownTicks = getAshBurstCooldownTicks();
         updatePersistentData();
         World world = boss.getWorld();
         world.playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.2f, 0.8f);
@@ -310,8 +312,16 @@ public class AshenOracleBoss extends BaseWorldBossController {
         return Math.max(0.0, plugin.getConfig().getDouble("worldBoss.bosses.AshenOracle.omenSafeRadius", 4.0));
     }
 
+    private int getOmenCooldownTicks() {
+        return plugin.getConfig().getInt("worldBoss.bosses.AshenOracle.omenCooldownTicks", DEFAULT_OMEN_COOLDOWN);
+    }
+
     private double getAshBurstRadius() {
         return Math.max(1.0, plugin.getConfig().getDouble("worldBoss.bosses.AshenOracle.ashBurstRadius", 10.0));
+    }
+
+    private int getAshBurstCooldownTicks() {
+        return plugin.getConfig().getInt("worldBoss.bosses.AshenOracle.ashBurstCooldownTicks", DEFAULT_ASH_BURST_COOLDOWN);
     }
 
     private double getRelicRadius() {
