@@ -33,6 +33,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -46,6 +47,8 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.block.BlockFace;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Projectile;
 
 import java.io.File;
 import java.io.IOException;
@@ -105,13 +108,51 @@ public class WorldBossManager implements Listener {
     public WorldBossManager(Plugin plugin, BloodMoonManager bloodMoonManager) {
         this.plugin = plugin;
         this.bloodMoonManager = bloodMoonManager;
-        this.bossTypeKey = new NamespacedKey(plugin, "world_boss_type");
-        this.returnLocationKey = new NamespacedKey(plugin, "world_boss_return_location");
+        this.bossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
+        this.returnLocationKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_RETURN_LOCATION_KEY);
         this.antiCheese = new WorldBossAntiCheese(plugin);
         this.portalDataFile = new File(plugin.getDataFolder(), PORTAL_DATA_FILE);
         for (TriggerType triggerType : TriggerType.values()) {
             lastTriggerTimes.put(triggerType, new HashMap<>());
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onWorldBossTarget(EntityTargetLivingEntityEvent event) {
+        if (event.getTarget() instanceof Player) {
+            return;
+        }
+        if (isWorldBossOrMinion(event.getEntity())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onWorldBossDamage(EntityDamageByEntityEvent event) {
+        if (event.getEntity() instanceof Player) {
+            return;
+        }
+        Entity damager = resolveDamageSource(event.getDamager());
+        if (isWorldBossOrMinion(damager)) {
+            event.setCancelled(true);
+        }
+    }
+
+    private Entity resolveDamageSource(Entity damager) {
+        if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Entity shooter) {
+            return shooter;
+        }
+        return damager;
+    }
+
+    private boolean isWorldBossOrMinion(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+        if (entity.getPersistentDataContainer().has(bossTypeKey, PersistentDataType.STRING)) {
+            return true;
+        }
+        return entity.getScoreboardTags().contains(WorldBossConstants.WORLD_BOSS_MINION_TAG);
     }
 
     public void start() {

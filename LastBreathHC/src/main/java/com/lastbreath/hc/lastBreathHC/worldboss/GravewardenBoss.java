@@ -259,6 +259,7 @@ public class GravewardenBoss extends BaseWorldBossController {
             Location spawn = center.clone().add(randomOffset(), 0, randomOffset());
             spawn.setY(world.getHighestBlockYAt(spawn));
             Skeleton skeleton = world.spawn(spawn, Skeleton.class);
+            skeleton.addScoreboardTag(WorldBossConstants.WORLD_BOSS_MINION_TAG);
             skeleton.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
             Player target = findNearestPlayerOutsideSafeZone(safeRadiusSquared);
             if (target != null) {
