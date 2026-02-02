@@ -1,6 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.asteroid;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
+import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenHelper;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantPage;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstone;
@@ -105,6 +107,7 @@ public class AsteroidLoot {
 
         addCustomItemLoot(inv, normalizedTier, config);
         addEnchantPageLoot(inv, normalizedTier);
+        addCosmeticAuraLoot(inv, normalizedTier, config);
 
         return inv;
     }
@@ -199,5 +202,29 @@ public class AsteroidLoot {
             case 2 -> config.getInt(basePath, tier2Default);
             default -> config.getInt(basePath, tier1Default);
         };
+    }
+
+    private static void addCosmeticAuraLoot(Inventory inv, int tier, FileConfiguration config) {
+        if (tier != 3) {
+            return;
+        }
+        String basePath = "asteroid.loot.tier3.cosmetics";
+        double chance = config.getDouble(basePath + ".chance", 2.0);
+        if (chance <= 0 || random.nextDouble() * 100 >= chance) {
+            return;
+        }
+        java.util.List<String> auraIds = config.getStringList(basePath + ".auras");
+        if (auraIds.isEmpty()) {
+            return;
+        }
+        java.util.List<BossAura> auras = auraIds.stream()
+                .map(BossAura::fromInput)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (auras.isEmpty()) {
+            return;
+        }
+        BossAura aura = auras.get(random.nextInt(auras.size()));
+        inv.addItem(CosmeticTokenHelper.createAuraToken(aura));
     }
 }
