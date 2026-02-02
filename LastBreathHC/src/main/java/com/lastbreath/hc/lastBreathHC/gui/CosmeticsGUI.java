@@ -125,7 +125,7 @@ public class CosmeticsGUI implements Listener {
         meta.setDisplayName(ChatColor.GOLD + "Boss Cosmetics");
         meta.setLore(List.of(
                 ChatColor.GRAY + "Equip boss-earned cosmetics here.",
-                ChatColor.DARK_GRAY + "Unlocks drop from world bosses."
+                ChatColor.DARK_GRAY + "Unlocks drop from world bosses and tier 3 asteroids."
         ));
         item.setItemMeta(meta);
         return item;

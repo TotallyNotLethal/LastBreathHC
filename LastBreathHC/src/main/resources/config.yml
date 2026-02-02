@@ -110,6 +110,19 @@ asteroid:
         totemOfLifeChance: 5
         gracestoneChance: 5
         enhancedGrindstoneChance: 10
+      cosmetics:
+        chance: 2
+        auras:
+          - ASTRAL_DRIFT
+          - ARCANE_GLIMMER
+          - SPORE_MIST
+          - HUSHED_CLOUD
+          - ECHO_FLICKER
+          - SOUL_WISP
+          - EMBER_HAZE
+          - CINDER_SPARK
+          - STELLAR_CRIT
+          - STATIC_PULSE
     enchantPages:
       tier1Chance: 25
       tier2Chance: 50

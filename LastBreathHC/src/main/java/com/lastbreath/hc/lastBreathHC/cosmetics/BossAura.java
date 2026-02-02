@@ -10,7 +10,17 @@ public enum BossAura {
     SOUL_FLAME("Soul Flame", Particle.SOUL_FIRE_FLAME, ChatColor.DARK_PURPLE, Material.SOUL_TORCH),
     STORM_SPARK("Storm Spark", Particle.ELECTRIC_SPARK, ChatColor.AQUA, Material.LIGHTNING_ROD),
     DUSTVEIL("Dustveil", Particle.ASH, ChatColor.GRAY, Material.GRAY_DYE),
-    CINDER_VEIL("Cinder Veil", Particle.FLAME, ChatColor.GOLD, Material.FIRE_CHARGE);
+    CINDER_VEIL("Cinder Veil", Particle.FLAME, ChatColor.GOLD, Material.FIRE_CHARGE),
+    ASTRAL_DRIFT("Astral Drift", Particle.END_ROD, ChatColor.AQUA, Material.END_ROD),
+    ARCANE_GLIMMER("Arcane Glimmer", Particle.ENCHANT, ChatColor.LIGHT_PURPLE, Material.ENCHANTED_BOOK),
+    SPORE_MIST("Spore Mist", Particle.SPORE_BLOSSOM_AIR, ChatColor.GREEN, Material.SPORE_BLOSSOM),
+    HUSHED_CLOUD("Hushed Cloud", Particle.CLOUD, ChatColor.WHITE, Material.WHITE_DYE),
+    ECHO_FLICKER("Echo Flicker", Particle.SCULK_SOUL, ChatColor.DARK_AQUA, Material.SCULK),
+    SOUL_WISP("Soul Wisp", Particle.SOUL, ChatColor.BLUE, Material.SOUL_LANTERN),
+    EMBER_HAZE("Ember Haze", Particle.SMOKE, ChatColor.DARK_GRAY, Material.BLACK_DYE),
+    CINDER_SPARK("Cinder Spark", Particle.FLAME, ChatColor.RED, Material.BLAZE_POWDER),
+    STELLAR_CRIT("Stellar Crit", Particle.CRIT, ChatColor.YELLOW, Material.GLOWSTONE_DUST),
+    STATIC_PULSE("Static Pulse", Particle.ELECTRIC_SPARK, ChatColor.AQUA, Material.AMETHYST_SHARD);
 
     private final String displayName;
     private final Particle particle;
