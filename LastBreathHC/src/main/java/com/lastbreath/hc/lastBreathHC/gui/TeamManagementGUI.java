@@ -1,6 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.gui;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.team.JoinOutcome;
+import com.lastbreath.hc.lastBreathHC.team.LeaveOutcome;
 import com.lastbreath.hc.lastBreathHC.team.TeamManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -159,7 +161,7 @@ public class TeamManagementGUI implements Listener {
             open(player);
             return;
         }
-        TeamManager.JoinOutcome outcome = teamManager.joinTeam(player, team.get());
+        JoinOutcome outcome = teamManager.joinTeam(player, team.get());
         switch (outcome) {
             case JOINED -> player.sendMessage(ChatColor.GREEN + "Joined team " + teamName + ".");
             case REQUESTED -> {
@@ -181,8 +183,8 @@ public class TeamManagementGUI implements Listener {
         }
         switch (action.toLowerCase(Locale.ROOT)) {
             case "leave" -> {
-                TeamManager.LeaveOutcome outcome = teamManager.leaveTeam(player);
-                if (outcome == TeamManager.LeaveOutcome.NOT_IN_TEAM) {
+                LeaveOutcome outcome = teamManager.leaveTeam(player);
+                if (outcome == LeaveOutcome.NOT_IN_TEAM) {
                     player.sendMessage(ChatColor.RED + "You are not on a team.");
                 } else {
                     player.sendMessage(ChatColor.YELLOW + "You left the team.");

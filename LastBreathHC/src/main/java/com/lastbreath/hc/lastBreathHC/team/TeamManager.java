@@ -24,21 +24,6 @@ import java.util.stream.Collectors;
 
 public class TeamManager {
 
-    public enum JoinOutcome {
-        JOINED,
-        REQUESTED,
-        REQUEST_ALREADY_PENDING,
-        ALREADY_MEMBER,
-        FAILED
-    }
-
-    public enum LeaveOutcome {
-        NOT_IN_TEAM,
-        LEFT,
-        OWNER_TRANSFERRED,
-        DISBANDED
-    }
-
     private final LastBreathHC plugin;
     private final File ownerFile;
     private final File dataFile;
