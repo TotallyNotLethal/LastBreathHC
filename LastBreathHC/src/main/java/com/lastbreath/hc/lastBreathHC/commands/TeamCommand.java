@@ -1,6 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.commands;
 
 import com.lastbreath.hc.lastBreathHC.gui.TeamManagementGUI;
+import com.lastbreath.hc.lastBreathHC.team.JoinOutcome;
+import com.lastbreath.hc.lastBreathHC.team.LeaveOutcome;
 import com.lastbreath.hc.lastBreathHC.team.TeamManager;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -127,7 +129,7 @@ public class TeamCommand implements BasicCommand {
             return;
         }
 
-        TeamManager.JoinOutcome outcome = teamManager.joinTeam(player, team.get());
+        JoinOutcome outcome = teamManager.joinTeam(player, team.get());
         switch (outcome) {
             case JOINED -> player.sendMessage(ChatColor.GREEN + "Joined team " + teamName + ".");
             case REQUESTED -> {
@@ -141,7 +143,7 @@ public class TeamCommand implements BasicCommand {
     }
 
     private void handleLeave(Player player) {
-        TeamManager.LeaveOutcome outcome = teamManager.leaveTeam(player);
+        LeaveOutcome outcome = teamManager.leaveTeam(player);
         switch (outcome) {
             case NOT_IN_TEAM -> player.sendMessage(ChatColor.RED + "You are not on a team.");
             case DISBANDED -> player.sendMessage(ChatColor.RED + "Team disbanded.");
