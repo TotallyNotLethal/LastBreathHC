@@ -317,7 +317,7 @@ public class CustomEnchantListener implements Listener {
             }
             try {
                 if (handleCustomDrops(player, tool, target, normalizedEnchantIds)) {
-                    target.setType(Material.AIR, false);
+                    breakBlockWithPhysics(target);
                 } else {
                     target.breakNaturally(tool);
                 }
@@ -356,6 +356,10 @@ public class CustomEnchantListener implements Listener {
         }
         giveDrops(player, block.getLocation(), drops, autoPickup);
         return true;
+    }
+
+    private void breakBlockWithPhysics(Block block) {
+        block.setType(Material.AIR, true);
     }
 
     private Collection<Block> getVeinBlocks(Block origin) {
