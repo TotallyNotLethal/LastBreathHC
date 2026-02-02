@@ -50,6 +50,8 @@ public class AshenOracleBoss extends BaseWorldBossController {
         int[] data = parseInts(getData(serializeInts(defaultOmenCooldown, defaultAshBurstCooldown)), 2);
         omenCooldownTicks = data[0] > 0 ? data[0] : defaultOmenCooldown;
         ashBurstCooldownTicks = data[1] > 0 ? data[1] : defaultAshBurstCooldown;
+        omenCooldownTicks = data[0] > 0 ? data[0] : defaultOmenCooldown;
+        ashBurstCooldownTicks = data[1] > 0 ? data[1] : defaultAshBurstCooldown;
 
         relics.clear();
         relics.addAll(loadBlockLocations());
