@@ -68,7 +68,7 @@ public final class TabMenuDataSource {
                 onlineCount,
                 pingMillis,
                 summary.uniqueJoins(),
-                summary.totalDeaths(),
+                Bukkit.getBannedPlayers().size(),
                 dateTimeLine,
                 null,
                 playerCountLine
