@@ -194,6 +194,7 @@ public class HollowColossusBoss extends BaseWorldBossController {
             Location spawn = center.clone().add(randomOffset(), 0, randomOffset());
             spawn.setY(world.getHighestBlockYAt(spawn));
             Zombie zombie = world.spawn(spawn, Zombie.class);
+            zombie.addScoreboardTag(WorldBossConstants.WORLD_BOSS_MINION_TAG);
             zombie.setTarget(findNearestPlayer());
             if (zombie.getAttribute(Attribute.MAX_HEALTH) != null) {
                 double baseHealth = plugin.getConfig().getDouble("worldBoss.bosses.HollowColossus.minionBaseHealth", 12.0);
