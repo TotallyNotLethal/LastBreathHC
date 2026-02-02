@@ -9,16 +9,16 @@ import java.util.Locale;
 import java.util.Set;
 
 public enum CustomEnchant {
+    AUTO_PICKUP("lb:auto_pickup", false, EnumSet.of(Material.NETHERITE_PICKAXE, Material.NETHERITE_AXE, Material.NETHERITE_SHOVEL, Material.NETHERITE_HOE)),
     QUARRY("lb:quarry", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
     VEIN_MINER("lb:vein_miner", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
-    AUTO_PICKUP("lb:auto_pickup", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
-    AUTO_REPLANT("lb:auto_replant", false, EnumSet.of(Material.NETHERITE_HOE)),
+    SMELTER_TOUCH("lb:smelter_touch", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
+    PROSPECTOR("lb:prospector", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
     TREE_FELLER("lb:tree_feller", false, EnumSet.of(Material.NETHERITE_AXE)),
     EXCAVATOR("lb:excavator", false, EnumSet.of(Material.NETHERITE_SHOVEL)),
+    AUTO_REPLANT("lb:auto_replant", false, EnumSet.of(Material.NETHERITE_HOE)),
     FERTILE_HARVEST("lb:fertile_harvest", false, EnumSet.of(Material.NETHERITE_HOE)),
-    SMELTER_TOUCH("lb:smelter_touch", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
     SWIFT_TILLER("lb:swift_tiller", false, EnumSet.of(Material.NETHERITE_HOE)),
-    PROSPECTOR("lb:prospector", false, EnumSet.of(Material.NETHERITE_PICKAXE)),
     WITHER_GUARD("lb:wither_guard", false, EnumSet.of(
             Material.NETHERITE_HELMET,
             Material.NETHERITE_CHESTPLATE,
