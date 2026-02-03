@@ -171,14 +171,26 @@ public class AsteroidListener implements Listener {
 
     @EventHandler
     public void onAsteroidMobDamage(EntityDamageByEntityEvent event) {
-        if (!(event.getDamager() instanceof LivingEntity attacker)) {
+        if (!(event.getEntity() instanceof LivingEntity target)) {
             return;
         }
-        if (!(event.getEntity() instanceof LivingEntity target)) {
+        Entity damagerEntity = event.getDamager();
+        LivingEntity attacker = null;
+        if (damagerEntity instanceof LivingEntity livingDamager) {
+            attacker = livingDamager;
+        } else if (damagerEntity instanceof org.bukkit.entity.Projectile projectile
+                && projectile.getShooter() instanceof LivingEntity livingShooter) {
+            attacker = livingShooter;
+        }
+        if (attacker == null) {
             return;
         }
         if (isAsteroidMob(attacker) && isAsteroidMob(target)) {
             event.setCancelled(true);
+            return;
+        }
+        if (isAsteroidMob(target) && damagerEntity instanceof org.bukkit.entity.Projectile) {
+            event.setDamage(event.getDamage() * 0.75);
         }
     }
 

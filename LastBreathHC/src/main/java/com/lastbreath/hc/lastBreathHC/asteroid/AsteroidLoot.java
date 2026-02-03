@@ -30,25 +30,25 @@ public class AsteroidLoot {
 
         inv.addItem(new ItemStack(Material.IRON_INGOT, getTieredAmount(config, normalizedTier, "ironIngot",
                 switch (normalizedTier) {
-                    case 2 -> 10;
-                    case 3 -> 14;
-                    default -> 6;
-                },
-                switch (normalizedTier) {
-                    case 2 -> 23;
-                    case 3 -> 27;
-                    default -> 19;
-                })));
-        inv.addItem(new ItemStack(Material.GOLD_INGOT, getTieredAmount(config, normalizedTier, "goldIngot",
-                switch (normalizedTier) {
-                    case 2 -> 6;
-                    case 3 -> 8;
+                    case 2 -> 8;
+                    case 3 -> 12;
                     default -> 4;
                 },
                 switch (normalizedTier) {
-                    case 2 -> 11;
-                    case 3 -> 13;
-                    default -> 9;
+                    case 2 -> 20;
+                    case 3 -> 24;
+                    default -> 16;
+                })));
+        inv.addItem(new ItemStack(Material.GOLD_INGOT, getTieredAmount(config, normalizedTier, "goldIngot",
+                switch (normalizedTier) {
+                    case 2 -> 4;
+                    case 3 -> 6;
+                    default -> 2;
+                },
+                switch (normalizedTier) {
+                    case 2 -> 9;
+                    case 3 -> 11;
+                    default -> 7;
                 })));
         inv.addItem(new ItemStack(Material.EMERALD, getTieredAmount(config, normalizedTier, "emerald",
                 switch (normalizedTier) {
@@ -72,17 +72,19 @@ public class AsteroidLoot {
                     case 3 -> 6;
                     default -> 4;
                 })));
-        inv.addItem(new ItemStack(Material.NETHERITE_SCRAP, getTieredAmount(config, normalizedTier, "netheriteScrap",
-                switch (normalizedTier) {
-                    case 2 -> 1;
-                    case 3 -> 2;
-                    default -> 1;
-                },
-                switch (normalizedTier) {
-                    case 2 -> 2;
-                    case 3 -> 3;
-                    default -> 1;
-                })));
+        if (random.nextInt(100) < chanceForTier(normalizedTier, 20, 40, 60)) {
+            inv.addItem(new ItemStack(Material.NETHERITE_SCRAP, getTieredAmount(config, normalizedTier, "netheriteScrap",
+                    switch (normalizedTier) {
+                        case 2 -> 1;
+                        case 3 -> 2;
+                        default -> 1;
+                    },
+                    switch (normalizedTier) {
+                        case 2 -> 2;
+                        case 3 -> 3;
+                        default -> 1;
+                    })));
+        }
 
         if (random.nextInt(100) < chanceForTier(normalizedTier, 50, 65, 80))
             inv.addItem(new ItemStack(Material.TOTEM_OF_UNDYING));
