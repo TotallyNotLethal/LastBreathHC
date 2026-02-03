@@ -23,6 +23,7 @@ import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
 import com.lastbreath.hc.lastBreathHC.mobs.MobStackCombatListener;
 import com.lastbreath.hc.lastBreathHC.mobs.MobStackManager;
 import com.lastbreath.hc.lastBreathHC.mobs.MobStackSignListener;
+import com.lastbreath.hc.lastBreathHC.mobs.AggressiveLogoutMobManager;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
@@ -114,6 +115,7 @@ public final class LastBreathHC extends JavaPlugin {
     private WorldBossManager worldBossManager;
     private CosmeticAuraService cosmeticAuraService;
     private MobStackManager mobStackManager;
+    private AggressiveLogoutMobManager aggressiveLogoutMobManager;
 
     @Override
     public void onEnable() {
@@ -176,6 +178,10 @@ public final class LastBreathHC extends JavaPlugin {
         mobStackManager = new MobStackManager(this);
         getServer().getPluginManager().registerEvents(
                 new MobStackCombatListener(mobStackManager), this
+        );
+        aggressiveLogoutMobManager = new AggressiveLogoutMobManager(this);
+        getServer().getPluginManager().registerEvents(
+                aggressiveLogoutMobManager, this
         );
         getServer().getPluginManager().registerEvents(
                 new BountyListener(), this
@@ -351,6 +357,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (mobStackManager != null) {
             mobStackManager.stop();
             mobStackManager = null;
+        }
+        if (aggressiveLogoutMobManager != null) {
+            aggressiveLogoutMobManager.shutdown();
+            aggressiveLogoutMobManager = null;
         }
         if (worldBossManager != null) {
             worldBossManager.shutdown();
