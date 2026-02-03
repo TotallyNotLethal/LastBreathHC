@@ -134,8 +134,8 @@ public class HollowColossusBoss extends BaseWorldBossController {
         targetedDebrisCooldownTicks = Math.min(targetedDebrisCooldownTicks, 40);
         World world = boss.getWorld();
         world.playSound(boss.getLocation(), Sound.ENTITY_IRON_GOLEM_ATTACK, 1.2f, 0.8f);
-        world.spawnParticle(Particle.BLOCK_CRACK, boss.getLocation(), 60, 1.4, 1.0, 1.4, Material.DEEPSLATE.createBlockData());
-        boss.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.INCREASE_DAMAGE, 160, 0));
+        world.spawnParticle(Particle.BLOCK_CRUMBLE, boss.getLocation(), 60, 1.4, 1.0, 1.4, Material.DEEPSLATE.createBlockData());
+        boss.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.STRENGTH, 160, 0));
     }
 
     private void closeCore() {

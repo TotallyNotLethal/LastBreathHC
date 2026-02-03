@@ -205,7 +205,7 @@ public class StormHeraldBoss extends BaseWorldBossController {
     private void enterTempest() {
         setPhase(PHASE_TEMPEST);
         boss.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 240, 1));
-        boss.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 240, 0));
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 240, 0));
         boss.getWorld().playSound(boss.getLocation(), Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1.5f, 0.6f);
         boss.getWorld().spawnParticle(Particle.FLASH, boss.getLocation(), 3, 0.6, 0.8, 0.6, 0.0);
     }

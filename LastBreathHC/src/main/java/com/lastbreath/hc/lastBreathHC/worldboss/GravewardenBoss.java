@@ -223,10 +223,10 @@ public class GravewardenBoss extends BaseWorldBossController {
     private void transitionToRevenant() {
         setPhase(PHASE_REVENANT);
         World world = boss.getWorld();
-        world.playSound(boss.getLocation(), Sound.ENTITY_WARDEN_ANGER, 1.4f, 0.6f);
+        world.playSound(boss.getLocation(), Sound.ENTITY_WARDEN_AGITATED, 1.4f, 0.6f);
         world.spawnParticle(Particle.SOUL_FIRE_FLAME, boss.getLocation(), 120, 2.5, 1.2, 2.5, 0.02);
         boss.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 0));
-        boss.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 200, 0));
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 200, 0));
     }
 
     private void pulseShield() {

@@ -225,7 +225,7 @@ public class AshenOracleBoss extends BaseWorldBossController {
         World world = boss.getWorld();
         world.playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.2f, 0.8f);
         world.spawnParticle(Particle.FLAME, boss.getLocation(), 80, 1.8, 1.2, 1.8, 0.05);
-        boss.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, 200, 0));
+        boss.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 200, 0));
         boss.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 0));
     }
 
@@ -293,7 +293,7 @@ public class AshenOracleBoss extends BaseWorldBossController {
                 continue;
             }
             player.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1.0f, 0.8f);
-            player.spawnParticle(Particle.SMOKE_LARGE, center, 30, 1.2, 0.8, 1.2, 0.02);
+            player.spawnParticle(Particle.DUST_PLUME, center, 30, 1.2, 0.8, 1.2, 0.02);
         }
     }
 
