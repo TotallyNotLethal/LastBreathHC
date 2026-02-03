@@ -6,6 +6,7 @@ import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -13,7 +14,10 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -33,6 +37,8 @@ public class AdminSpectateHotbarListener implements Listener {
     private final SpectateCommand spectateCommand;
     private final NamespacedKey toolKey;
     private final Map<Tool, ItemStack> toolItems = new EnumMap<>(Tool.class);
+    private static final String TOOLS_MENU_TITLE = ChatColor.DARK_AQUA + "Spectate Tools";
+    private static final int TOOLS_MENU_SIZE = 9;
 
     public AdminSpectateHotbarListener(LastBreathHC plugin, SpectateCommand spectateCommand) {
         this.plugin = plugin;
@@ -50,6 +56,29 @@ public class AdminSpectateHotbarListener implements Listener {
             slot++;
         }
         player.updateInventory();
+    }
+
+    public void openToolsMenu(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, TOOLS_MENU_SIZE, TOOLS_MENU_TITLE);
+        int slot = 0;
+        for (Tool tool : Tool.values()) {
+            inventory.setItem(slot, toolItems.get(tool).clone());
+            slot++;
+        }
+        player.openInventory(inventory);
+    }
+
+    @EventHandler
+    public void onToggleSneak(PlayerToggleSneakEvent event) {
+        if (!event.isSneaking()) {
+            return;
+        }
+        Player player = event.getPlayer();
+        SpectateSession session = spectateCommand.getSession(player.getUniqueId());
+        if (session == null || !session.isAdminSpectate()) {
+            return;
+        }
+        openToolsMenu(player);
     }
 
     @EventHandler
@@ -80,6 +109,35 @@ public class AdminSpectateHotbarListener implements Listener {
         }
 
         event.setCancelled(true);
+        handleTool(player, tool);
+    }
+
+    @EventHandler
+    public void onToolsMenuClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+        if (!TOOLS_MENU_TITLE.equals(event.getView().getTitle())) {
+            return;
+        }
+        event.setCancelled(true);
+        SpectateSession session = spectateCommand.getSession(player.getUniqueId());
+        if (session == null || !session.isAdminSpectate()) {
+            return;
+        }
+        ItemStack item = event.getCurrentItem();
+        if (item == null || !item.hasItemMeta()) {
+            return;
+        }
+        ItemMeta meta = item.getItemMeta();
+        String toolId = meta.getPersistentDataContainer().get(toolKey, PersistentDataType.STRING);
+        if (toolId == null) {
+            return;
+        }
+        Tool tool = Tool.fromId(toolId);
+        if (tool == null) {
+            return;
+        }
         handleTool(player, tool);
     }
 
@@ -198,9 +256,14 @@ public class AdminSpectateHotbarListener implements Listener {
     }
 
     private void setSpectatorTarget(Player viewer, Player target, String message) {
-        viewer.setSpectatorTarget(target);
         viewer.teleport(target.getLocation());
-        viewer.sendMessage(ChatColor.AQUA + message);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!viewer.isOnline() || viewer.getGameMode() != GameMode.SPECTATOR) {
+                return;
+            }
+            viewer.setSpectatorTarget(target);
+            viewer.sendMessage(ChatColor.AQUA + message);
+        });
     }
 
     private List<Player> getOnlineTargets(Player viewer) {
