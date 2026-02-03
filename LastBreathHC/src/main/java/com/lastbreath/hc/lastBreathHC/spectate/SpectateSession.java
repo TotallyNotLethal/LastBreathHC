@@ -20,6 +20,7 @@ public class SpectateSession {
     private final int foodLevel;
     private final float saturation;
     private final List<PotionEffect> potionEffects;
+    private final boolean adminSpectate;
 
     public SpectateSession(
             Location returnLocation,
@@ -32,7 +33,8 @@ public class SpectateSession {
             double health,
             int foodLevel,
             float saturation,
-            List<PotionEffect> potionEffects
+            List<PotionEffect> potionEffects,
+            boolean adminSpectate
     ) {
         this.returnLocation = returnLocation;
         this.returnMode = returnMode;
@@ -45,6 +47,7 @@ public class SpectateSession {
         this.foodLevel = foodLevel;
         this.saturation = saturation;
         this.potionEffects = potionEffects;
+        this.adminSpectate = adminSpectate;
     }
 
     public Location getReturnLocation() {
@@ -89,5 +92,9 @@ public class SpectateSession {
 
     public List<PotionEffect> getPotionEffects() {
         return potionEffects;
+    }
+
+    public boolean isAdminSpectate() {
+        return adminSpectate;
     }
 }
