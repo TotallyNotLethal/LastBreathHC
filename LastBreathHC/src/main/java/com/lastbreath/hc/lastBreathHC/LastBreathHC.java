@@ -554,6 +554,10 @@ public final class LastBreathHC extends JavaPlugin {
     private Location pickAsteroidLocation(World world, int tier) {
         WorldBorder border = world.getWorldBorder();
         double borderRadius = border.getSize() / 2.0;
+        double maxDistance = AsteroidManager.getMaxAsteroidDistance();
+        if (maxDistance > 0) {
+            borderRadius = Math.min(borderRadius, maxDistance);
+        }
         double minRadius = 0.0;
         double maxRadius;
         if (tier == 3) {
@@ -585,6 +589,13 @@ public final class LastBreathHC extends JavaPlugin {
         double maxX = border.getCenter().getX() + borderRadius;
         double minZ = border.getCenter().getZ() - borderRadius;
         double maxZ = border.getCenter().getZ() + borderRadius;
+        double maxDistance = AsteroidManager.getMaxAsteroidDistance();
+        if (maxDistance > 0) {
+            minX = Math.max(minX, -maxDistance);
+            maxX = Math.min(maxX, maxDistance);
+            minZ = Math.max(minZ, -maxDistance);
+            maxZ = Math.min(maxZ, maxDistance);
+        }
 
         int minHeight = world.getMinHeight();
         int maxHeight = world.getMaxHeight() - 1;
@@ -594,8 +605,9 @@ public final class LastBreathHC extends JavaPlugin {
             double distance = Math.sqrt(random.nextDouble()) * radius;
             double x = centerX + Math.cos(angle) * distance;
             double z = centerZ + Math.sin(angle) * distance;
-            x = Math.max(minX, Math.min(maxX, x));
-            z = Math.max(minZ, Math.min(maxZ, z));
+            if (x < minX || x > maxX || z < minZ || z > maxZ) {
+                continue;
+            }
             int blockX = (int) Math.floor(x);
             int blockZ = (int) Math.floor(z);
 
@@ -652,6 +664,13 @@ public final class LastBreathHC extends JavaPlugin {
         double maxX = border.getCenter().getX() + borderRadius;
         double minZ = border.getCenter().getZ() - borderRadius;
         double maxZ = border.getCenter().getZ() + borderRadius;
+        double maxDistance = AsteroidManager.getMaxAsteroidDistance();
+        if (maxDistance > 0) {
+            minX = Math.max(minX, -maxDistance);
+            maxX = Math.min(maxX, maxDistance);
+            minZ = Math.max(minZ, -maxDistance);
+            maxZ = Math.min(maxZ, maxDistance);
+        }
         int minHeight = world.getMinHeight();
         int maxHeight = world.getMaxHeight() - 1;
 
@@ -660,8 +679,9 @@ public final class LastBreathHC extends JavaPlugin {
             double distance = Math.sqrt(minSquared + random.nextDouble() * (maxSquared - minSquared));
             double x = centerX + Math.cos(angle) * distance;
             double z = centerZ + Math.sin(angle) * distance;
-            x = Math.max(minX, Math.min(maxX, x));
-            z = Math.max(minZ, Math.min(maxZ, z));
+            if (x < minX || x > maxX || z < minZ || z > maxZ) {
+                continue;
+            }
             int blockX = (int) Math.floor(x);
             int blockZ = (int) Math.floor(z);
 
