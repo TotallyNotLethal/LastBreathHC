@@ -13,6 +13,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 public class DeathRejoinListener implements Listener {
 
+    private static final String ADMIN_SPECTATE_METADATA = "lastbreathhc.adminSpectate";
+
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
@@ -43,8 +45,13 @@ public class DeathRejoinListener implements Listener {
             return;
         }
 
+        Player player = event.getPlayer();
+        if (player.isOp() || player.hasMetadata(ADMIN_SPECTATE_METADATA)) {
+            return;
+        }
+
         event.setCancelled(true);
-        forceSurvival(event.getPlayer());
+        forceSurvival(player);
     }
 
     private void forceSurvival(Player player) {
