@@ -69,6 +69,11 @@ public class SpectateCommand implements BasicCommand, Listener {
             return;
         }
 
+        if (!isAdmin(player)) {
+            player.sendMessage(ChatColor.RED + "Spectate is only available to operators.");
+            return;
+        }
+
         if (args.length == 0) {
             player.sendMessage(ChatColor.RED + "Usage: /spectate <player> <mode?> or /spectate leave");
             return;
@@ -141,12 +146,7 @@ public class SpectateCommand implements BasicCommand, Listener {
 
         viewer.setGameMode(GameMode.SPECTATOR);
         viewer.teleport(target.getLocation());
-        viewer.setSpectatorTarget(target);
-        viewer.sendMessage(ChatColor.AQUA + "Now spectating " + target.getName() + " (" + mode + ").");
-
-        if (adminSpectate) {
-            hideAdminSpectatorFromNonAdmins(viewer);
-        }
+        Bukkit.getScheduler().runTask(plugin, () -> finalizeSpectate(viewer, target, adminSpectate, mode));
     }
 
     private SpectateSession captureSession(Player player, boolean adminSpectate) {
@@ -218,6 +218,26 @@ public class SpectateCommand implements BasicCommand, Listener {
 
     private boolean isAdmin(Player player) {
         return player.isOp();
+    }
+
+    private void finalizeSpectate(Player viewer, Player target, boolean adminSpectate, String mode) {
+        if (!viewer.isOnline()) {
+            sessions.remove(viewer.getUniqueId());
+            return;
+        }
+
+        if (viewer.getGameMode() != GameMode.SPECTATOR) {
+            endSpectate(viewer, false);
+            viewer.sendMessage(ChatColor.RED + "Spectate failed because spectator mode is blocked.");
+            return;
+        }
+
+        viewer.setSpectatorTarget(target);
+        viewer.sendMessage(ChatColor.AQUA + "Now spectating " + target.getName() + " (" + mode + ").");
+
+        if (adminSpectate) {
+            hideAdminSpectatorFromNonAdmins(viewer);
+        }
     }
 
     private void hideAdminSpectatorFromNonAdmins(Player adminPlayer) {
