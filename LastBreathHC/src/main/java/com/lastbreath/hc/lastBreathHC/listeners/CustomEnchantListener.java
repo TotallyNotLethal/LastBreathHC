@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CustomEnchantListener implements Listener {
 
@@ -41,6 +42,9 @@ public class CustomEnchantListener implements Listener {
     private static final int DEFAULT_TREE_LEAF_BRIDGE_LIMIT = 2;
     private static final int DEFAULT_TREE_LEAF_BRIDGE_RADIUS = 2;
     private static final int DEFAULT_TREE_MAX_RADIUS = 12;
+    private static final int DEFAULT_TREE_LEAF_DECAY_RADIUS = 5;
+    private static final int TREE_LEAF_DECAY_MIN_DELAY = 10;
+    private static final int TREE_LEAF_DECAY_MAX_DELAY = 40;
     private static final double PROSPECTOR_CHANCE = 0.2;
 
     private static final Map<Material, Material> CROP_SEEDS = new EnumMap<>(Material.class);
@@ -111,7 +115,11 @@ public class CustomEnchantListener implements Listener {
             breakExtraBlocks(player, tool, getVeinBlocks(block), normalized);
         }
         if (treeFeller && isAxe(tool.getType()) && isLog(block.getType())) {
-            breakExtraBlocks(player, tool, getTreeBlocks(block), normalized);
+            Collection<Block> treeBlocks = getTreeBlocks(block);
+            breakExtraBlocks(player, tool, treeBlocks, normalized);
+            Set<Block> felledLogs = new HashSet<>(treeBlocks);
+            felledLogs.add(block);
+            scheduleLeafDecay(felledLogs, tool);
         }
         if (excavator && isShovel(tool.getType()) && isShovelMineable(block.getType())) {
             breakExtraBlocks(player, tool, getExcavatorBlocks(block, player), normalized);
@@ -340,6 +348,93 @@ public class CustomEnchantListener implements Listener {
                 processing.remove(location);
             }
         }
+    }
+
+    private void scheduleLeafDecay(Collection<Block> logs, ItemStack tool) {
+        if (logs.isEmpty()) {
+            return;
+        }
+        Set<Block> leaves = collectLeafDecayTargets(logs, DEFAULT_TREE_LEAF_DECAY_RADIUS);
+        if (leaves.isEmpty()) {
+            return;
+        }
+        ItemStack toolSnapshot = tool.clone();
+        var worldBossManager = plugin.getWorldBossManager();
+        for (Block leaf : leaves) {
+            int delay = ThreadLocalRandom.current().nextInt(TREE_LEAF_DECAY_MIN_DELAY, TREE_LEAF_DECAY_MAX_DELAY + 1);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (!isLeaf(leaf.getType()) || leaf.getType() == Material.AIR) {
+                    return;
+                }
+                if (worldBossManager != null && worldBossManager.isArenaBlockProtected(leaf)) {
+                    return;
+                }
+                Location location = leaf.getLocation();
+                if (!processing.add(location)) {
+                    return;
+                }
+                try {
+                    leaf.breakNaturally(toolSnapshot);
+                } finally {
+                    processing.remove(location);
+                }
+            }, delay);
+        }
+    }
+
+    private Set<Block> collectLeafDecayTargets(Collection<Block> logs, int radius) {
+        Set<Block> leaves = new HashSet<>();
+        Set<Block> visited = new HashSet<>();
+        Deque<Block> queue = new ArrayDeque<>();
+        int radiusSquared = radius * radius;
+
+        for (Block log : logs) {
+            for (BlockFace face : BlockFace.values()) {
+                if (!face.isCartesian()) {
+                    continue;
+                }
+                Block candidate = log.getRelative(face);
+                if (isLeaf(candidate.getType()) && visited.add(candidate)
+                        && isWithinLeafDecayRadius(candidate, logs, radiusSquared)) {
+                    queue.add(candidate);
+                    leaves.add(candidate);
+                }
+            }
+        }
+
+        while (!queue.isEmpty()) {
+            Block current = queue.poll();
+            for (BlockFace face : BlockFace.values()) {
+                if (!face.isCartesian()) {
+                    continue;
+                }
+                Block neighbor = current.getRelative(face);
+                if (!isLeaf(neighbor.getType()) || !visited.add(neighbor)) {
+                    continue;
+                }
+                if (!isWithinLeafDecayRadius(neighbor, logs, radiusSquared)) {
+                    continue;
+                }
+                leaves.add(neighbor);
+                queue.add(neighbor);
+            }
+        }
+        return leaves;
+    }
+
+    private boolean isWithinLeafDecayRadius(Block candidate, Collection<Block> logs, int radiusSquared) {
+        int cx = candidate.getX();
+        int cy = candidate.getY();
+        int cz = candidate.getZ();
+        for (Block log : logs) {
+            int dx = cx - log.getX();
+            int dy = cy - log.getY();
+            int dz = cz - log.getZ();
+            if (dx * dx + dy * dy + dz * dz <= radiusSquared) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean handleCustomDrops(Player player, ItemStack tool, Block block, Set<String> normalizedEnchantIds) {
