@@ -290,6 +290,10 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 worldBossManager, this
         );
+        SpectateCommand spectateCommand = new SpectateCommand(this);
+        getServer().getPluginManager().registerEvents(
+                spectateCommand, this
+        );
 
         TokenRecipe.register();
         ReviveGuiTokenRecipe.register();
@@ -320,6 +324,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("waypoint", new WaypointCommand(this, teamManager, teamWaypointManager));
                     event.registrar().register("worldboss", new WorldBossCommand());
                     event.registrar().register("cosmetics", new CosmeticsCommand(cosmeticsGUI));
+                    event.registrar().register("spectate", spectateCommand);
                 }
         );
     }
