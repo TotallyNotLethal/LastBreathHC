@@ -23,11 +23,15 @@ import org.bukkit.persistence.PersistentDataType;
 public class CosmeticsGUI implements Listener {
 
     private static final int INVENTORY_SIZE = 54;
-    private static final String TITLE = "Boss Cosmetics";
+    private static final String BOSS_TITLE = "Cosmetics - Boss Unlocks";
+    private static final String ASTEROID_TITLE = "Cosmetics - Asteroid Unlocks";
     private static final String TYPE_PREFIX = "prefix";
     private static final String TYPE_AURA = "aura";
     private static final String TYPE_KILL = "kill";
     private static final String TYPE_CLEAR = "clear";
+    private static final String TYPE_PAGE = "page";
+    private static final String PAGE_BOSS = "boss";
+    private static final String PAGE_ASTEROID = "asteroid";
 
     private final NamespacedKey typeKey;
     private final NamespacedKey idKey;
@@ -38,25 +42,47 @@ public class CosmeticsGUI implements Listener {
     }
 
     public void open(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, INVENTORY_SIZE, TITLE);
-        inventory.setItem(4, buildInfoItem());
+        open(player, PAGE_BOSS);
+    }
+
+    private void open(Player player, String page) {
+        boolean bossPage = PAGE_BOSS.equals(page);
+        String title = bossPage ? BOSS_TITLE : ASTEROID_TITLE;
+        Inventory inventory = Bukkit.createInventory(null, INVENTORY_SIZE, title);
+        inventory.setItem(4, buildInfoItem(bossPage));
         inventory.setItem(2, buildClearItem("Clear Prefix", TYPE_CLEAR, TYPE_PREFIX));
-        inventory.setItem(4 + 2, buildClearItem("Clear Aura", TYPE_CLEAR, TYPE_AURA));
-        inventory.setItem(6 + 2, buildClearItem("Clear Kill Message", TYPE_CLEAR, TYPE_KILL));
+        inventory.setItem(6, buildClearItem("Clear Aura", TYPE_CLEAR, TYPE_AURA));
+        inventory.setItem(8, buildClearItem("Clear Kill Message", TYPE_CLEAR, TYPE_KILL));
 
-        int prefixSlot = 9;
-        for (BossPrefix prefix : BossPrefix.values()) {
-            inventory.setItem(prefixSlot++, buildPrefixItem(player, prefix));
-        }
+        inventory.setItem(0, buildPageItem(
+                bossPage ? "View Asteroid Unlocks" : "View Boss Unlocks",
+                bossPage ? PAGE_ASTEROID : PAGE_BOSS
+        ));
 
-        int auraSlot = 18;
-        for (BossAura aura : BossAura.values()) {
-            inventory.setItem(auraSlot++, buildAuraItem(player, aura));
-        }
+        if (bossPage) {
+            int prefixSlot = 9;
+            for (BossPrefix prefix : BossPrefix.values()) {
+                inventory.setItem(prefixSlot++, buildPrefixItem(player, prefix));
+            }
 
-        int killSlot = 27;
-        for (BossKillMessage message : BossKillMessage.values()) {
-            inventory.setItem(killSlot++, buildKillMessageItem(player, message));
+            int auraSlot = 18;
+            for (BossAura aura : BossAura.values()) {
+                if (aura.isBossUnlock()) {
+                    inventory.setItem(auraSlot++, buildAuraItem(player, aura));
+                }
+            }
+
+            int killSlot = 27;
+            for (BossKillMessage message : BossKillMessage.values()) {
+                inventory.setItem(killSlot++, buildKillMessageItem(player, message));
+            }
+        } else {
+            int auraSlot = 9;
+            for (BossAura aura : BossAura.values()) {
+                if (!aura.isBossUnlock()) {
+                    inventory.setItem(auraSlot++, buildAuraItem(player, aura));
+                }
+            }
         }
 
         player.openInventory(inventory);
@@ -64,7 +90,7 @@ public class CosmeticsGUI implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!TITLE.equals(event.getView().getTitle())) {
+        if (!isCosmeticsTitle(event.getView().getTitle())) {
             return;
         }
         event.setCancelled(true);
@@ -82,7 +108,11 @@ public class CosmeticsGUI implements Listener {
         }
         if (TYPE_CLEAR.equals(type)) {
             handleClear(player, id);
-            open(player);
+            open(player, currentPageId(event.getView().getTitle()));
+            return;
+        }
+        if (TYPE_PAGE.equals(type)) {
+            open(player, id);
             return;
         }
         if (TYPE_PREFIX.equals(type)) {
@@ -116,16 +146,18 @@ public class CosmeticsGUI implements Listener {
                 player.sendMessage(ChatColor.GREEN + "Equipped kill message: " + message.displayName());
             }
         }
-        open(player);
+        open(player, currentPageId(event.getView().getTitle()));
     }
 
-    private ItemStack buildInfoItem() {
+    private ItemStack buildInfoItem(boolean bossPage) {
         ItemStack item = new ItemStack(Material.BOOK);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + "Boss Cosmetics");
+        meta.setDisplayName(ChatColor.GOLD + (bossPage ? "Boss Cosmetics" : "Asteroid Cosmetics"));
         meta.setLore(List.of(
-                ChatColor.GRAY + "Equip boss-earned cosmetics here.",
-                ChatColor.DARK_GRAY + "Unlocks drop from world bosses and tier 3 asteroids."
+                ChatColor.GRAY + (bossPage
+                        ? "Equip cosmetics earned from world bosses."
+                        : "Equip cosmetics found in tier 3 asteroids."),
+                ChatColor.DARK_GRAY + "Use the button to swap pages."
         ));
         item.setItemMeta(meta);
         return item;
@@ -137,6 +169,17 @@ public class CosmeticsGUI implements Listener {
         meta.setDisplayName(ChatColor.RED + label);
         meta.getPersistentDataContainer().set(typeKey, PersistentDataType.STRING, type);
         meta.getPersistentDataContainer().set(idKey, PersistentDataType.STRING, id);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack buildPageItem(String label, String pageId) {
+        ItemStack item = new ItemStack(Material.ENDER_EYE);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.AQUA + label);
+        meta.setLore(List.of(ChatColor.GRAY + "Click to change pages."));
+        meta.getPersistentDataContainer().set(typeKey, PersistentDataType.STRING, TYPE_PAGE);
+        meta.getPersistentDataContainer().set(idKey, PersistentDataType.STRING, pageId);
         item.setItemMeta(meta);
         return item;
     }
@@ -172,7 +215,9 @@ public class CosmeticsGUI implements Listener {
         } else if (unlocked) {
             lore.add(ChatColor.YELLOW + "Click to equip.");
         } else {
-            lore.add(ChatColor.DARK_RED + "Locked - defeat its boss.");
+            lore.add(ChatColor.DARK_RED + (aura.isBossUnlock()
+                    ? "Locked - defeat its boss."
+                    : "Locked - found in tier 3 asteroids."));
         }
         meta.setLore(lore);
         meta.getPersistentDataContainer().set(typeKey, PersistentDataType.STRING, TYPE_AURA);
@@ -212,5 +257,16 @@ public class CosmeticsGUI implements Listener {
             CosmeticManager.equipKillMessage(player, null);
             player.sendMessage(ChatColor.YELLOW + "Kill message cleared.");
         }
+    }
+
+    private boolean isCosmeticsTitle(String title) {
+        return BOSS_TITLE.equals(title) || ASTEROID_TITLE.equals(title);
+    }
+
+    private String currentPageId(String title) {
+        if (ASTEROID_TITLE.equals(title)) {
+            return PAGE_ASTEROID;
+        }
+        return PAGE_BOSS;
     }
 }
