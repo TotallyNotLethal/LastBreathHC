@@ -3,6 +3,13 @@
 
 debug: false
 
+customEnchants:
+  treeFeller:
+    treeLimit: 256
+    leafBridgeLimit: 2
+    leafBridgeRadius: 2
+    maxRadius: 12
+
 discordWebhook:
   enabled: true
   url: "https://discord.com/api/webhooks/1467134026044145880/0ywcs5lSzWDJdzkZe9_nWJyXw3vIOfMA4Loz102Ox2XxgAMFC0oJZVP8naEhepqBsomJ"

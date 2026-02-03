@@ -37,7 +37,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CustomEnchantListener implements Listener {
 
     private static final int VEIN_LIMIT = 64;
-    private static final int TREE_LIMIT = 128;
+    private static final int DEFAULT_TREE_LIMIT = 256;
+    private static final int DEFAULT_TREE_LEAF_BRIDGE_LIMIT = 2;
+    private static final int DEFAULT_TREE_LEAF_BRIDGE_RADIUS = 2;
+    private static final int DEFAULT_TREE_MAX_RADIUS = 12;
     private static final double PROSPECTOR_CHANCE = 0.2;
 
     private static final Map<Material, Material> CROP_SEEDS = new EnumMap<>(Material.class);
@@ -61,9 +64,17 @@ public class CustomEnchantListener implements Listener {
     private final Set<Location> processing = ConcurrentHashMap.newKeySet();
     private final Map<Material, ItemStack> smeltCache = new ConcurrentHashMap<>();
     private final Set<Material> smeltMisses = ConcurrentHashMap.newKeySet();
+    private final int treeLimit;
+    private final int treeLeafBridgeLimit;
+    private final int treeLeafBridgeRadius;
+    private final int treeMaxRadius;
 
     public CustomEnchantListener(LastBreathHC plugin) {
         this.plugin = plugin;
+        this.treeLimit = plugin.getConfig().getInt("customEnchants.treeFeller.treeLimit", DEFAULT_TREE_LIMIT);
+        this.treeLeafBridgeLimit = plugin.getConfig().getInt("customEnchants.treeFeller.leafBridgeLimit", DEFAULT_TREE_LEAF_BRIDGE_LIMIT);
+        this.treeLeafBridgeRadius = plugin.getConfig().getInt("customEnchants.treeFeller.leafBridgeRadius", DEFAULT_TREE_LEAF_BRIDGE_RADIUS);
+        this.treeMaxRadius = plugin.getConfig().getInt("customEnchants.treeFeller.maxRadius", DEFAULT_TREE_MAX_RADIUS);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -156,6 +167,10 @@ public class CustomEnchantListener implements Listener {
 
     private boolean isLog(Material type) {
         return Tag.LOGS.isTagged(type);
+    }
+
+    private boolean isLeaf(Material type) {
+        return Tag.LEAVES.isTagged(type);
     }
 
     private boolean isShovelMineable(Material type) {
@@ -404,25 +419,96 @@ public class CustomEnchantListener implements Listener {
         Deque<Block> queue = new ArrayDeque<>();
         queue.add(origin);
         matches.add(origin);
-        while (!queue.isEmpty() && matches.size() < TREE_LIMIT) {
+        while (!queue.isEmpty() && matches.size() < treeLimit) {
             Block current = queue.poll();
             for (BlockFace face : BlockFace.values()) {
                 if (!face.isCartesian()) {
                     continue;
                 }
-                Block neighbor = current.getRelative(face);
-                if (!isLog(neighbor.getType()) || matches.contains(neighbor)) {
-                    continue;
-                }
-                matches.add(neighbor);
-                queue.add(neighbor);
-                if (matches.size() >= TREE_LIMIT) {
+                tryAddTreeNeighbor(origin, current, current.getRelative(face), matches, queue);
+                if (matches.size() >= treeLimit) {
                     break;
                 }
             }
         }
         matches.remove(origin);
         return matches;
+    }
+
+    private void tryAddTreeNeighbor(Block origin, Block current, Block neighbor, Set<Block> matches, Deque<Block> queue) {
+        if (!withinTreeRadius(origin, neighbor)) {
+            return;
+        }
+        if (isLog(neighbor.getType())) {
+            if (matches.add(neighbor)) {
+                queue.add(neighbor);
+            }
+            return;
+        }
+        if (!isLeaf(neighbor.getType()) || treeLeafBridgeLimit <= 0) {
+            return;
+        }
+        Block bridged = findLogThroughLeaves(origin, current, neighbor);
+        if (bridged != null && matches.add(bridged)) {
+            queue.add(bridged);
+        }
+    }
+
+    private Block findLogThroughLeaves(Block origin, Block current, Block startLeaf) {
+        Deque<LeafSearchNode> queue = new ArrayDeque<>();
+        Set<Block> visited = new HashSet<>();
+        queue.add(new LeafSearchNode(startLeaf, 1));
+        visited.add(startLeaf);
+        while (!queue.isEmpty()) {
+            LeafSearchNode node = queue.poll();
+            Block block = node.block();
+            if (!withinLeafBridgeRadius(current, block)) {
+                continue;
+            }
+            if (isLog(block.getType())) {
+                return block;
+            }
+            if (node.depth() >= treeLeafBridgeLimit) {
+                continue;
+            }
+            for (BlockFace face : BlockFace.values()) {
+                if (!face.isCartesian()) {
+                    continue;
+                }
+                Block next = block.getRelative(face);
+                if (!withinTreeRadius(origin, next) || visited.contains(next)) {
+                    continue;
+                }
+                if (isLog(next.getType())) {
+                    if (withinLeafBridgeRadius(current, next)) {
+                        return next;
+                    }
+                    continue;
+                }
+                if (isLeaf(next.getType())) {
+                    visited.add(next);
+                    queue.add(new LeafSearchNode(next, node.depth() + 1));
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean withinTreeRadius(Block origin, Block candidate) {
+        return manhattanDistance(origin, candidate) <= treeMaxRadius;
+    }
+
+    private boolean withinLeafBridgeRadius(Block origin, Block candidate) {
+        return manhattanDistance(origin, candidate) <= treeLeafBridgeRadius;
+    }
+
+    private int manhattanDistance(Block origin, Block candidate) {
+        return Math.abs(origin.getX() - candidate.getX())
+                + Math.abs(origin.getY() - candidate.getY())
+                + Math.abs(origin.getZ() - candidate.getZ());
+    }
+
+    private record LeafSearchNode(Block block, int depth) {
     }
 
     private Collection<Block> getExcavatorBlocks(Block origin, Player player) {
