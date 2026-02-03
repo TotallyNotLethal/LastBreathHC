@@ -61,11 +61,11 @@ asteroid:
   loot:
     tier1:
       ironIngot:
-        min: 6
-        max: 19
-      goldIngot:
         min: 4
-        max: 9
+        max: 16
+      goldIngot:
+        min: 2
+        max: 7
       emerald:
         min: 2
         max: 7
@@ -77,11 +77,11 @@ asteroid:
         max: 1
     tier2:
       ironIngot:
-        min: 10
-        max: 23
+        min: 8
+        max: 20
       goldIngot:
-        min: 6
-        max: 11
+        min: 4
+        max: 9
       emerald:
         min: 4
         max: 9
@@ -98,11 +98,11 @@ asteroid:
         enhancedGrindstoneChance: 5
     tier3:
       ironIngot:
-        min: 14
-        max: 27
+        min: 12
+        max: 24
       goldIngot:
-        min: 8
-        max: 13
+        min: 6
+        max: 11
       emerald:
         min: 6
         max: 11

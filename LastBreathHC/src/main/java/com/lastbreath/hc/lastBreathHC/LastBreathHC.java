@@ -54,7 +54,6 @@ import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import com.lastbreath.hc.lastBreathHC.token.TokenRecipe;
 import com.lastbreath.hc.lastBreathHC.token.ReviveGuiTokenRecipe;
@@ -552,25 +551,31 @@ public final class LastBreathHC extends JavaPlugin {
         return null;
     }
 
-    private Location pickAsteroidLocation(World world) {
+    private Location pickAsteroidLocation(World world, int tier) {
         WorldBorder border = world.getWorldBorder();
         double borderRadius = border.getSize() / 2.0;
-        double spawnRadius = Math.min(10_000.0, borderRadius);
+        double minRadius = 0.0;
+        double maxRadius;
+        if (tier == 3) {
+            minRadius = 20_000.0;
+            maxRadius = borderRadius;
+        } else if (tier == 2) {
+            minRadius = 10_000.0;
+            maxRadius = Math.min(20_000.0, borderRadius);
+        } else {
+            maxRadius = Math.min(10_000.0, borderRadius);
+        }
         int attempts = 30;
 
-        List<Player> players = world.getPlayers();
-        double playerBiasChance = getConfig().getDouble("asteroid.spawn.playerBiasChance", 0.5);
-        double playerBiasRadius = getConfig().getDouble("asteroid.spawn.playerBiasRadius", 250.0);
-        if (!players.isEmpty() && random.nextDouble() < playerBiasChance) {
-            Player player = players.get(random.nextInt(players.size()));
-            Location playerBiased = findAsteroidLocation(world, player.getLocation().getX(),
-                    player.getLocation().getZ(), playerBiasRadius, attempts);
-            if (playerBiased != null) {
-                return playerBiased;
-            }
+        if (maxRadius < minRadius) {
+            maxRadius = minRadius;
         }
 
-        return findAsteroidLocation(world, 0.0, 0.0, spawnRadius, attempts);
+        Location location = findAsteroidLocationInBand(world, 0.0, 0.0, minRadius, maxRadius, attempts);
+        if (location != null) {
+            return location;
+        }
+        return findAsteroidLocation(world, 0.0, 0.0, Math.max(maxRadius, 0.0), attempts);
     }
 
     private Location findAsteroidLocation(World world, double centerX, double centerZ, double radius, int attempts) {
@@ -587,6 +592,72 @@ public final class LastBreathHC extends JavaPlugin {
         for (int attempt = 0; attempt < attempts; attempt++) {
             double angle = random.nextDouble() * Math.PI * 2;
             double distance = Math.sqrt(random.nextDouble()) * radius;
+            double x = centerX + Math.cos(angle) * distance;
+            double z = centerZ + Math.sin(angle) * distance;
+            x = Math.max(minX, Math.min(maxX, x));
+            z = Math.max(minZ, Math.min(maxZ, z));
+            int blockX = (int) Math.floor(x);
+            int blockZ = (int) Math.floor(z);
+
+            int scanY = world.getHighestBlockYAt(blockX, blockZ);
+            if (scanY < minHeight || scanY > maxHeight) {
+                continue;
+            }
+
+            int groundY = -1;
+            for (int y = scanY; y >= minHeight; y--) {
+                Material groundType = world.getBlockAt(blockX, y, blockZ).getType();
+                if (!groundType.isSolid()) {
+                    continue;
+                }
+                if (isLogOrLeaf(groundType)) {
+                    continue;
+                }
+                Material aboveType = y + 1 > maxHeight
+                        ? Material.AIR
+                        : world.getBlockAt(blockX, y + 1, blockZ).getType();
+                if (isLogOrLeaf(aboveType)) {
+                    continue;
+                }
+                groundY = y;
+                break;
+            }
+
+            if (groundY < minHeight || groundY >= maxHeight) {
+                continue;
+            }
+
+            Location candidate = new Location(world, blockX, groundY, blockZ);
+            if (!border.isInside(candidate)) {
+                continue;
+            }
+
+            return candidate;
+        }
+
+        return null;
+    }
+
+    private Location findAsteroidLocationInBand(World world, double centerX, double centerZ, double minRadius,
+                                                double maxRadius, int attempts) {
+        if (maxRadius <= 0) {
+            return null;
+        }
+        double clampedMin = Math.max(0.0, Math.min(minRadius, maxRadius));
+        double minSquared = clampedMin * clampedMin;
+        double maxSquared = maxRadius * maxRadius;
+        WorldBorder border = world.getWorldBorder();
+        double borderRadius = border.getSize() / 2.0;
+        double minX = border.getCenter().getX() - borderRadius;
+        double maxX = border.getCenter().getX() + borderRadius;
+        double minZ = border.getCenter().getZ() - borderRadius;
+        double maxZ = border.getCenter().getZ() + borderRadius;
+        int minHeight = world.getMinHeight();
+        int maxHeight = world.getMaxHeight() - 1;
+
+        for (int attempt = 0; attempt < attempts; attempt++) {
+            double angle = random.nextDouble() * Math.PI * 2;
+            double distance = Math.sqrt(minSquared + random.nextDouble() * (maxSquared - minSquared));
             double x = centerX + Math.cos(angle) * distance;
             double z = centerZ + Math.sin(angle) * distance;
             x = Math.max(minX, Math.min(maxX, x));
@@ -650,10 +721,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     private int pickWeightedAsteroidTier() {
         int roll = random.nextInt(100);
-        if (roll < 75) {
+        if (roll < 50) {
             return 1;
         }
-        if (roll < 95) {
+        if (roll < 75) {
             return 2;
         }
         return 3;
@@ -666,7 +737,8 @@ public final class LastBreathHC extends JavaPlugin {
             return false;
         }
 
-        Location location = pickAsteroidLocation(world);
+        int tier = pickWeightedAsteroidTier();
+        Location location = pickAsteroidLocation(world, tier);
         if (location == null) {
             getLogger().warning("Unable to find a valid asteroid location in world " + world.getName() + ".");
             return false;
@@ -674,7 +746,6 @@ public final class LastBreathHC extends JavaPlugin {
 
         double meteorShowerChance = getConfig().getDouble("asteroid.spawn.meteorShowerChance", 0.0);
         boolean meteorShower = random.nextDouble() < meteorShowerChance;
-        int tier = pickWeightedAsteroidTier();
         AsteroidManager.spawnAsteroid(world, location, tier);
 
         if (meteorShower) {

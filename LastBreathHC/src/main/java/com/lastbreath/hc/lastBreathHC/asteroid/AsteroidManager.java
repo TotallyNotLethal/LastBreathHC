@@ -10,6 +10,8 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -408,20 +410,20 @@ public class AsteroidManager {
         if (hasScaleTag) {
             return;
         }
-        double scale = ThreadLocalRandom.current().nextDouble(1.0, 2.5);
+        double scale = ThreadLocalRandom.current().nextDouble(1.1, 2.6);
         AttributeInstance scaleAttribute = livingEntity.getAttribute(Attribute.SCALE);
         if (scaleAttribute != null) {
             scaleAttribute.setBaseValue(scale);
         }
         AttributeInstance maxHealthAttribute = livingEntity.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealthAttribute != null) {
-            double newMax = maxHealthAttribute.getBaseValue() * scale;
+            double newMax = maxHealthAttribute.getBaseValue() * scale * 1.15;
             maxHealthAttribute.setBaseValue(newMax);
             livingEntity.setHealth(newMax);
         }
         AttributeInstance attackAttribute = livingEntity.getAttribute(Attribute.ATTACK_DAMAGE);
         if (attackAttribute != null) {
-            attackAttribute.setBaseValue(attackAttribute.getBaseValue() * scale);
+            attackAttribute.setBaseValue(attackAttribute.getBaseValue() * scale * 1.12);
         }
         livingEntity.addScoreboardTag(ASTEROID_SCALE_TAG_PREFIX + scale);
     }
@@ -614,6 +616,7 @@ public class AsteroidManager {
         livingEntity.addScoreboardTag(keyTag);
         livingEntity.addScoreboardTag(tierTag);
         applyAsteroidScale(livingEntity);
+        applyAsteroidMobTuning(livingEntity);
         livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
         livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 72000, 0, true, true, true));
         applyArmorProjectileProtection(livingEntity);
@@ -653,6 +656,7 @@ public class AsteroidManager {
                         livingEntity.addScoreboardTag(keyTag);
                         livingEntity.addScoreboardTag(tierTag);
                         applyAsteroidScale(livingEntity);
+                        applyAsteroidMobTuning(livingEntity);
                         livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 72000, 0, true, true, true));
                         livingEntity.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 72000, 0, true, true, true));
                         applyArmorProjectileProtection(livingEntity);
@@ -689,6 +693,33 @@ public class AsteroidManager {
                 itemStack.setItemMeta(meta);
                 setter.accept(itemStack);
             }
+        }
+    }
+
+    private static void applyAsteroidMobTuning(LivingEntity livingEntity) {
+        if (livingEntity instanceof Mob mob) {
+            mob.setAI(true);
+            mob.setAware(true);
+        }
+        applyAttributeMultiplier(livingEntity, Attribute.GENERIC_MOVEMENT_SPEED, 1.3);
+        applyAttributeMultiplier(livingEntity, Attribute.GENERIC_FOLLOW_RANGE, 1.3);
+        applyAttributeMultiplierByName(livingEntity, "GENERIC_SWIM_SPEED", 1.3);
+        applyAttributeMultiplierByName(livingEntity, "GENERIC_WATER_MOVEMENT_EFFICIENCY", 1.3);
+    }
+
+    private static void applyAttributeMultiplier(LivingEntity livingEntity, Attribute attribute, double multiplier) {
+        AttributeInstance instance = livingEntity.getAttribute(attribute);
+        if (instance == null) {
+            return;
+        }
+        instance.setBaseValue(instance.getBaseValue() * multiplier);
+    }
+
+    private static void applyAttributeMultiplierByName(LivingEntity livingEntity, String attributeName, double multiplier) {
+        try {
+            Attribute attribute = Attribute.valueOf(attributeName);
+            applyAttributeMultiplier(livingEntity, attribute, multiplier);
+        } catch (IllegalArgumentException ignored) {
         }
     }
 
@@ -756,11 +787,34 @@ public class AsteroidManager {
                                 applyReturnRegeneration(mob);
                             }
                         }
+                        if (mob instanceof Mob aggressiveMob && aggressiveMob.getTarget() == null) {
+                            Player nearest = findNearestPlayer(center, leashRadius);
+                            if (nearest != null) {
+                                aggressiveMob.setTarget(nearest);
+                            }
+                        }
                         return false;
                     });
                 }
             }
         }.runTaskTimer(plugin, 20L, 40L);
+    }
+
+    private static Player findNearestPlayer(Location center, double radius) {
+        World world = center.getWorld();
+        if (world == null) {
+            return null;
+        }
+        double bestDistance = Double.MAX_VALUE;
+        Player best = null;
+        for (Player player : world.getNearbyPlayers(center, radius)) {
+            double distance = player.getLocation().distanceSquared(center);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = player;
+            }
+        }
+        return best;
     }
 
     public static int getMobLeashRadius() {
