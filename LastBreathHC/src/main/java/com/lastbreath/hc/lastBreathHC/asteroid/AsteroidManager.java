@@ -40,6 +40,7 @@ import java.util.function.Consumer;
 public class AsteroidManager {
     private static final double ASTEROID_MAX_HEALTH = 1024.0;
     private static final int ASTEROID_MAX_DISTANCE = 50000;
+    private static final int ASTEROID_EDGE_VARIANCE = 64;
 
     public static final Map<Location, AsteroidEntry> ASTEROIDS = new HashMap<>();
     public static final String ASTEROID_MOB_TAG = "asteroid_mob";
@@ -265,12 +266,34 @@ public class AsteroidManager {
         if (location == null) {
             return null;
         }
-        double x = Math.max(-ASTEROID_MAX_DISTANCE, Math.min(ASTEROID_MAX_DISTANCE, location.getX()));
-        double z = Math.max(-ASTEROID_MAX_DISTANCE, Math.min(ASTEROID_MAX_DISTANCE, location.getZ()));
+        double x = clampCoordinateWithVariance(location.getX());
+        double z = clampCoordinateWithVariance(location.getZ());
         if (x == location.getX() && z == location.getZ()) {
             return location;
         }
         return new Location(location.getWorld(), x, location.getY(), z);
+    }
+
+    public static int getMaxAsteroidDistance() {
+        return ASTEROID_MAX_DISTANCE;
+    }
+
+    private static double clampCoordinateWithVariance(double value) {
+        if (value > ASTEROID_MAX_DISTANCE) {
+            return ASTEROID_MAX_DISTANCE - randomEdgeVariance();
+        }
+        if (value < -ASTEROID_MAX_DISTANCE) {
+            return -ASTEROID_MAX_DISTANCE + randomEdgeVariance();
+        }
+        return value;
+    }
+
+    private static double randomEdgeVariance() {
+        int maxVariance = Math.min(ASTEROID_EDGE_VARIANCE, ASTEROID_MAX_DISTANCE);
+        if (maxVariance <= 0) {
+            return 0.0;
+        }
+        return ThreadLocalRandom.current().nextInt(maxVariance + 1);
     }
 
     private static void enqueueAsteroidSpawn(AsteroidSpawnSequence sequence) {
