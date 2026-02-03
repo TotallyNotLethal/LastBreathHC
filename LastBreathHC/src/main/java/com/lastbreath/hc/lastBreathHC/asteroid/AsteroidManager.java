@@ -38,6 +38,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
 public class AsteroidManager {
+    private static final double ASTEROID_MAX_HEALTH = 1024.0;
+    private static final int ASTEROID_MAX_DISTANCE = 50000;
 
     public static final Map<Location, AsteroidEntry> ASTEROIDS = new HashMap<>();
     public static final String ASTEROID_MOB_TAG = "asteroid_mob";
@@ -248,15 +250,27 @@ public class AsteroidManager {
     }
 
     public static void spawnAsteroid(World world, Location loc) {
-        Location center = loc.getBlock().getLocation();
+        Location center = clampAsteroidLocation(loc.getBlock().getLocation());
         int tier = determineTierByDistance(world, center);
         spawnAsteroid(world, center, tier);
     }
 
     public static void spawnAsteroid(World world, Location loc, int tier) {
-        Location center = loc.getBlock().getLocation();
+        Location center = clampAsteroidLocation(loc.getBlock().getLocation());
         int resolvedTier = Math.max(1, Math.min(3, tier));
         enqueueAsteroidSpawn(new AsteroidSpawnSequence(world, center, resolvedTier));
+    }
+
+    private static Location clampAsteroidLocation(Location location) {
+        if (location == null) {
+            return null;
+        }
+        double x = Math.max(-ASTEROID_MAX_DISTANCE, Math.min(ASTEROID_MAX_DISTANCE, location.getX()));
+        double z = Math.max(-ASTEROID_MAX_DISTANCE, Math.min(ASTEROID_MAX_DISTANCE, location.getZ()));
+        if (x == location.getX() && z == location.getZ()) {
+            return location;
+        }
+        return new Location(location.getWorld(), x, location.getY(), z);
     }
 
     private static void enqueueAsteroidSpawn(AsteroidSpawnSequence sequence) {
@@ -418,8 +432,9 @@ public class AsteroidManager {
         AttributeInstance maxHealthAttribute = livingEntity.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealthAttribute != null) {
             double newMax = maxHealthAttribute.getBaseValue() * scale * 1.15;
-            maxHealthAttribute.setBaseValue(newMax);
-            livingEntity.setHealth(newMax);
+            double cappedMax = Math.min(newMax, ASTEROID_MAX_HEALTH);
+            maxHealthAttribute.setBaseValue(cappedMax);
+            livingEntity.setHealth(cappedMax);
         }
         AttributeInstance attackAttribute = livingEntity.getAttribute(Attribute.ATTACK_DAMAGE);
         if (attackAttribute != null) {
