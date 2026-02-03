@@ -115,9 +115,6 @@ public class SpectateCommand implements BasicCommand, Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player joiningPlayer = event.getPlayer();
-        if (isAdmin(joiningPlayer)) {
-            return;
-        }
         sessions.entrySet().stream()
                 .filter(entry -> entry.getValue().isAdminSpectate())
                 .forEach(entry -> {
@@ -232,17 +229,25 @@ public class SpectateCommand implements BasicCommand, Listener {
             return;
         }
 
-        viewer.setSpectatorTarget(target);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!viewer.isOnline() || viewer.getGameMode() != GameMode.SPECTATOR) {
+                return;
+            }
+            viewer.setSpectatorTarget(target);
+        });
         viewer.sendMessage(ChatColor.AQUA + "Now spectating " + target.getName() + " (" + mode + ").");
 
         if (adminSpectate) {
-            hideAdminSpectatorFromNonAdmins(viewer);
+            hideAdminSpectatorFromAll(viewer);
+            if (adminHotbarListener != null) {
+                adminHotbarListener.openToolsMenu(viewer);
+            }
         }
     }
 
-    private void hideAdminSpectatorFromNonAdmins(Player adminPlayer) {
+    private void hideAdminSpectatorFromAll(Player adminPlayer) {
         for (Player other : Bukkit.getOnlinePlayers()) {
-            if (other.getUniqueId().equals(adminPlayer.getUniqueId()) || isAdmin(other)) {
+            if (other.getUniqueId().equals(adminPlayer.getUniqueId())) {
                 continue;
             }
             other.hidePlayer(plugin, adminPlayer);
