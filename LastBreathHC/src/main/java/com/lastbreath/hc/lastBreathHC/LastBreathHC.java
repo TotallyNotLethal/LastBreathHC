@@ -28,6 +28,7 @@ import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerSpawnListener;
+import com.lastbreath.hc.lastBreathHC.spectate.AdminSpectateHotbarListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsListener;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.BossTitleLandingListener;
@@ -291,8 +292,13 @@ public final class LastBreathHC extends JavaPlugin {
                 worldBossManager, this
         );
         SpectateCommand spectateCommand = new SpectateCommand(this);
+        AdminSpectateHotbarListener adminSpectateHotbarListener = new AdminSpectateHotbarListener(this, spectateCommand);
+        spectateCommand.setAdminHotbarListener(adminSpectateHotbarListener);
         getServer().getPluginManager().registerEvents(
                 spectateCommand, this
+        );
+        getServer().getPluginManager().registerEvents(
+                adminSpectateHotbarListener, this
         );
 
         TokenRecipe.register();

@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.commands;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.spectate.AdminSpectateHotbarListener;
 import com.lastbreath.hc.lastBreathHC.spectate.SpectateSession;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -32,9 +33,18 @@ public class SpectateCommand implements BasicCommand, Listener {
     private static final String STOP_COMMAND = "stop";
     private final Map<UUID, SpectateSession> sessions = new ConcurrentHashMap<>();
     private final LastBreathHC plugin;
+    private AdminSpectateHotbarListener adminHotbarListener;
 
     public SpectateCommand(LastBreathHC plugin) {
         this.plugin = plugin;
+    }
+
+    public void setAdminHotbarListener(AdminSpectateHotbarListener adminHotbarListener) {
+        this.adminHotbarListener = adminHotbarListener;
+    }
+
+    public SpectateSession getSession(UUID viewerId) {
+        return sessions.get(viewerId);
     }
 
     @Override
@@ -121,12 +131,17 @@ public class SpectateCommand implements BasicCommand, Listener {
         viewer.getInventory().clear();
         viewer.getInventory().setArmorContents(new ItemStack[viewer.getInventory().getArmorContents().length]);
         viewer.getInventory().setItemInOffHand(null);
-        viewer.getInventory().setItem(0, new ItemStack(Material.COMPASS));
-        viewer.getInventory().setItem(8, new ItemStack(Material.BARRIER));
+        if (adminSpectate && adminHotbarListener != null) {
+            adminHotbarListener.applyHotbar(viewer);
+        } else {
+            viewer.getInventory().setItem(0, new ItemStack(Material.COMPASS));
+            viewer.getInventory().setItem(8, new ItemStack(Material.BARRIER));
+        }
         viewer.updateInventory();
 
         viewer.setGameMode(GameMode.SPECTATOR);
         viewer.teleport(target.getLocation());
+        viewer.setSpectatorTarget(target);
         viewer.sendMessage(ChatColor.AQUA + "Now spectating " + target.getName() + " (" + mode + ").");
 
         if (adminSpectate) {
@@ -176,6 +191,7 @@ public class SpectateCommand implements BasicCommand, Listener {
 
     private void restoreSession(Player player, SpectateSession session) {
         Location returnLocation = session.getReturnLocation();
+        player.setSpectatorTarget(null);
         player.teleport(returnLocation);
         player.setGameMode(session.getReturnMode());
 
