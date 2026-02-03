@@ -12,6 +12,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -96,8 +97,25 @@ public class SpectateCommand implements BasicCommand, Listener {
         }
     }
 
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player joiningPlayer = event.getPlayer();
+        if (isAdmin(joiningPlayer)) {
+            return;
+        }
+        sessions.entrySet().stream()
+                .filter(entry -> entry.getValue().isAdminSpectate())
+                .forEach(entry -> {
+                    Player viewer = Bukkit.getPlayer(entry.getKey());
+                    if (viewer != null && viewer.isOnline()) {
+                        joiningPlayer.hidePlayer(plugin, viewer);
+                    }
+                });
+    }
+
     private void startSpectate(Player viewer, Player target, String mode) {
-        SpectateSession session = captureSession(viewer);
+        boolean adminSpectate = shouldHideAdminSpectator(viewer, mode);
+        SpectateSession session = captureSession(viewer, adminSpectate);
         sessions.put(viewer.getUniqueId(), session);
 
         viewer.getInventory().clear();
@@ -110,9 +128,13 @@ public class SpectateCommand implements BasicCommand, Listener {
         viewer.setGameMode(GameMode.SPECTATOR);
         viewer.teleport(target.getLocation());
         viewer.sendMessage(ChatColor.AQUA + "Now spectating " + target.getName() + " (" + mode + ").");
+
+        if (adminSpectate) {
+            hideAdminSpectatorFromNonAdmins(viewer);
+        }
     }
 
-    private SpectateSession captureSession(Player player) {
+    private SpectateSession captureSession(Player player, boolean adminSpectate) {
         ItemStack[] inventoryContents = Arrays.copyOf(player.getInventory().getContents(), player.getInventory().getContents().length);
         ItemStack[] armorContents = Arrays.copyOf(player.getInventory().getArmorContents(), player.getInventory().getArmorContents().length);
         ItemStack offhand = player.getInventory().getItemInOffHand() == null ? null : player.getInventory().getItemInOffHand().clone();
@@ -129,7 +151,8 @@ public class SpectateCommand implements BasicCommand, Listener {
                 player.getHealth(),
                 player.getFoodLevel(),
                 player.getSaturation(),
-                potionEffects
+                potionEffects,
+                adminSpectate
         );
     }
 
@@ -142,6 +165,9 @@ public class SpectateCommand implements BasicCommand, Listener {
             return;
         }
 
+        if (session.isAdminSpectate()) {
+            showAdminSpectatorToAll(player);
+        }
         restoreSession(player, session);
         if (notify) {
             player.sendMessage(ChatColor.GREEN + "Stopped spectating.");
@@ -168,5 +194,31 @@ public class SpectateCommand implements BasicCommand, Listener {
             player.addPotionEffect(effect);
         }
         player.updateInventory();
+    }
+
+    private boolean shouldHideAdminSpectator(Player viewer, String mode) {
+        return isAdmin(viewer) && "view".equalsIgnoreCase(mode);
+    }
+
+    private boolean isAdmin(Player player) {
+        return player.isOp();
+    }
+
+    private void hideAdminSpectatorFromNonAdmins(Player adminPlayer) {
+        for (Player other : Bukkit.getOnlinePlayers()) {
+            if (other.getUniqueId().equals(adminPlayer.getUniqueId()) || isAdmin(other)) {
+                continue;
+            }
+            other.hidePlayer(plugin, adminPlayer);
+        }
+    }
+
+    private void showAdminSpectatorToAll(Player adminPlayer) {
+        for (Player other : Bukkit.getOnlinePlayers()) {
+            if (other.getUniqueId().equals(adminPlayer.getUniqueId())) {
+                continue;
+            }
+            other.showPlayer(plugin, adminPlayer);
+        }
     }
 }
