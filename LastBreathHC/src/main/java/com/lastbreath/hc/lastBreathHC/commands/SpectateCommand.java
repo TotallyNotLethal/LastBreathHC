@@ -226,13 +226,17 @@ public class SpectateCommand implements BasicCommand, Listener {
             return;
         }
 
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!viewer.isOnline() || viewer.getGameMode() != GameMode.SPECTATOR) {
                 return;
             }
+            if (!target.isOnline() || target.getWorld() == null) {
+                viewer.sendMessage(ChatColor.RED + "Spectate failed because the target is no longer available.");
+                return;
+            }
             viewer.setSpectatorTarget(target);
-        });
-        viewer.sendMessage(ChatColor.AQUA + "Now spectating " + target.getName() + " (" + mode + ").");
+            viewer.sendMessage(ChatColor.AQUA + "Now spectating " + target.getName() + " (" + mode + ").");
+        }, 2L);
 
         if (adminSpectate) {
             hideAdminSpectatorFromAll(viewer);
