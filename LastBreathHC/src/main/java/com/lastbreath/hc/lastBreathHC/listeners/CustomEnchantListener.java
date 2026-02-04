@@ -11,6 +11,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -19,6 +20,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayDeque;
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -61,6 +64,7 @@ public class CustomEnchantListener implements Listener {
     private final Set<Location> processing = ConcurrentHashMap.newKeySet();
     private final Map<Material, ItemStack> smeltCache = new ConcurrentHashMap<>();
     private final Set<Material> smeltMisses = ConcurrentHashMap.newKeySet();
+    private final Random random = new Random();
 
     public CustomEnchantListener(LastBreathHC plugin) {
         this.plugin = plugin;
@@ -318,6 +322,9 @@ public class CustomEnchantListener implements Listener {
             try {
                 if (handleCustomDrops(player, tool, target, normalizedEnchantIds)) {
                     breakBlockWithPhysics(target);
+                    if (applyDurabilityDamage(player, tool)) {
+                        return;
+                    }
                 } else {
                     target.breakNaturally(tool);
                 }
@@ -325,6 +332,25 @@ public class CustomEnchantListener implements Listener {
                 processing.remove(location);
             }
         }
+    }
+
+    private boolean applyDurabilityDamage(Player player, ItemStack tool) {
+        ItemMeta meta = tool.getItemMeta();
+        if (!(meta instanceof Damageable damageable)) {
+            return false;
+        }
+        int unbreakingLevel = tool.getEnchantmentLevel(Enchantment.DURABILITY);
+        if (unbreakingLevel > 0 && random.nextInt(unbreakingLevel + 1) != 0) {
+            return false;
+        }
+        int newDamage = damageable.getDamage() + 1;
+        damageable.setDamage(newDamage);
+        tool.setItemMeta(meta);
+        if (newDamage >= tool.getType().getMaxDurability()) {
+            player.getInventory().setItemInMainHand(new ItemStack(Material.AIR));
+            return true;
+        }
+        return false;
     }
 
     private boolean handleCustomDrops(Player player, ItemStack tool, Block block, Set<String> normalizedEnchantIds) {
