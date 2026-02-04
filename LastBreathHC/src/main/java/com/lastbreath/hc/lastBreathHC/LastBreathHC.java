@@ -72,6 +72,7 @@ import com.lastbreath.hc.lastBreathHC.items.CustomItemCraftListener;
 import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantAnvilListener;
 import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantDamageListener;
 import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantListener;
+import com.lastbreath.hc.lastBreathHC.listeners.ServerListMotdListener;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneLifeListener;
@@ -286,6 +287,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new ChatPrefixListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new ServerListMotdListener(), this
         );
         worldBossManager = new WorldBossManager(this, bloodMoonManager);
         getServer().getPluginManager().registerEvents(
