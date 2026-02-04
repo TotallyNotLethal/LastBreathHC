@@ -137,7 +137,7 @@ public class CustomEnchantListener implements Listener {
             return;
         }
         Block clicked = Objects.requireNonNull(event.getClickedBlock());
-        tillArea(clicked);
+        tillArea(clicked, player, tool);
     }
 
     private Set<String> normalizeIds(List<String> ids) {
@@ -579,7 +579,7 @@ public class CustomEnchantListener implements Listener {
         return resolveDirectionalFace(player);
     }
 
-    private void tillArea(Block origin) {
+    private void tillArea(Block origin, Player player, ItemStack tool) {
         for (int x = -1; x <= 1; x++) {
             for (int z = -1; z <= 1; z++) {
                 Block target = origin.getRelative(x, 0, z);
@@ -588,6 +588,9 @@ public class CustomEnchantListener implements Listener {
                     continue;
                 }
                 target.setType(Material.FARMLAND, false);
+                if (applyDurabilityDamage(player, tool)) {
+                    return;
+                }
             }
         }
     }
