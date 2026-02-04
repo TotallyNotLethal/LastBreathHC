@@ -127,6 +127,7 @@ public class SpectateCommand implements BasicCommand, Listener {
     private void startSpectate(Player viewer, Player target, String mode) {
         boolean adminSpectate = shouldHideAdminSpectator(viewer, mode);
         SpectateSession session = captureSession(viewer, adminSpectate);
+        session.setSelectedTargetId(target.getUniqueId());
         sessions.put(viewer.getUniqueId(), session);
 
         viewer.getInventory().clear();

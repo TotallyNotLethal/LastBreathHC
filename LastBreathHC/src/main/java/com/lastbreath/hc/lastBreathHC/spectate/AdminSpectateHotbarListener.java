@@ -30,6 +30,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 public class AdminSpectateHotbarListener implements Listener {
 
@@ -109,7 +110,7 @@ public class AdminSpectateHotbarListener implements Listener {
         }
 
         event.setCancelled(true);
-        handleTool(player, tool);
+        handleTool(player, session, tool);
     }
 
     @EventHandler
@@ -138,41 +139,42 @@ public class AdminSpectateHotbarListener implements Listener {
         if (tool == null) {
             return;
         }
-        handleTool(player, tool);
+        handleTool(player, session, tool);
     }
 
-    private void handleTool(Player player, Tool tool) {
+    private void handleTool(Player player, SpectateSession session, Tool tool) {
         switch (tool) {
-            case PREVIOUS_TARGET -> cycleTarget(player, -1);
-            case NEXT_TARGET -> cycleTarget(player, 1);
-            case TOGGLE_POV -> toggleSpectatorTarget(player);
-            case TELEPORT_TARGET -> teleportToTarget(player);
-            case OPEN_ENDERCHEST -> openEnderChest(player);
-            case VIEW_INVENTORY -> viewInventory(player);
-            case SHOW_STATS -> showStats(player);
-            case SHOW_LOCATION -> showLocation(player);
+            case PREVIOUS_TARGET -> cycleTarget(player, session, -1);
+            case NEXT_TARGET -> cycleTarget(player, session, 1);
+            case TOGGLE_POV -> toggleSpectatorTarget(player, session);
+            case TELEPORT_TARGET -> teleportToTarget(player, session);
+            case OPEN_ENDERCHEST -> openEnderChest(player, session);
+            case VIEW_INVENTORY -> viewInventory(player, session);
+            case SHOW_STATS -> showStats(player, session);
+            case SHOW_LOCATION -> showLocation(player, session);
             case EXIT_SPECTATE -> player.performCommand("spectate leave");
         }
     }
 
-    private void cycleTarget(Player viewer, int step) {
+    private void cycleTarget(Player viewer, SpectateSession session, int step) {
         List<Player> targets = getOnlineTargets(viewer);
         if (targets.isEmpty()) {
             viewer.sendMessage(ChatColor.RED + "No available players to spectate.");
             return;
         }
 
-        Player current = getTargetPlayer(viewer);
+        Player current = getStoredTargetPlayer(viewer, session, targets);
         int index = current == null ? 0 : targets.indexOf(current);
         if (index < 0) {
             index = 0;
         }
         int nextIndex = Math.floorMod(index + step, targets.size());
         Player nextTarget = targets.get(nextIndex);
+        session.setSelectedTargetId(nextTarget.getUniqueId());
         setSpectatorTarget(viewer, nextTarget, "Now spectating " + nextTarget.getName() + ".");
     }
 
-    private void toggleSpectatorTarget(Player viewer) {
+    private void toggleSpectatorTarget(Player viewer, SpectateSession session) {
         Entity current = viewer.getSpectatorTarget();
         if (current != null) {
             viewer.setSpectatorTarget(null);
@@ -180,17 +182,17 @@ public class AdminSpectateHotbarListener implements Listener {
             return;
         }
 
-        List<Player> targets = getOnlineTargets(viewer);
-        if (targets.isEmpty()) {
+        Player target = resolveStoredTarget(viewer, session);
+        if (target == null) {
             viewer.sendMessage(ChatColor.RED + "No available players to spectate.");
             return;
         }
-        Player target = targets.get(0);
+        session.setSelectedTargetId(target.getUniqueId());
         setSpectatorTarget(viewer, target, "Spectator POV set to " + target.getName() + ".");
     }
 
-    private void teleportToTarget(Player viewer) {
-        Player target = getTargetPlayer(viewer);
+    private void teleportToTarget(Player viewer, SpectateSession session) {
+        Player target = getTargetPlayer(viewer, session);
         if (target == null) {
             viewer.sendMessage(ChatColor.RED + "No spectate target selected.");
             return;
@@ -199,8 +201,8 @@ public class AdminSpectateHotbarListener implements Listener {
         viewer.sendMessage(ChatColor.AQUA + "Teleported to " + target.getName() + ".");
     }
 
-    private void openEnderChest(Player viewer) {
-        Player target = getTargetPlayer(viewer);
+    private void openEnderChest(Player viewer, SpectateSession session) {
+        Player target = getTargetPlayer(viewer, session);
         if (target == null) {
             viewer.sendMessage(ChatColor.RED + "No spectate target selected.");
             return;
@@ -209,8 +211,8 @@ public class AdminSpectateHotbarListener implements Listener {
         viewer.sendMessage(ChatColor.AQUA + "Viewing " + target.getName() + "'s ender chest.");
     }
 
-    private void viewInventory(Player viewer) {
-        Player target = getTargetPlayer(viewer);
+    private void viewInventory(Player viewer, SpectateSession session) {
+        Player target = getTargetPlayer(viewer, session);
         if (target == null) {
             viewer.sendMessage(ChatColor.RED + "No spectate target selected.");
             return;
@@ -219,8 +221,8 @@ public class AdminSpectateHotbarListener implements Listener {
         viewer.sendMessage(ChatColor.AQUA + "Viewing " + target.getName() + "'s inventory.");
     }
 
-    private void showStats(Player viewer) {
-        Player target = getTargetPlayer(viewer);
+    private void showStats(Player viewer, SpectateSession session) {
+        Player target = getTargetPlayer(viewer, session);
         if (target == null) {
             viewer.sendMessage(ChatColor.RED + "No spectate target selected.");
             return;
@@ -233,8 +235,8 @@ public class AdminSpectateHotbarListener implements Listener {
         viewer.sendMessage(ChatColor.YELLOW + "Time alive: " + formatDuration(stats.timeAlive));
     }
 
-    private void showLocation(Player viewer) {
-        Player target = getTargetPlayer(viewer);
+    private void showLocation(Player viewer, SpectateSession session) {
+        Player target = getTargetPlayer(viewer, session);
         if (target == null) {
             viewer.sendMessage(ChatColor.RED + "No spectate target selected.");
             return;
@@ -247,9 +249,48 @@ public class AdminSpectateHotbarListener implements Listener {
                 + ", " + location.getBlockZ() + ")");
     }
 
-    private Player getTargetPlayer(Player viewer) {
+    private Player getTargetPlayer(Player viewer, SpectateSession session) {
+        Player storedTarget = resolveStoredTarget(viewer, session);
+        if (storedTarget != null) {
+            return storedTarget;
+        }
         Entity target = viewer.getSpectatorTarget();
         if (target instanceof Player player) {
+            session.setSelectedTargetId(player.getUniqueId());
+            return player;
+        }
+        return null;
+    }
+
+    private Player resolveStoredTarget(Player viewer, SpectateSession session) {
+        UUID storedTargetId = session.getSelectedTargetId();
+        if (storedTargetId != null) {
+            Player storedTarget = Bukkit.getPlayer(storedTargetId);
+            if (storedTarget != null && storedTarget.isOnline()) {
+                return storedTarget;
+            }
+        }
+
+        List<Player> targets = getOnlineTargets(viewer);
+        if (targets.isEmpty()) {
+            return null;
+        }
+        Player fallback = targets.get(0);
+        session.setSelectedTargetId(fallback.getUniqueId());
+        return fallback;
+    }
+
+    private Player getStoredTargetPlayer(Player viewer, SpectateSession session, List<Player> targets) {
+        UUID storedTargetId = session.getSelectedTargetId();
+        if (storedTargetId != null) {
+            for (Player target : targets) {
+                if (target.getUniqueId().equals(storedTargetId)) {
+                    return target;
+                }
+            }
+        }
+        Entity current = viewer.getSpectatorTarget();
+        if (current instanceof Player player) {
             return player;
         }
         return null;
