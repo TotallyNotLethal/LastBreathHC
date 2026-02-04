@@ -740,9 +740,8 @@ public class AsteroidManager {
             mob.setAware(true);
         }
         applyAttributeMultiplier(livingEntity, Attribute.GENERIC_MOVEMENT_SPEED, 1.3);
-        applyAttributeMultiplier(livingEntity, Attribute.GENERIC_FOLLOW_RANGE, 1.3);
-        applyAttributeMultiplierByName(livingEntity, "GENERIC_SWIM_SPEED", 1.3);
-        applyAttributeMultiplierByName(livingEntity, "GENERIC_WATER_MOVEMENT_EFFICIENCY", 1.3);
+        applyAttributeMultiplier(livingEntity, Attribute.GENERIC_FOLLOW_RANGE, 1.5);
+        applyAttributeMultiplierByName(livingEntity, "WATER_MOVEMENT_EFFICIENCY", 1.3);
     }
 
     private static void applyAttributeMultiplier(LivingEntity livingEntity, Attribute attribute, double multiplier) {
