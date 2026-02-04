@@ -63,12 +63,14 @@ public final class TabMenuDataSource {
         int pingMillis = calculateAveragePing(Bukkit.getOnlinePlayers());
         String dateTimeLine = buildDateTimeLine();
         String playerCountLine = "Online players: " + onlineCount + " | Ping: " + pingMillis + "ms";
+        String totalPlaytimeLine = formatDuration(summary.totalPlaytimeTicks());
         return new TabMenuModelBuilder.TabMenuContext(
                 serverName,
                 onlineCount,
                 pingMillis,
                 summary.uniqueJoins(),
                 Bukkit.getBannedPlayers().size(),
+                totalPlaytimeLine,
                 dateTimeLine,
                 null,
                 playerCountLine
@@ -112,5 +114,13 @@ public final class TabMenuDataSource {
         } catch (Exception e) {
             return ZoneId.of(DateTimeSettings.defaultSettings().zoneId());
         }
+    }
+
+    private String formatDuration(long timeAliveTicks) {
+        long seconds = timeAliveTicks / 20L;
+        long hours = seconds / 3600;
+        long minutes = (seconds % 3600) / 60;
+        long secs = seconds % 60;
+        return String.format("%dh %dm %ds", hours, minutes, secs);
     }
 }

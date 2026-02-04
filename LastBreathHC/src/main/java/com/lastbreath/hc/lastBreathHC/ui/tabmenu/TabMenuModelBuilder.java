@@ -34,6 +34,7 @@ public final class TabMenuModelBuilder {
         tokens.put("uniqueJoinsFormatted", formatNumber(context.uniqueJoins()));
         tokens.put("totalDeaths", Integer.toString(context.totalDeaths()));
         tokens.put("totalDeathsFormatted", formatNumber(context.totalDeaths()));
+        tokens.put("totalPlaytime", emptyIfNull(context.totalPlaytime()));
         tokens.put("dateTimeLine", emptyIfNull(context.dateTimeLine()));
         tokens.put("playerListLine", emptyIfNull(context.playerListLine()));
         tokens.put("playerCountLine", emptyIfNull(context.playerCountLine()));
@@ -129,6 +130,7 @@ public final class TabMenuModelBuilder {
                                  int pingMillis,
                                  int uniqueJoins,
                                  int totalDeaths,
+                                 String totalPlaytime,
                                  String dateTimeLine,
                                  String playerListLine,
                                  String playerCountLine) {

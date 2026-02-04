@@ -6,6 +6,8 @@ header:
       color: "gray"
     - text: "Unique Joins: {uniqueJoinsFormatted} | Total Deaths: {totalDeathsFormatted}"
       color: "gray"
+    - text: "Total Playtime: {totalPlaytime}"
+      color: "gray"
 
 footer:
   lines:

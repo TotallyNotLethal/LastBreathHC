@@ -62,6 +62,7 @@ public class StatsManager {
 
     public static StatsSummary summarize() {
         Map<UUID, Integer> deathsByPlayer = new HashMap<>();
+        Map<UUID, Long> timeAliveByPlayer = new HashMap<>();
         File file = getFile();
         if (file.exists()) {
             YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
@@ -72,6 +73,7 @@ public class StatsManager {
                     try {
                         UUID uuid = UUID.fromString(key);
                         deathsByPlayer.put(uuid, config.getInt(base + "." + key + ".deaths", 0));
+                        timeAliveByPlayer.put(uuid, config.getLong(base + "." + key + ".timeAlive", 0L));
                     } catch (IllegalArgumentException ignored) {
                         LastBreathHC.getInstance().getLogger().warning("Invalid UUID in stats file: " + key);
                     }
@@ -81,10 +83,12 @@ public class StatsManager {
 
         for (Map.Entry<UUID, PlayerStats> entry : stats.entrySet()) {
             deathsByPlayer.put(entry.getKey(), entry.getValue().deaths);
+            timeAliveByPlayer.put(entry.getKey(), entry.getValue().timeAlive);
         }
 
         int totalDeaths = deathsByPlayer.values().stream().mapToInt(Integer::intValue).sum();
-        return new StatsSummary(deathsByPlayer.size(), totalDeaths);
+        long totalPlaytimeTicks = timeAliveByPlayer.values().stream().mapToLong(Long::longValue).sum();
+        return new StatsSummary(deathsByPlayer.size(), totalDeaths, totalPlaytimeTicks);
     }
 
     private static PlayerStats loadFromDisk(UUID uuid) {
@@ -226,6 +230,6 @@ public class StatsManager {
         }
     }
 
-    public record StatsSummary(int uniqueJoins, int totalDeaths) {
+    public record StatsSummary(int uniqueJoins, int totalDeaths, long totalPlaytimeTicks) {
     }
 }
