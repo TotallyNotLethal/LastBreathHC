@@ -9,7 +9,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -135,9 +134,6 @@ public class SpectateCommand implements BasicCommand, Listener {
         viewer.getInventory().setItemInOffHand(null);
         if (adminSpectate && adminHotbarListener != null) {
             adminHotbarListener.applyHotbar(viewer);
-        } else {
-            viewer.getInventory().setItem(0, new ItemStack(Material.COMPASS));
-            viewer.getInventory().setItem(8, new ItemStack(Material.BARRIER));
         }
         viewer.updateInventory();
 
