@@ -297,14 +297,18 @@ public class AdminSpectateHotbarListener implements Listener {
     }
 
     private void setSpectatorTarget(Player viewer, Player target, String message) {
-        viewer.teleport(target.getLocation());
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!viewer.isOnline() || viewer.getGameMode() != GameMode.SPECTATOR) {
                 return;
             }
+            if (!target.isOnline() || target.getWorld() == null) {
+                viewer.sendMessage(ChatColor.RED + "Unable to spectate " + target.getName() + " because they are no longer available.");
+                return;
+            }
+            viewer.teleport(target.getLocation());
             viewer.setSpectatorTarget(target);
             viewer.sendMessage(ChatColor.AQUA + message);
-        });
+        }, 2L);
     }
 
     private List<Player> getOnlineTargets(Player viewer) {
