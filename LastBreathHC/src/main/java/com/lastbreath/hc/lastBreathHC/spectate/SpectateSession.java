@@ -6,6 +6,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 
 import java.util.List;
+import java.util.UUID;
 
 public class SpectateSession {
 
@@ -21,6 +22,7 @@ public class SpectateSession {
     private final float saturation;
     private final List<PotionEffect> potionEffects;
     private final boolean adminSpectate;
+    private UUID selectedTargetId;
 
     public SpectateSession(
             Location returnLocation,
@@ -96,5 +98,13 @@ public class SpectateSession {
 
     public boolean isAdminSpectate() {
         return adminSpectate;
+    }
+
+    public UUID getSelectedTargetId() {
+        return selectedTargetId;
+    }
+
+    public void setSelectedTargetId(UUID selectedTargetId) {
+        this.selectedTargetId = selectedTargetId;
     }
 }
