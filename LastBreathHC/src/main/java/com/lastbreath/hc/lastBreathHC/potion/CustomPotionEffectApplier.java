@@ -134,6 +134,9 @@ public class CustomPotionEffectApplier implements Listener {
         if (hasEffect(player, "burning_blood")) {
             applyBurningBlood(player);
         }
+        if (hasEffect(player, "dousing_skin")) {
+            applyDousingSkin(player, event);
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -387,6 +390,12 @@ public class CustomPotionEffectApplier implements Listener {
         }
         if (hasEffect(player, "void_sight")) {
             applyVoidSight(player);
+        }
+        if (hasEffect(player, "thermal_vision")) {
+            applyThermalVision(player);
+        }
+        if (hasEffect(player, "steam_blur")) {
+            applySteamBlur(player);
         }
         if (hasEffect(player, "mind_fog")) {
             applyMindFog(player);
@@ -915,6 +924,19 @@ public class CustomPotionEffectApplier implements Listener {
         event.setDamage(event.getDamage() * 1.25);
     }
 
+    private void applyDousingSkin(Player player, EntityDamageEvent event) {
+        if (!(event.getCause() == EntityDamageEvent.DamageCause.FIRE
+                || event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK
+                || event.getCause() == EntityDamageEvent.DamageCause.LAVA
+                || event.getCause() == EntityDamageEvent.DamageCause.HOT_FLOOR)) {
+            return;
+        }
+        if (!triggerWithCooldown(player, "dousing_skin", 2 * TICKS_PER_SECOND, 1.0)) {
+            return;
+        }
+        event.setDamage(event.getDamage() * 0.8);
+    }
+
     private void applyManaLeak(Player player, EntityRegainHealthEvent event) {
         if (event.getRegainReason() != EntityRegainHealthEvent.RegainReason.REGEN
                 && event.getRegainReason() != EntityRegainHealthEvent.RegainReason.SATIATED) {
@@ -1171,6 +1193,31 @@ public class CustomPotionEffectApplier implements Listener {
             return;
         }
         player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 4 * TICKS_PER_SECOND, 0, true, true, true));
+    }
+
+    private void applyThermalVision(Player player) {
+        boolean submerged = player.isInWater() || player.getEyeLocation().getBlock().getType() == Material.LAVA;
+        if (!submerged) {
+            return;
+        }
+        if (!triggerWithCooldown(player, "thermal_vision", 4 * TICKS_PER_SECOND, 1.0)) {
+            return;
+        }
+        player.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, 6 * TICKS_PER_SECOND, 0, true, true, true));
+        if (player.isInWater()) {
+            player.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, 3 * TICKS_PER_SECOND, 0, true, true, true));
+        }
+    }
+
+    private void applySteamBlur(Player player) {
+        boolean inHeatOrWater = player.isInWater() || player.getLocation().getBlock().getType() == Material.LAVA;
+        if (!inHeatOrWater) {
+            return;
+        }
+        if (!triggerWithCooldown(player, "steam_blur", 8 * TICKS_PER_SECOND, 0.3)) {
+            return;
+        }
+        player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 3 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
     private void applyMindFog(Player player) {
