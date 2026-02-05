@@ -18,7 +18,7 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 public class ArrowAggroListener implements Listener {
 
     private static final String ARROW_AGGRO_RADIUS_CONFIG = "arrowAggro.radius";
-    private static final double DEFAULT_RADIUS = 16.0;
+    private static final double DEFAULT_RADIUS = 4.0;
 
     private final LastBreathHC plugin;
 
