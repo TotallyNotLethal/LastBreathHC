@@ -41,6 +41,7 @@ public class CustomEnchantListener implements Listener {
 
     private static final int VEIN_LIMIT = 64;
     private static final int TREE_LIMIT = 128;
+    private static final int CONNECTION_RANGE = 2;
     private static final double PROSPECTOR_CHANCE = 0.2;
 
     private static final Map<Material, Material> CROP_SEEDS = new EnumMap<>(Material.class);
@@ -396,24 +397,35 @@ public class CustomEnchantListener implements Listener {
         matches.add(origin);
         while (!queue.isEmpty() && matches.size() < VEIN_LIMIT) {
             Block current = queue.poll();
-            for (BlockFace face : BlockFace.values()) {
-                if (!face.isCartesian()) {
-                    continue;
-                }
-                if (tryAddVeinNeighbor(current.getRelative(face), type, matches, queue)) {
+            for (int dx = -CONNECTION_RANGE; dx <= CONNECTION_RANGE; dx++) {
+                for (int dy = -CONNECTION_RANGE; dy <= CONNECTION_RANGE; dy++) {
+                    for (int dz = -CONNECTION_RANGE; dz <= CONNECTION_RANGE; dz++) {
+                        if (!isWithinConnectionRange(dx, dy, dz)) {
+                            continue;
+                        }
+                        if (tryAddVeinNeighbor(current.getRelative(dx, dy, dz), type, matches, queue)
+                            && matches.size() >= VEIN_LIMIT) {
+                            break;
+                        }
+                    }
                     if (matches.size() >= VEIN_LIMIT) {
                         break;
                     }
                 }
-                if (tryAddVeinNeighbor(current.getRelative(face, 2), type, matches, queue)) {
-                    if (matches.size() >= VEIN_LIMIT) {
-                        break;
-                    }
+                if (matches.size() >= VEIN_LIMIT) {
+                    break;
                 }
             }
         }
         matches.remove(origin);
         return matches;
+    }
+
+    private boolean isWithinConnectionRange(int dx, int dy, int dz) {
+        if (dx == 0 && dy == 0 && dz == 0) {
+            return false;
+        }
+        return Math.max(Math.max(Math.abs(dx), Math.abs(dy)), Math.abs(dz)) <= CONNECTION_RANGE;
     }
 
     private boolean tryAddVeinNeighbor(Block neighbor, Material type, Set<Block> matches, Deque<Block> queue) {
@@ -427,21 +439,32 @@ public class CustomEnchantListener implements Listener {
 
     private Collection<Block> getTreeBlocks(Block origin) {
         Set<Block> matches = new HashSet<>();
+        Material type = origin.getType();
         Deque<Block> queue = new ArrayDeque<>();
         queue.add(origin);
         matches.add(origin);
         while (!queue.isEmpty() && matches.size() < TREE_LIMIT) {
             Block current = queue.poll();
-            for (BlockFace face : BlockFace.values()) {
-                if (!face.isCartesian()) {
-                    continue;
+            for (int dx = -CONNECTION_RANGE; dx <= CONNECTION_RANGE; dx++) {
+                for (int dy = -CONNECTION_RANGE; dy <= CONNECTION_RANGE; dy++) {
+                    for (int dz = -CONNECTION_RANGE; dz <= CONNECTION_RANGE; dz++) {
+                        if (!isWithinConnectionRange(dx, dy, dz)) {
+                            continue;
+                        }
+                        Block neighbor = current.getRelative(dx, dy, dz);
+                        if (neighbor.getType() != type || matches.contains(neighbor)) {
+                            continue;
+                        }
+                        matches.add(neighbor);
+                        queue.add(neighbor);
+                        if (matches.size() >= TREE_LIMIT) {
+                            break;
+                        }
+                    }
+                    if (matches.size() >= TREE_LIMIT) {
+                        break;
+                    }
                 }
-                Block neighbor = current.getRelative(face);
-                if (!isLog(neighbor.getType()) || matches.contains(neighbor)) {
-                    continue;
-                }
-                matches.add(neighbor);
-                queue.add(neighbor);
                 if (matches.size() >= TREE_LIMIT) {
                     break;
                 }
