@@ -11,6 +11,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Leaves;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -22,6 +23,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -42,6 +44,8 @@ public class CustomEnchantListener implements Listener {
     private static final int VEIN_LIMIT = 64;
     private static final int TREE_LIMIT = 128;
     private static final int CONNECTION_RANGE = 2;
+    private static final int LEAF_DECAY_TOTAL_TICKS = 200;
+    private static final int LEAF_DECAY_INTERVAL_TICKS = 10;
     private static final double PROSPECTOR_CHANCE = 0.2;
 
     private static final Map<Material, Material> CROP_SEEDS = new EnumMap<>(Material.class);
@@ -105,7 +109,9 @@ public class CustomEnchantListener implements Listener {
             breakExtraBlocks(player, tool, getVeinBlocks(block), normalized);
         }
         if (treeFeller && isAxe(tool.getType()) && isLog(block.getType())) {
-            breakExtraBlocks(player, tool, getTreeBlocks(block), normalized);
+            Collection<Block> treeBlocks = getTreeBlocks(block);
+            breakExtraBlocks(player, tool, treeBlocks, normalized);
+            accelerateLeafDecay(block, treeBlocks);
         }
         if (excavator && isShovel(tool.getType()) && isShovelMineable(block.getType())) {
             breakExtraBlocks(player, tool, getExcavatorBlocks(block, player), normalized);
@@ -472,6 +478,64 @@ public class CustomEnchantListener implements Listener {
         }
         matches.remove(origin);
         return matches;
+    }
+
+    private void accelerateLeafDecay(Block origin, Collection<Block> treeBlocks) {
+        List<Block> logs = new ArrayList<>(treeBlocks.size() + 1);
+        logs.add(origin);
+        logs.addAll(treeBlocks);
+
+        Set<Block> leavesToDecay = new HashSet<>();
+        for (Block log : logs) {
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        Block candidate = log.getRelative(dx, dy, dz);
+                        if (isNaturallyDecayingLeaf(candidate)) {
+                            leavesToDecay.add(candidate);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (leavesToDecay.isEmpty()) {
+            return;
+        }
+
+        List<Block> orderedLeaves = new ArrayList<>(leavesToDecay);
+        int maxRuns = Math.max(1, LEAF_DECAY_TOTAL_TICKS / LEAF_DECAY_INTERVAL_TICKS);
+        int leavesPerRun = Math.max(1, (int) Math.ceil((double) orderedLeaves.size() / maxRuns));
+
+        new BukkitRunnable() {
+            private int index = 0;
+
+            @Override
+            public void run() {
+                int removedThisRun = 0;
+                while (index < orderedLeaves.size() && removedThisRun < leavesPerRun) {
+                    Block leaf = orderedLeaves.get(index++);
+                    if (isNaturallyDecayingLeaf(leaf)) {
+                        leaf.setType(Material.AIR, true);
+                    }
+                    removedThisRun++;
+                }
+                if (index >= orderedLeaves.size()) {
+                    cancel();
+                }
+            }
+        }.runTaskTimer(plugin, LEAF_DECAY_INTERVAL_TICKS, LEAF_DECAY_INTERVAL_TICKS);
+    }
+
+    private boolean isNaturallyDecayingLeaf(Block block) {
+        if (!Tag.LEAVES.isTagged(block.getType())) {
+            return false;
+        }
+        BlockData data = block.getBlockData();
+        if (!(data instanceof Leaves leaves)) {
+            return true;
+        }
+        return !leaves.isPersistent();
     }
 
     private Collection<Block> getExcavatorBlocks(Block origin, Player player) {
