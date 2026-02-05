@@ -346,7 +346,7 @@ public class CustomEnchantListener implements Listener {
         if (!(meta instanceof Damageable damageable)) {
             return false;
         }
-        int unbreakingLevel = tool.getEnchantmentLevel(Enchantment.DURABILITY);
+        int unbreakingLevel = tool.getEnchantmentLevel(Enchantment.UNBREAKING);
         if (unbreakingLevel > 0 && random.nextInt(unbreakingLevel + 1) != 0) {
             return false;
         }
