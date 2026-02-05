@@ -139,6 +139,14 @@ effects:
     displayName: "Deep Breathing"
     category: POSITIVE
     description: "Extended underwater sprinting endurance."
+  - id: thermal_vision
+    displayName: "Thermal Vision"
+    category: POSITIVE
+    description: "Sharpens vision while submerged in water or lava."
+  - id: dousing_skin
+    displayName: "Dousing Skin"
+    category: POSITIVE
+    description: "Slightly reduces fire and lava damage."
   - id: crystal_focus
     displayName: "Crystal Focus"
     category: POSITIVE
@@ -247,6 +255,10 @@ effects:
     displayName: "Sea Sickness"
     category: NEGATIVE
     description: "Nausea after quick swimming bursts."
+  - id: steam_blur
+    displayName: "Steam Blur"
+    category: NEGATIVE
+    description: "Heat and spray can briefly blur your focus."
   - id: overgrowth
     displayName: "Overgrowth"
     category: NEGATIVE

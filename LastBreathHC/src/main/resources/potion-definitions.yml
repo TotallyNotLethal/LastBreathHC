@@ -224,6 +224,88 @@ potions:
     branchBrews:
       - honeyed_guard
       - glow_warmth
+  - id: molten_clarity
+    displayName: "§rPotion of Molten Clarity"
+    craftingIngredient: TINTED_GLASS
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: WATER_BREATHING
+        durationTicks: 1800
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: FIRE_RESISTANCE
+        durationTicks: 900
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: thermal_vision
+        durationTicks: 1800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: dousing_skin
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: steam_blur
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - abyssal_breath
+      - soulflame_guard
+    branchBrews:
+      - deep_breath
+  - id: seekers_draft
+    displayName: "§rPotion of Seeker's Draft"
+    craftingIngredient: SPYGLASS
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: NIGHT_VISION
+        durationTicks: 1800
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: HASTE
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: HUNGER
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: clear_sight
+        durationTicks: 1800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: stone_sense
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: ringing_head
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - lucid_mind
+      - veiled_resonance
+    branchBrews:
+      - clear_mind
   - id: tidal_step
     displayName: "§rPotion of Tidal Step"
     craftingIngredient: NAUTILUS_SHELL
@@ -420,7 +502,7 @@ potions:
       - veiled_resonance
     branchBrews:
       - clear_mind
-      - soulfame_guard
+      - soulflame_guard
       - void_focus
   - id: tempered_rush
     displayName: "§rPotion of Tempered Rush"
@@ -496,6 +578,7 @@ potions:
       - maelstrom_stride
     branchBrews:
       - echoed_veil
+      - seekers_draft
       - lucid_mind
   - id: amber_bulwark
     displayName: "§rPotion of Amber Bulwark"
@@ -612,6 +695,7 @@ potions:
       - harvester_edge
     branchBrews:
       - deep_breath
+      - molten_clarity
       - amber_bulwark
       - radiant_warmth
   - id: maelstrom_stride
@@ -732,6 +816,7 @@ potions:
       - lucid_mind
     branchBrews:
       - crimson_guard
+      - molten_clarity
       - amber_bulwark
       - harvester_edge
   - id: void_focus
@@ -773,4 +858,4 @@ potions:
       - veiled_resonance
       - maelstrom_stride
       - harvester_edge
-      - soulfame_guard
+      - soulflame_guard
