@@ -42,7 +42,7 @@ public class ServerListMotdListener implements Listener {
 
     private String resolveServerName() {
         Server server = Bukkit.getServer();
-        String name = server.getServerName();
+        String name = "Last Breath";
         if (name == null || name.isBlank() || name.equalsIgnoreCase("Unknown Server")) {
             name = server.getName();
         }
