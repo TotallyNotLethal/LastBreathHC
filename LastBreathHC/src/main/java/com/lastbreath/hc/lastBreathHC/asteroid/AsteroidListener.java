@@ -9,6 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.PiglinBrute;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -192,6 +193,17 @@ public class AsteroidListener implements Listener {
         if (isAsteroidMob(target) && damagerEntity instanceof org.bukkit.entity.Projectile) {
             event.setDamage(event.getDamage() * 0.75);
         }
+
+        if (!isAsteroidMob(target) || isAsteroidMob(attacker)) {
+            return;
+        }
+
+        String asteroidKeyTag = getAsteroidKeyTag(target);
+        if (asteroidKeyTag == null || asteroidKeyTag.isBlank()) {
+            return;
+        }
+
+        alertAsteroidPack(target, asteroidKeyTag, attacker);
     }
 
     @EventHandler
@@ -201,6 +213,33 @@ public class AsteroidListener implements Listener {
                 && (entity instanceof PiglinBrute || entity.getType() == EntityType.PIGLIN_BRUTE)) {
             event.setCancelled(true);
         }
+    }
+
+    private void alertAsteroidPack(LivingEntity target, String asteroidKeyTag, LivingEntity attacker) {
+        if (target.getWorld() == null) {
+            return;
+        }
+        for (LivingEntity entity : target.getWorld().getEntitiesByClass(LivingEntity.class)) {
+            if (!(entity instanceof Mob mob)) {
+                continue;
+            }
+            if (!isAsteroidMob(entity)) {
+                continue;
+            }
+            if (entity.getScoreboardTags().contains(asteroidKeyTag)) {
+                mob.setTarget(attacker);
+                mob.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+            }
+        }
+    }
+
+    private String getAsteroidKeyTag(LivingEntity entity) {
+        for (String tag : entity.getScoreboardTags()) {
+            if (tag.startsWith(AsteroidManager.ASTEROID_KEY_TAG_PREFIX)) {
+                return tag;
+            }
+        }
+        return null;
     }
 
     private boolean hasActiveAsteroidMobs(Location loc, AsteroidManager.AsteroidEntry entry) {

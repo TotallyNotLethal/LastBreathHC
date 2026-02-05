@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.potion;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -8,6 +9,7 @@ import org.bukkit.Sound;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.Ageable;
+import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
@@ -585,7 +587,7 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "clear_sight", 10 * TICKS_PER_SECOND, 0.5)) {
             return;
         }
-        revealNearbyOres(player, Particle.BLOCK_MARKER);
+        revealNearbyClearSightOres(player);
     }
 
     private void applyIronStomach(Player player, EntityPotionEffectEvent event) {
@@ -684,17 +686,94 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "stone_sense", 12 * TICKS_PER_SECOND, 0.4)) {
             return;
         }
+        revealNearbyCaves(player);
+    }
+
+    private void revealNearbyCaves(Player player) {
         int radius = 6;
+        Location origin = player.getLocation();
+        int revealed = 0;
+        int maxReveals = 25;
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
-                    Block block = player.getLocation().getBlock().getRelative(x, y, z);
-                    if (block.getType() == Material.AIR && block.getRelative(0, -1, 0).getType().isSolid()) {
-                        player.spawnParticle(Particle.SCULK_SOUL, block.getLocation().add(0.5, 0.5, 0.5), 1, 0.2, 0.2, 0.2, 0.01);
+                    if (revealed >= maxReveals) {
+                        return;
                     }
+                    Block block = origin.getBlock().getRelative(x, y, z);
+                    if (!isCavePocket(block)) {
+                        continue;
+                    }
+                    spawnStoneSenseSpoofStand(player, block.getLocation().add(0.5, 0.0, 0.5));
+                    revealed++;
                 }
             }
         }
+    }
+
+    private boolean isCavePocket(Block block) {
+        if (block.getType() != Material.AIR) {
+            return false;
+        }
+        int solidNeighbors = 0;
+        if (block.getRelative(1, 0, 0).getType().isSolid()) {
+            solidNeighbors++;
+        }
+        if (block.getRelative(-1, 0, 0).getType().isSolid()) {
+            solidNeighbors++;
+        }
+        if (block.getRelative(0, 0, 1).getType().isSolid()) {
+            solidNeighbors++;
+        }
+        if (block.getRelative(0, 0, -1).getType().isSolid()) {
+            solidNeighbors++;
+        }
+        if (block.getRelative(0, -1, 0).getType().isSolid()) {
+            solidNeighbors++;
+        }
+        return solidNeighbors >= 3;
+    }
+
+    private void spawnStoneSenseSpoofStand(Player viewer, Location location) {
+        ArmorStand stand = location.getWorld().spawn(location, ArmorStand.class, spawned -> {
+            spawned.setMarker(true);
+            spawned.setInvisible(true);
+            spawned.setGravity(false);
+            spawned.setInvulnerable(true);
+            spawned.setSilent(true);
+            spawned.setCustomName("Cave");
+            spawned.setCustomNameVisible(true);
+            spawned.setGlowing(true);
+            spawned.getEquipment().setHelmet(new ItemStack(Material.STONE));
+        });
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!online.getUniqueId().equals(viewer.getUniqueId())) {
+                online.hideEntity(plugin, stand);
+            }
+        }
+
+        new BukkitRunnable() {
+            private int ticksElapsed = 0;
+
+            @Override
+            public void run() {
+                if (!stand.isValid() || !viewer.isOnline()) {
+                    cleanup();
+                    return;
+                }
+                ticksElapsed += 5;
+                stand.setGlowing((ticksElapsed / 5) % 2 == 1);
+                if (ticksElapsed >= 40) {
+                    cleanup();
+                }
+            }
+
+            private void cleanup() {
+                stand.remove();
+                cancel();
+            }
+        }.runTaskTimer(plugin, 5L, 5L);
     }
 
     private void applyBeastTamer(Player player, EntityTameEvent event) {
@@ -753,10 +832,16 @@ public class CustomPotionEffectApplier implements Listener {
         if (!player.isSprinting()) {
             return;
         }
-        if (!triggerWithCooldown(player, "windstep", 4 * TICKS_PER_SECOND, 0.2)) {
+        if (!triggerWithCooldown(player, "windstep", 4 * TICKS_PER_SECOND, 0.35)) {
             return;
         }
-        player.setVelocity(player.getVelocity().add(new Vector(0, 0.35, 0)));
+        Vector forward = player.getLocation().getDirection().setY(0);
+        if (forward.lengthSquared() <= 0.0001) {
+            return;
+        }
+        forward.normalize();
+        Vector impulse = forward.multiply(1.15).setY(0.42);
+        player.setVelocity(player.getVelocity().add(impulse));
     }
 
     private void applyQuickHeal(Player player, EntityRegainHealthEvent event) {
@@ -811,10 +896,11 @@ public class CustomPotionEffectApplier implements Listener {
         if (event.getCause() != EntityDamageEvent.DamageCause.FALL) {
             return;
         }
-        if (event.getDamage() > 4.0) {
+        if (player.getFallDistance() <= 7.0f || event.getDamage() <= 6.0) {
+            event.setCancelled(true);
             return;
         }
-        event.setDamage(event.getDamage() * 0.5);
+        event.setDamage(event.getDamage() * 0.7);
     }
 
     private void applyEchoStep(Player player) {
@@ -1003,7 +1089,7 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "crystal_focus", 12 * TICKS_PER_SECOND, 0.4)) {
             return;
         }
-        revealNearbyOres(player, Particle.END_ROD);
+        revealNearbyClearSightOres(player);
     }
 
     private void applyRazorThoughts(Player player) {
@@ -1029,7 +1115,7 @@ public class CustomPotionEffectApplier implements Listener {
         if (!triggerWithCooldown(player, "ore_pulse", 8 * TICKS_PER_SECOND, 0.5)) {
             return;
         }
-        revealNearbyOres(player, Particle.SCULK_SOUL);
+        revealNearbyClearSightOres(player);
     }
 
     private void applyHushAura(Player player) {
@@ -1357,6 +1443,80 @@ public class CustomPotionEffectApplier implements Listener {
             return;
         }
         player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 2 * TICKS_PER_SECOND, 0, true, true, true));
+    }
+
+    private void revealNearbyClearSightOres(Player player) {
+        int radius = 6;
+        Location origin = player.getLocation();
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    Block block = origin.getBlock().getRelative(x, y, z);
+                    Material type = block.getType();
+                    if (type.name().endsWith("_ORE") || type == Material.ANCIENT_DEBRIS) {
+                        spawnClearSightSpoofStand(player, block);
+                    }
+                }
+            }
+        }
+    }
+
+    private void spawnClearSightSpoofStand(Player viewer, Block block) {
+        Location standLocation = block.getLocation().add(0.5, 0.0, 0.5);
+        ArmorStand stand = block.getWorld().spawn(standLocation, ArmorStand.class, spawned -> {
+            spawned.setMarker(true);
+            spawned.setInvisible(true);
+            spawned.setGravity(false);
+            spawned.setInvulnerable(true);
+            spawned.setSilent(true);
+            spawned.setCustomName(formatOreName(block.getType()));
+            spawned.setCustomNameVisible(true);
+            spawned.setGlowing(true);
+            spawned.getEquipment().setHelmet(new ItemStack(block.getType()));
+        });
+
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!online.getUniqueId().equals(viewer.getUniqueId())) {
+                online.hideEntity(plugin, stand);
+            }
+        }
+
+        new BukkitRunnable() {
+            private int ticksElapsed = 0;
+
+            @Override
+            public void run() {
+                if (!stand.isValid() || !viewer.isOnline()) {
+                    cleanup();
+                    return;
+                }
+                ticksElapsed += 5;
+                stand.setGlowing((ticksElapsed / 5) % 2 == 1);
+                if (ticksElapsed >= 40) {
+                    cleanup();
+                }
+            }
+
+            private void cleanup() {
+                stand.remove();
+                cancel();
+            }
+        }.runTaskTimer(plugin, 5L, 5L);
+    }
+
+    private String formatOreName(Material material) {
+        String raw = material.name().toLowerCase().replace('_', ' ');
+        StringBuilder builder = new StringBuilder();
+        for (String token : raw.split(" ")) {
+            if (token.isEmpty()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(token.charAt(0))).append(token.substring(1));
+        }
+        return builder.toString();
     }
 
     private void revealNearbyOres(Player player, Particle particle) {
