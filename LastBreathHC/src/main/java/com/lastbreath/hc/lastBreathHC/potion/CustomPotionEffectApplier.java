@@ -31,6 +31,7 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -58,6 +59,7 @@ public class CustomPotionEffectApplier implements Listener {
     private final CustomPotionEffectManager effectManager;
     private final Random random = new Random();
     private final Map<UUID, Map<String, Long>> effectCooldowns = new HashMap<>();
+    private final Map<UUID, Location> thermalVisionSpoofedBlocks = new HashMap<>();
 
     public CustomPotionEffectApplier(LastBreathHC plugin, CustomPotionEffectManager effectManager) {
         this.plugin = plugin;
@@ -242,6 +244,11 @@ public class CustomPotionEffectApplier implements Listener {
         }
     }
 
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        clearThermalVisionOverlay(event.getPlayer());
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onFurnaceExtract(FurnaceExtractEvent event) {
         Player player = event.getPlayer();
@@ -393,6 +400,8 @@ public class CustomPotionEffectApplier implements Listener {
         }
         if (hasEffect(player, "thermal_vision")) {
             applyThermalVision(player);
+        } else {
+            clearThermalVisionOverlay(player);
         }
         if (hasEffect(player, "steam_blur")) {
             applySteamBlur(player);
@@ -1196,10 +1205,13 @@ public class CustomPotionEffectApplier implements Listener {
     }
 
     private void applyThermalVision(Player player) {
-        boolean submerged = player.isInWater() || player.getEyeLocation().getBlock().getType() == Material.LAVA;
+        Material eyeBlockType = player.getEyeLocation().getBlock().getType();
+        boolean submerged = eyeBlockType == Material.WATER || eyeBlockType == Material.LAVA || player.isInWater();
         if (!submerged) {
+            clearThermalVisionOverlay(player);
             return;
         }
+        spoofThermalVisionOverlay(player, eyeBlockType);
         if (!triggerWithCooldown(player, "thermal_vision", 4 * TICKS_PER_SECOND, 1.0)) {
             return;
         }
@@ -1207,6 +1219,40 @@ public class CustomPotionEffectApplier implements Listener {
         if (player.isInWater()) {
             player.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, 3 * TICKS_PER_SECOND, 0, true, true, true));
         }
+    }
+
+    private void spoofThermalVisionOverlay(Player player, Material eyeBlockType) {
+        if (eyeBlockType != Material.WATER && eyeBlockType != Material.LAVA) {
+            clearThermalVisionOverlay(player);
+            return;
+        }
+        Location eyeBlockLocation = player.getEyeLocation().getBlock().getLocation();
+        Location lastSpoofed = thermalVisionSpoofedBlocks.get(player.getUniqueId());
+        if (lastSpoofed != null && !sameBlock(lastSpoofed, eyeBlockLocation)) {
+            player.sendBlockChange(lastSpoofed, lastSpoofed.getBlock().getBlockData());
+            thermalVisionSpoofedBlocks.remove(player.getUniqueId());
+        }
+        if (lastSpoofed != null && sameBlock(lastSpoofed, eyeBlockLocation)) {
+            return;
+        }
+        player.sendBlockChange(eyeBlockLocation, Material.AIR.createBlockData());
+        thermalVisionSpoofedBlocks.put(player.getUniqueId(), eyeBlockLocation);
+    }
+
+    private void clearThermalVisionOverlay(Player player) {
+        Location spoofedBlock = thermalVisionSpoofedBlocks.remove(player.getUniqueId());
+        if (spoofedBlock == null) {
+            return;
+        }
+        player.sendBlockChange(spoofedBlock, spoofedBlock.getBlock().getBlockData());
+    }
+
+    private boolean sameBlock(Location a, Location b) {
+        return a.getWorld() != null
+                && a.getWorld().equals(b.getWorld())
+                && a.getBlockX() == b.getBlockX()
+                && a.getBlockY() == b.getBlockY()
+                && a.getBlockZ() == b.getBlockZ();
     }
 
     private void applySteamBlur(Player player) {
