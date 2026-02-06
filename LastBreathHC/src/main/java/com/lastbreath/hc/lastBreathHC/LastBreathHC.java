@@ -255,7 +255,7 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 environmentalEffectsManager, this
         );
-        PotionHandler potionHandler = new PotionHandler(this, potionDefinitionRegistry);
+        PotionHandler potionHandler = new PotionHandler(this, potionDefinitionRegistry, customPotionEffectRegistry);
         getServer().getPluginManager().registerEvents(
                 potionHandler, this
         );

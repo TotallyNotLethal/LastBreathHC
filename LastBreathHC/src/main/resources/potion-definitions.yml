@@ -1,7 +1,7 @@
 potions:
   - id: clear_mind
     displayName: "§rPotion of Clear Mind"
-    craftingIngredient: AMETHYST_SHARD
+    craftingIngredient: AMETHYST_BLOCK
     allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
@@ -267,7 +267,7 @@ potions:
       - deep_breath
   - id: seekers_draft
     displayName: "§rPotion of Seeker's Draft"
-    craftingIngredient: SPYGLASS
+    craftingIngredient: RECOVERY_COMPASS
     allowFromAwkward: true
     scaryToDrink: false
     baseEffects:
@@ -463,7 +463,7 @@ potions:
       - crimson_guard
   - id: lucid_mind
     displayName: "§rElixir of Lucid Mind"
-    craftingIngredient: AMETHYST_CLUSTER
+    craftingIngredient: DIAMOND_BLOCK
     allowFromAwkward: false
     scaryToDrink: false
     baseEffects:
@@ -485,8 +485,8 @@ potions:
         cooldownTicks: 0
     afterEffects: []
     customEffects:
-      - id: crystal_focus
-        durationTicks: 4800
+      - id: clear_sight
+        durationTicks: 2400
         trigger: ON_DRINK
         cooldownTicks: 0
       - id: razor_thoughts
@@ -506,7 +506,7 @@ potions:
       - void_focus
   - id: tempered_rush
     displayName: "§rPotion of Tempered Rush"
-    craftingIngredient: COPPER_BLOCK
+    craftingIngredient: NETHERITE_INGOT
     allowFromAwkward: false
     scaryToDrink: false
     baseEffects:
@@ -527,7 +527,7 @@ potions:
         durationTicks: 1600
         trigger: ON_DRINK
         cooldownTicks: 0
-      - id: ore_pulse
+      - id: clear_sight
         durationTicks: 1600
         trigger: ON_DRINK
         cooldownTicks: 0

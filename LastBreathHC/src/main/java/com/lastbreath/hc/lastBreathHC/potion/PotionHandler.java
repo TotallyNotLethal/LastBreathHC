@@ -50,8 +50,9 @@ public class PotionHandler implements Listener {
     private final NamespacedKey customEffectsKey;
     private final NamespacedKey scaryToDrinkKey;
     private final PotionDefinitionRegistry definitionRegistry;
+    private final CustomPotionEffectRegistry effectRegistry;
 
-    public PotionHandler(LastBreathHC plugin, PotionDefinitionRegistry definitionRegistry) {
+    public PotionHandler(LastBreathHC plugin, PotionDefinitionRegistry definitionRegistry, CustomPotionEffectRegistry effectRegistry) {
         this.redstoneKey = new NamespacedKey(plugin, "potion_redstone_apps");
         this.concentrationKey = new NamespacedKey(plugin, "potion_concentration");
         this.purifiedKey = new NamespacedKey(plugin, "potion_purified");
@@ -59,6 +60,7 @@ public class PotionHandler implements Listener {
         this.customEffectsKey = new NamespacedKey(plugin, "potion_custom_effects");
         this.scaryToDrinkKey = new NamespacedKey(plugin, "potion_scary_to_drink");
         this.definitionRegistry = definitionRegistry;
+        this.effectRegistry = effectRegistry;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -210,9 +212,6 @@ public class PotionHandler implements Listener {
             return null;
         }
         List<PotionEffect> effects = getPotionEffects(meta);
-        if (effects.isEmpty()) {
-            return null;
-        }
 
         PotionMeta updatedMeta = (PotionMeta) meta.clone();
         updatedMeta.setBasePotionType(PotionType.AWKWARD);
@@ -246,9 +245,6 @@ public class PotionHandler implements Listener {
             return null;
         }
         List<PotionEffect> effects = getPotionEffects(meta);
-        if (effects.isEmpty()) {
-            return null;
-        }
 
         PotionMeta updatedMeta = (PotionMeta) meta.clone();
         updatedMeta.setBasePotionType(PotionType.AWKWARD);
@@ -283,9 +279,6 @@ public class PotionHandler implements Listener {
             return null;
         }
         List<PotionEffect> effects = getPotionEffects(meta);
-        if (effects.isEmpty()) {
-            return null;
-        }
 
         List<PotionEffect> filtered = new ArrayList<>();
         for (PotionEffect effect : effects) {
@@ -293,7 +286,31 @@ public class PotionHandler implements Listener {
                 filtered.add(effect);
             }
         }
-        if (filtered.size() == effects.size()) {
+        boolean removedNegativePotionEffects = filtered.size() != effects.size();
+
+        PersistentDataContainer existingContainer = meta.getPersistentDataContainer();
+        String customId = existingContainer.get(customIdKey, PersistentDataType.STRING);
+        boolean removedNegativeCustomEffects = false;
+        int remainingCustomEffects = existingContainer.getOrDefault(customEffectsKey, PersistentDataType.INTEGER, 0);
+        if (customId != null) {
+            HardcorePotionDefinition definition = definitionRegistry.getById(customId);
+            if (definition != null) {
+                remainingCustomEffects = 0;
+                for (HardcorePotionDefinition.CustomEffectDefinition customEffect : definition.customEffects()) {
+                    CustomPotionEffectRegistry.CustomPotionEffectDefinition customDefinition = effectRegistry.getById(customEffect.id());
+                    if (customDefinition == null) {
+                        continue;
+                    }
+                    if (customDefinition.category() == CustomEffectCategory.NEGATIVE) {
+                        removedNegativeCustomEffects = true;
+                        continue;
+                    }
+                    remainingCustomEffects++;
+                }
+            }
+        }
+
+        if (!removedNegativePotionEffects && !removedNegativeCustomEffects) {
             return null;
         }
 
@@ -306,6 +323,13 @@ public class PotionHandler implements Listener {
 
         PersistentDataContainer container = updatedMeta.getPersistentDataContainer();
         container.set(purifiedKey, PersistentDataType.BYTE, (byte) 1);
+        if (removedNegativeCustomEffects) {
+            if (remainingCustomEffects > 0) {
+                container.set(customEffectsKey, PersistentDataType.INTEGER, remainingCustomEffects);
+            } else {
+                container.remove(customEffectsKey);
+            }
+        }
         updateLore(updatedMeta);
 
         potion.setItemMeta(updatedMeta);

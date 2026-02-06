@@ -28,6 +28,7 @@ public class CustomPotionEffectManager implements Listener {
     private final CustomPotionEffectRegistry effectRegistry;
     private final NamespacedKey customIdKey;
     private final NamespacedKey redstoneKey;
+    private final NamespacedKey purifiedKey;
     private final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
     private final Map<UUID, Map<String, Long>> activeEffects = new HashMap<>();
 
@@ -39,6 +40,7 @@ public class CustomPotionEffectManager implements Listener {
         this.effectRegistry = effectRegistry;
         this.customIdKey = new NamespacedKey(plugin, "potion_custom_id");
         this.redstoneKey = new NamespacedKey(plugin, "potion_redstone_apps");
+        this.purifiedKey = new NamespacedKey(plugin, "potion_purified");
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -55,7 +57,8 @@ public class CustomPotionEffectManager implements Listener {
                 return;
             }
             int redstoneApps = container.getOrDefault(redstoneKey, PersistentDataType.INTEGER, 0);
-            applyCustomEffects(event.getPlayer(), definition.customEffects(), definition, redstoneApps);
+            boolean purified = container.has(purifiedKey, PersistentDataType.BYTE);
+            applyCustomEffects(event.getPlayer(), definition.customEffects(), definition, redstoneApps, purified);
         }
     }
 
@@ -69,12 +72,16 @@ public class CustomPotionEffectManager implements Listener {
     private void applyCustomEffects(Player player,
                                     List<HardcorePotionDefinition.CustomEffectDefinition> customEffects,
                                     HardcorePotionDefinition definition,
-                                    int redstoneApps) {
+                                    int redstoneApps,
+                                    boolean purified) {
         if (customEffects.isEmpty()) {
             return;
         }
         int delayTicks = calculateAfterEffectDelay(definition, redstoneApps);
         for (HardcorePotionDefinition.CustomEffectDefinition customEffect : customEffects) {
+            if (purified && isNegativeCustomEffect(customEffect.id())) {
+                continue;
+            }
             int durationTicks = extendDuration(customEffect.durationTicks(), redstoneApps);
             if (customEffect.trigger() == EffectTrigger.AFTER_EFFECT && delayTicks > 0) {
                 new BukkitRunnable() {
@@ -122,6 +129,12 @@ public class CustomPotionEffectManager implements Listener {
                 }
             }.runTaskLater(plugin, durationTicks);
         }
+    }
+
+
+    private boolean isNegativeCustomEffect(String effectId) {
+        CustomPotionEffectRegistry.CustomPotionEffectDefinition definition = effectRegistry.getById(effectId);
+        return definition != null && definition.category() == CustomEffectCategory.NEGATIVE;
     }
 
     private int calculateAfterEffectDelay(HardcorePotionDefinition definition, int redstoneApps) {
