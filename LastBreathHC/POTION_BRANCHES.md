@@ -7,14 +7,14 @@
 
 ## Base brews (Awkward potion + ingredient)
 These are the entry points for the potion tree:
-- **Potion of Clear Mind** (`clear_mind`) + `AMETHYST_SHARD`
+- **Potion of Clear Mind** (`clear_mind`) + `AMETHYST_BLOCK`
 - **Potion of Copper Rush** (`copper_rush`) + `COPPER_INGOT`
 - **Potion of Echoed Veil** (`echoed_veil`) + `ECHO_SHARD`
 - **Potion of Honeyed Guard** (`honeyed_guard`) + `HONEYCOMB`
 - **Potion of Glow Warmth** (`glow_warmth`) + `GLOW_BERRIES`
 - **Potion of Deep Breath** (`deep_breath`) + `PRISMARINE_CRYSTALS`
 - **Potion of Molten Clarity** (`molten_clarity`) + `TINTED_GLASS`
-- **Potion of Seeker's Draft** (`seekers_draft`) + `SPYGLASS`
+- **Potion of Seeker's Draft** (`seekers_draft`) + `RECOVERY_COMPASS`
 - **Potion of Tidal Step** (`tidal_step`) + `NAUTILUS_SHELL`
 - **Potion of Forager's Edge** (`forager_edge`) + `SWEET_BERRIES`
 - **Potion of Crimson Guard** (`crimson_guard`) + `CRIMSON_FUNGUS`
@@ -22,8 +22,8 @@ These are the entry points for the potion tree:
 
 ## Stronger variants (require previous potion + ingredient)
 These potions **must** be brewed by re-adding the listed **previous custom potion** to the cauldron (or brewing stand) and then adding the ingredient. The ingredient **alone** (with Awkward or Water) will not work for these:
-- **Elixir of Lucid Mind** (`lucid_mind`) requires: **Potion of Clear Mind** (`clear_mind`) *or* **Potion of Seeker's Draft** (`seekers_draft`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) *or* **Potion of Void Focus** (`void_focus`) + `AMETHYST_CLUSTER`
-- **Potion of Tempered Rush** (`tempered_rush`) requires: **Potion of Copper Rush** (`copper_rush`) *or* **Elixir of Lucid Mind** (`lucid_mind`) *or* **Potion of Void Focus** (`void_focus`) + `COPPER_BLOCK`
+- **Elixir of Lucid Mind** (`lucid_mind`) requires: **Potion of Clear Mind** (`clear_mind`) *or* **Potion of Seeker's Draft** (`seekers_draft`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) *or* **Potion of Void Focus** (`void_focus`) + `DIAMOND_BLOCK`
+- **Potion of Tempered Rush** (`tempered_rush`) requires: **Potion of Copper Rush** (`copper_rush`) *or* **Elixir of Lucid Mind** (`lucid_mind`) *or* **Potion of Void Focus** (`void_focus`) + `NETHERITE_INGOT`
 - **Potion of Veiled Resonance** (`veiled_resonance`) requires: **Potion of Echoed Veil** (`echoed_veil`) *or* **Potion of Seeker's Draft** (`seekers_draft`) *or* **Elixir of Lucid Mind** (`lucid_mind`) + `SCULK_CATALYST`
 - **Potion of Amber Bulwark** (`amber_bulwark`) requires: **Potion of Honeyed Guard** (`honeyed_guard`) *or* **Potion of Tempered Rush** (`tempered_rush`) + `HONEY_BLOCK`
 - **Potion of Radiant Warmth** (`radiant_warmth`) requires: **Potion of Glow Warmth** (`glow_warmth`) *or* **Potion of Tempered Rush** (`tempered_rush`) + `GLOWSTONE`
@@ -46,22 +46,22 @@ Use a **water cauldron on a lit soul campfire**. Toss in the potion (or a water 
   - `NETHER_STAR` ➜ purifies negative effects
 
 ### Base cauldron brews (water bottle/awkward + ingredient)
-- Water bottle/Awkward + `AMETHYST_SHARD` ➜ **Potion of Clear Mind** (`clear_mind`)
+- Water bottle/Awkward + `AMETHYST_BLOCK` ➜ **Potion of Clear Mind** (`clear_mind`)
 - Water bottle/Awkward + `COPPER_INGOT` ➜ **Potion of Copper Rush** (`copper_rush`)
 - Water bottle/Awkward + `ECHO_SHARD` ➜ **Potion of Echoed Veil** (`echoed_veil`)
 - Water bottle/Awkward + `HONEYCOMB` ➜ **Potion of Honeyed Guard** (`honeyed_guard`)
 - Water bottle/Awkward + `GLOW_BERRIES` ➜ **Potion of Glow Warmth** (`glow_warmth`)
 - Water bottle/Awkward + `PRISMARINE_CRYSTALS` ➜ **Potion of Deep Breath** (`deep_breath`)
 - Water bottle/Awkward + `TINTED_GLASS` ➜ **Potion of Molten Clarity** (`molten_clarity`)
-- Water bottle/Awkward + `SPYGLASS` ➜ **Potion of Seeker's Draft** (`seekers_draft`)
+- Water bottle/Awkward + `RECOVERY_COMPASS` ➜ **Potion of Seeker's Draft** (`seekers_draft`)
 - Water bottle/Awkward + `NAUTILUS_SHELL` ➜ **Potion of Tidal Step** (`tidal_step`)
 - Water bottle/Awkward + `SWEET_BERRIES` ➜ **Potion of Forager's Edge** (`forager_edge`)
 - Water bottle/Awkward + `CRIMSON_FUNGUS` ➜ **Potion of Crimson Guard** (`crimson_guard`)
 - Water bottle/Awkward + `WARPED_FUNGUS` ➜ **Potion of Warped Focus** (`warped_focus`)
 
 ### Branch-only cauldron brews (previous potion + ingredient)
-- **Potion of Clear Mind** (`clear_mind`) *or* **Potion of Seeker's Draft** (`seekers_draft`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) *or* **Potion of Void Focus** (`void_focus`) + `AMETHYST_CLUSTER` ➜ **Elixir of Lucid Mind** (`lucid_mind`)
-- **Potion of Copper Rush** (`copper_rush`) *or* **Elixir of Lucid Mind** (`lucid_mind`) *or* **Potion of Void Focus** (`void_focus`) + `COPPER_BLOCK` ➜ **Potion of Tempered Rush** (`tempered_rush`)
+- **Potion of Clear Mind** (`clear_mind`) *or* **Potion of Seeker's Draft** (`seekers_draft`) *or* **Potion of Soulflame Guard** (`soulflame_guard`) *or* **Potion of Void Focus** (`void_focus`) + `DIAMOND_BLOCK` ➜ **Elixir of Lucid Mind** (`lucid_mind`)
+- **Potion of Copper Rush** (`copper_rush`) *or* **Elixir of Lucid Mind** (`lucid_mind`) *or* **Potion of Void Focus** (`void_focus`) + `NETHERITE_INGOT` ➜ **Potion of Tempered Rush** (`tempered_rush`)
 - **Potion of Echoed Veil** (`echoed_veil`) *or* **Potion of Seeker's Draft** (`seekers_draft`) *or* **Elixir of Lucid Mind** (`lucid_mind`) + `SCULK_CATALYST` ➜ **Potion of Veiled Resonance** (`veiled_resonance`)
 - **Potion of Honeyed Guard** (`honeyed_guard`) *or* **Potion of Tempered Rush** (`tempered_rush`) + `HONEY_BLOCK` ➜ **Potion of Amber Bulwark** (`amber_bulwark`)
 - **Potion of Glow Warmth** (`glow_warmth`) *or* **Potion of Tempered Rush** (`tempered_rush`) + `GLOWSTONE` ➜ **Potion of Radiant Warmth** (`radiant_warmth`)
@@ -77,11 +77,11 @@ Use the following map to see which potion can be upgraded into another potion by
 - **clear_mind**
   - ➜ **copper_rush** + `COPPER_INGOT`
   - ➜ **echoed_veil** + `ECHO_SHARD`
-  - ➜ **lucid_mind** + `AMETHYST_CLUSTER`
+  - ➜ **lucid_mind** + `DIAMOND_BLOCK`
 - **copper_rush**
   - ➜ **honeyed_guard** + `HONEYCOMB`
   - ➜ **glow_warmth** + `GLOW_BERRIES`
-  - ➜ **tempered_rush** + `COPPER_BLOCK`
+  - ➜ **tempered_rush** + `NETHERITE_INGOT`
 - **echoed_veil**
   - ➜ **warped_focus** + `WARPED_FUNGUS`
   - ➜ **tidal_step** + `NAUTILUS_SHELL`
@@ -102,7 +102,7 @@ Use the following map to see which potion can be upgraded into another potion by
   - ➜ **abyssal_breath** + `HEART_OF_THE_SEA`
   - ➜ **soulflame_guard** + `MAGMA_CREAM`
 - **seekers_draft**
-  - ➜ **lucid_mind** + `AMETHYST_CLUSTER`
+  - ➜ **lucid_mind** + `DIAMOND_BLOCK`
   - ➜ **veiled_resonance** + `SCULK_CATALYST`
 - **tidal_step**
   - ➜ **forager_edge** + `SWEET_BERRIES`
@@ -114,14 +114,14 @@ Use the following map to see which potion can be upgraded into another potion by
   - ➜ **harvester_edge** + `MOSS_BLOCK`
 - **crimson_guard**
   - ➜ **warped_focus** + `WARPED_FUNGUS`
-  - ➜ **clear_mind** + `AMETHYST_SHARD`
+  - ➜ **clear_mind** + `AMETHYST_BLOCK`
   - ➜ **soulflame_guard** + `MAGMA_CREAM`
 - **warped_focus**
-  - ➜ **clear_mind** + `AMETHYST_SHARD`
+  - ➜ **clear_mind** + `AMETHYST_BLOCK`
   - ➜ **copper_rush** + `COPPER_INGOT`
   - ➜ **void_focus** + `ENDER_EYE`
 - **lucid_mind**
-  - ➜ **tempered_rush** + `COPPER_BLOCK`
+  - ➜ **tempered_rush** + `NETHERITE_INGOT`
   - ➜ **veiled_resonance** + `SCULK_CATALYST`
 - **tempered_rush**
   - ➜ **amber_bulwark** + `HONEY_BLOCK`
@@ -146,7 +146,7 @@ Use the following map to see which potion can be upgraded into another potion by
   - ➜ **void_focus** + `ENDER_EYE`
 - **soulflame_guard**
   - ➜ **void_focus** + `ENDER_EYE`
-  - ➜ **lucid_mind** + `AMETHYST_CLUSTER`
+  - ➜ **lucid_mind** + `DIAMOND_BLOCK`
 - **void_focus**
-  - ➜ **lucid_mind** + `AMETHYST_CLUSTER`
-  - ➜ **tempered_rush** + `COPPER_BLOCK`
+  - ➜ **lucid_mind** + `DIAMOND_BLOCK`
+  - ➜ **tempered_rush** + `NETHERITE_INGOT`
