@@ -41,6 +41,15 @@ tabMenu:
 arrowAggro:
   radius: 3.0
 
+potion:
+  thermalVision:
+    fullFluidSpoofEnabled: true
+    fullFluidSpoofRadius: 12
+    maxSpoofBlocksPerPlayer: 2000
+    preserveMovementFluidShell: true
+    movementShellHorizontal: 1
+    movementShellVertical: 1
+
 anvilCrush:
   radius: 0.75
   mapping:

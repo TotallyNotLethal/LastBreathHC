@@ -8,6 +8,7 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -61,7 +62,7 @@ public class CustomPotionEffectApplier implements Listener {
     private final CustomPotionEffectManager effectManager;
     private final Random random = new Random();
     private final Map<UUID, Map<String, Long>> effectCooldowns = new HashMap<>();
-    private final Map<UUID, Location> thermalVisionSpoofedBlocks = new HashMap<>();
+    private final Map<UUID, Map<ThermalVisionBlockKey, BlockData>> thermalVisionSpoofedBlocks = new HashMap<>();
 
     public CustomPotionEffectApplier(LastBreathHC plugin, CustomPotionEffectManager effectManager) {
         this.plugin = plugin;
@@ -1308,37 +1309,194 @@ public class CustomPotionEffectApplier implements Listener {
     }
 
     private void spoofThermalVisionOverlay(Player player, Material eyeBlockType) {
+        if (isThermalVisionFullSpoofEnabled()) {
+            spoofNearbyFluidAsAir(player);
+            return;
+        }
+        spoofOnlyOverlay(player, eyeBlockType);
+    }
+
+    private void clearThermalVisionOverlay(Player player) {
+        Map<ThermalVisionBlockKey, BlockData> spoofedBlocks = thermalVisionSpoofedBlocks.remove(player.getUniqueId());
+        if (spoofedBlocks == null || spoofedBlocks.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<ThermalVisionBlockKey, BlockData> entry : spoofedBlocks.entrySet()) {
+            Location location = entry.getKey().toLocation();
+            if (location != null) {
+                player.sendBlockChange(location, entry.getValue());
+            }
+        }
+    }
+
+    private void spoofNearbyFluidAsAir(Player player) {
+        Location eyeLocation = player.getEyeLocation();
+        Block eyeBlock = eyeLocation.getBlock();
+        Location center = eyeBlock.getLocation();
+        int radius = Math.max(1, plugin.getConfig().getInt("potion.thermalVision.fullFluidSpoofRadius", 12));
+        int maxSpoofBlocks = Math.max(1, plugin.getConfig().getInt("potion.thermalVision.maxSpoofBlocksPerPlayer", 2000));
+
+        Map<ThermalVisionBlockKey, BlockData> currentSpoofs = new HashMap<>();
+        boolean overCap = false;
+
+        for (int dx = -radius; dx <= radius && !overCap; dx++) {
+            for (int dy = -radius; dy <= radius && !overCap; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    Block block = center.clone().add(dx, dy, dz).getBlock();
+                    Material type = block.getType();
+                    if (type != Material.WATER && type != Material.LAVA) {
+                        continue;
+                    }
+                    if (shouldPreserveMovementFluid(player, block, eyeBlock)) {
+                        continue;
+                    }
+                    ThermalVisionBlockKey key = ThermalVisionBlockKey.fromLocation(block.getLocation());
+                    if (key == null) {
+                        continue;
+                    }
+                    currentSpoofs.put(key, block.getBlockData());
+                    if (currentSpoofs.size() > maxSpoofBlocks) {
+                        overCap = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (overCap) {
+            clearThermalVisionOverlay(player);
+            return;
+        }
+
+        applySpoofChanges(player, currentSpoofs);
+    }
+
+
+    private boolean shouldPreserveMovementFluid(Player player, Block block, Block eyeBlock) {
+        if (!isThermalVisionMovementShellEnabled()) {
+            return false;
+        }
+        if (isSameBlock(block, eyeBlock)) {
+            return false;
+        }
+        int horizontalShell = Math.max(0, plugin.getConfig().getInt("potion.thermalVision.movementShellHorizontal", 1));
+        int verticalShell = Math.max(0, plugin.getConfig().getInt("potion.thermalVision.movementShellVertical", 1));
+
+        Location body = player.getLocation();
+        int dx = Math.abs(block.getX() - body.getBlockX());
+        int dz = Math.abs(block.getZ() - body.getBlockZ());
+        if (dx > horizontalShell || dz > horizontalShell) {
+            return false;
+        }
+
+        int minY = body.getBlockY() - verticalShell;
+        int maxY = eyeBlock.getY() + verticalShell;
+        return block.getY() >= minY && block.getY() <= maxY;
+    }
+
+    private boolean isSameBlock(Block a, Block b) {
+        return a.getWorld().equals(b.getWorld())
+                && a.getX() == b.getX()
+                && a.getY() == b.getY()
+                && a.getZ() == b.getZ();
+    }
+
+    private void spoofOnlyOverlay(Player player, Material eyeBlockType) {
         if (eyeBlockType != Material.WATER && eyeBlockType != Material.LAVA) {
             clearThermalVisionOverlay(player);
             return;
         }
-        Location eyeBlockLocation = player.getEyeLocation().getBlock().getLocation();
-        Location lastSpoofed = thermalVisionSpoofedBlocks.get(player.getUniqueId());
-        if (lastSpoofed != null && !sameBlock(lastSpoofed, eyeBlockLocation)) {
-            player.sendBlockChange(lastSpoofed, lastSpoofed.getBlock().getBlockData());
-            thermalVisionSpoofedBlocks.remove(player.getUniqueId());
-        }
-        if (lastSpoofed != null && sameBlock(lastSpoofed, eyeBlockLocation)) {
+        Block eyeBlock = player.getEyeLocation().getBlock();
+        ThermalVisionBlockKey key = ThermalVisionBlockKey.fromLocation(eyeBlock.getLocation());
+        if (key == null) {
             return;
         }
-        player.sendBlockChange(eyeBlockLocation, Material.AIR.createBlockData());
-        thermalVisionSpoofedBlocks.put(player.getUniqueId(), eyeBlockLocation);
+        Map<ThermalVisionBlockKey, BlockData> overlayOnlySpoof = new HashMap<>();
+        overlayOnlySpoof.put(key, eyeBlock.getBlockData());
+        applySpoofChanges(player, overlayOnlySpoof);
     }
 
-    private void clearThermalVisionOverlay(Player player) {
-        Location spoofedBlock = thermalVisionSpoofedBlocks.remove(player.getUniqueId());
-        if (spoofedBlock == null) {
-            return;
+    private void applySpoofChanges(Player player, Map<ThermalVisionBlockKey, BlockData> newSpoofs) {
+        UUID playerId = player.getUniqueId();
+        Map<ThermalVisionBlockKey, BlockData> previousSpoofs = thermalVisionSpoofedBlocks.getOrDefault(playerId, Map.of());
+
+        for (Map.Entry<ThermalVisionBlockKey, BlockData> entry : previousSpoofs.entrySet()) {
+            if (newSpoofs.containsKey(entry.getKey())) {
+                continue;
+            }
+            Location location = entry.getKey().toLocation();
+            if (location != null) {
+                player.sendBlockChange(location, entry.getValue());
+            }
         }
-        player.sendBlockChange(spoofedBlock, spoofedBlock.getBlock().getBlockData());
+
+        for (ThermalVisionBlockKey key : newSpoofs.keySet()) {
+            if (previousSpoofs.containsKey(key)) {
+                continue;
+            }
+            Location location = key.toLocation();
+            if (location != null) {
+                player.sendBlockChange(location, Material.AIR.createBlockData());
+            }
+        }
+
+        thermalVisionSpoofedBlocks.put(playerId, newSpoofs);
     }
 
-    private boolean sameBlock(Location a, Location b) {
-        return a.getWorld() != null
-                && a.getWorld().equals(b.getWorld())
-                && a.getBlockX() == b.getBlockX()
-                && a.getBlockY() == b.getBlockY()
-                && a.getBlockZ() == b.getBlockZ();
+    private boolean isThermalVisionFullSpoofEnabled() {
+        return plugin.getConfig().getBoolean("potion.thermalVision.fullFluidSpoofEnabled", true);
+    }
+
+    private boolean isThermalVisionMovementShellEnabled() {
+        return plugin.getConfig().getBoolean("potion.thermalVision.preserveMovementFluidShell", true);
+    }
+
+    private static final class ThermalVisionBlockKey {
+        private final UUID worldId;
+        private final int x;
+        private final int y;
+        private final int z;
+
+        private ThermalVisionBlockKey(UUID worldId, int x, int y, int z) {
+            this.worldId = worldId;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        private static ThermalVisionBlockKey fromLocation(Location location) {
+            if (location.getWorld() == null) {
+                return null;
+            }
+            return new ThermalVisionBlockKey(location.getWorld().getUID(), location.getBlockX(), location.getBlockY(), location.getBlockZ());
+        }
+
+        private Location toLocation() {
+            if (Bukkit.getWorld(worldId) == null) {
+                return null;
+            }
+            return new Location(Bukkit.getWorld(worldId), x, y, z);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof ThermalVisionBlockKey that)) {
+                return false;
+            }
+            return x == that.x && y == that.y && z == that.z && worldId.equals(that.worldId);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = worldId.hashCode();
+            result = 31 * result + x;
+            result = 31 * result + y;
+            result = 31 * result + z;
+            return result;
+        }
     }
 
     private void applySteamBlur(Player player) {
