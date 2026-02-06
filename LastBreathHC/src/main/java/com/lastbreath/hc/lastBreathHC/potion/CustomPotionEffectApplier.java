@@ -95,9 +95,6 @@ public class CustomPotionEffectApplier implements Listener {
         if (hasEffect(player, "crystal_luck")) {
             applyCrystalLuck(player, event);
         }
-        if (hasEffect(player, "ore_pulse")) {
-            applyOrePulse(player, event);
-        }
         if (hasEffect(player, "bounty_call")) {
             applyBountyCall(player, event);
         }
@@ -378,9 +375,6 @@ public class CustomPotionEffectApplier implements Listener {
         }
         if (hasEffect(player, "gloom")) {
             applyGloom(player);
-        }
-        if (hasEffect(player, "crystal_focus")) {
-            applyCrystalFocus(player);
         }
         if (hasEffect(player, "razor_thoughts")) {
             applyRazorThoughts(player);
@@ -1085,13 +1079,6 @@ public class CustomPotionEffectApplier implements Listener {
         player.addPotionEffect(new PotionEffect(PotionEffectType.UNLUCK, 10 * TICKS_PER_SECOND, 0, true, true, true));
     }
 
-    private void applyCrystalFocus(Player player) {
-        if (!triggerWithCooldown(player, "crystal_focus", 12 * TICKS_PER_SECOND, 0.4)) {
-            return;
-        }
-        revealNearbyClearSightOres(player);
-    }
-
     private void applyRazorThoughts(Player player) {
         if (!triggerWithCooldown(player, "razor_thoughts", 10 * TICKS_PER_SECOND, 0.4)) {
             return;
@@ -1105,17 +1092,6 @@ public class CustomPotionEffectApplier implements Listener {
             return;
         }
         player.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, 2 * TICKS_PER_SECOND, 1, true, true, true));
-    }
-
-    private void applyOrePulse(Player player, BlockBreakEvent event) {
-        Material type = event.getBlock().getType();
-        if (!type.name().endsWith("_ORE") && type != Material.ANCIENT_DEBRIS) {
-            return;
-        }
-        if (!triggerWithCooldown(player, "ore_pulse", 8 * TICKS_PER_SECOND, 0.5)) {
-            return;
-        }
-        revealNearbyClearSightOres(player);
     }
 
     private void applyHushAura(Player player) {

@@ -485,8 +485,8 @@ potions:
         cooldownTicks: 0
     afterEffects: []
     customEffects:
-      - id: crystal_focus
-        durationTicks: 4800
+      - id: clear_sight
+        durationTicks: 2400
         trigger: ON_DRINK
         cooldownTicks: 0
       - id: razor_thoughts
@@ -527,7 +527,7 @@ potions:
         durationTicks: 1600
         trigger: ON_DRINK
         cooldownTicks: 0
-      - id: ore_pulse
+      - id: clear_sight
         durationTicks: 1600
         trigger: ON_DRINK
         cooldownTicks: 0

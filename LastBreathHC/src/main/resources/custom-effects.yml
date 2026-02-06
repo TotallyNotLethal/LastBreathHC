@@ -147,10 +147,6 @@ effects:
     displayName: "Dousing Skin"
     category: POSITIVE
     description: "Slightly reduces fire and lava damage."
-  - id: crystal_focus
-    displayName: "Crystal Focus"
-    category: POSITIVE
-    description: "Lucid Mind sharpens awareness of nearby resources."
   - id: razor_thoughts
     displayName: "Razor Thoughts"
     category: POSITIVE
@@ -159,10 +155,6 @@ effects:
     displayName: "Overclocked Tools"
     category: POSITIVE
     description: "Tools feel lighter and break blocks faster."
-  - id: ore_pulse
-    displayName: "Ore Pulse"
-    category: POSITIVE
-    description: "Occasional pulse reveals nearby ore."
   - id: hush_aura
     displayName: "Hush Aura"
     category: POSITIVE
