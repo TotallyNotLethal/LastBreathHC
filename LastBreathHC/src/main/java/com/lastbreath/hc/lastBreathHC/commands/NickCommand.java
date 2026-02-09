@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.commands;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.nickname.NicknameStorage;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
@@ -20,8 +21,13 @@ public class NickCommand implements BasicCommand {
 
     private static final int MIN_LENGTH = 3;
     private static final int MAX_LENGTH = 16;
-    private static final String HEX_COLOR_PATTERN = "(?i)§x(§[0-9a-f]){6}";
+    private static final String PERMISSION_NODE = "lastbreathhc.nick";
+    private static final String HEX_COLOR_PATTERN = "(?i)" + ChatColor.COLOR_CHAR + "x("
+            + ChatColor.COLOR_CHAR + "[0-9a-f]){6}";
     private static final Pattern HEX_INPUT_PATTERN = Pattern.compile("(?i)&#([0-9a-f]{6})");
+    private static final Pattern DISALLOWED_FORMAT_PATTERN =
+            Pattern.compile("(?i)(&[klmno]|" + ChatColor.COLOR_CHAR + "[klmno])");
+    private static final Pattern FORBIDDEN_ROLE_PATTERN = Pattern.compile("(?i)(owner|admin|mod)");
     private final NamespacedKey nicknameKey;
 
     public NickCommand(LastBreathHC plugin) {
@@ -43,6 +49,10 @@ public class NickCommand implements BasicCommand {
             sender.sendMessage("Players only.");
             return;
         }
+        if (!player.hasPermission(PERMISSION_NODE)) {
+            player.sendMessage("Â§cNo permission.");
+            return;
+        }
 
         if (args.length == 0 || (args.length == 1 && args[0].equalsIgnoreCase("off"))) {
             clearNickname(player);
@@ -54,7 +64,14 @@ public class NickCommand implements BasicCommand {
             player.sendMessage("§cUsage: /nick <nickname> or /nick off");
             return;
         }
-
+        if (containsWhitespace(rawNickname)) {
+            player.sendMessage("§cNicknames cannot contain spaces.");
+            return;
+        }
+        if (DISALLOWED_FORMAT_PATTERN.matcher(rawNickname).find()) {
+            player.sendMessage("§cNicknames cannot use bold, italic, underline, strikethrough, or obfuscated text.");
+            return;
+        }
         String normalizedNickname = normalizeHexColors(rawNickname);
         String translated = ChatColor.translateAlternateColorCodes('&', normalizedNickname);
         String stripped = stripFormatting(translated);
@@ -63,7 +80,14 @@ public class NickCommand implements BasicCommand {
             player.sendMessage("§cNickname must be between " + MIN_LENGTH + " and " + MAX_LENGTH + " characters.");
             return;
         }
-
+        if (DISALLOWED_FORMAT_PATTERN.matcher(translated).find()) {
+            player.sendMessage("§cNicknames cannot use bold, italic, underline, strikethrough, or obfuscated text.");
+            return;
+        }
+        if (containsForbiddenRole(stripped)) {
+            player.sendMessage("§cNicknames cannot contain staff titles.");
+            return;
+        }
         player.getPersistentDataContainer().set(nicknameKey, PersistentDataType.STRING, translated);
         applyNickname(player, translated);
         updateNicknameStats(player, translated);
@@ -72,6 +96,7 @@ public class NickCommand implements BasicCommand {
 
     private void clearNickname(Player player) {
         player.getPersistentDataContainer().remove(nicknameKey);
+        NicknameStorage.save(player.getUniqueId(), null);
         player.setDisplayName(player.getName());
         TitleManager.refreshPlayerTabTitle(player);
         updateNicknameStats(player, null);
@@ -99,6 +124,20 @@ public class NickCommand implements BasicCommand {
             return "";
         }
         return stripped.trim();
+    }
+
+    private boolean containsWhitespace(String input) {
+        for (int i = 0; i < input.length(); i++) {
+            if (Character.isWhitespace(input.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean containsForbiddenRole(String stripped) {
+        String lettersOnly = stripped.replaceAll("[^A-Za-z]", "");
+        return FORBIDDEN_ROLE_PATTERN.matcher(lettersOnly).find();
     }
 
     private String normalizeHexColors(String input) {
