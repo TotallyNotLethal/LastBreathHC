@@ -14,6 +14,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+import org.bukkit.Bukkit;
+import org.bukkit.scheduler.BukkitTask;
 
 public class FakePlayerService {
     private static final String UUID_NAMESPACE = "com.lastbreath.hc.lastBreathHC.fakeplayer:";
@@ -22,12 +26,17 @@ public class FakePlayerService {
     private final FakePlayerRepository repository;
     private final FakePlayerPlatformAdapter platformAdapter;
     private final SkinService skinService;
+    private final FakePlayersSettings settings;
     private final Map<UUID, FakePlayerRecord> records = new ConcurrentHashMap<>();
+    private final ConcurrentLinkedQueue<Runnable> visualUpdateQueue = new ConcurrentLinkedQueue<>();
 
-    public FakePlayerService(LastBreathHC plugin, FakePlayerRepository repository, SkinService skinService) {
+    private BukkitTask visualDrainTask;
+
+    public FakePlayerService(LastBreathHC plugin, FakePlayerRepository repository, SkinService skinService, FakePlayersSettings settings) {
         this.plugin = plugin;
         this.repository = repository;
         this.skinService = skinService;
+        this.settings = settings;
         this.platformAdapter = FakePlayerPlatformAdapterFactory.create(plugin);
     }
 
@@ -36,11 +45,17 @@ public class FakePlayerService {
         Map<String, SkinCacheEntry> skinCache = new ConcurrentHashMap<>();
         repository.loadInto(records, skinCache);
         skinService.loadCache(skinCache);
+        startVisualDrainTask();
         int respawned = startupAutoRespawn();
         plugin.getLogger().info("Loaded " + records.size() + " fake player(s), auto-respawned " + respawned + ".");
     }
 
     public void shutdown() {
+        if (visualDrainTask != null) {
+            visualDrainTask.cancel();
+            visualDrainTask = null;
+        }
+        flushVisualQueue();
         for (FakePlayerRecord record : records.values()) {
             platformAdapter.despawnFakeTabEntry(record.getUuid());
         }
@@ -71,7 +86,7 @@ public class FakePlayerService {
             record.setActive(true);
             record.setLastSeenAt(Instant.now());
         }
-        platformAdapter.updateDisplayState(record);
+        queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
         return record;
     }
 
@@ -91,7 +106,7 @@ public class FakePlayerService {
         record.setSkinOwner(normalizedOwner);
         record.setTextures(lookup.textures());
         record.setSignature(lookup.signature());
-        platformAdapter.updateDisplayState(record);
+        queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
         return new SkinUpdateOutcome(true, lookup.refreshed(), lookup.usedCachedAfterFailure(), false);
     }
 
@@ -100,7 +115,7 @@ public class FakePlayerService {
         if (removed == null) {
             return false;
         }
-        platformAdapter.despawnFakeTabEntry(uuid);
+        queueVisualUpdate(() -> platformAdapter.despawnFakeTabEntry(uuid));
         return true;
     }
 
@@ -142,7 +157,7 @@ public class FakePlayerService {
         if (active) {
             record.setLastSeenAt(Instant.now());
         }
-        platformAdapter.updateDisplayState(record);
+        queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
         return true;
     }
 
@@ -194,17 +209,40 @@ public class FakePlayerService {
     }
 
     public int startupAutoRespawn() {
+        if (!settings.autoRespawnActiveOnStartup()) {
+            plugin.getLogger().info("fakePlayers.autoRespawnActiveOnStartup=false, skipping fake-player auto-respawn.");
+            return 0;
+        }
+
         Instant now = Instant.now();
-        int count = 0;
+        List<FakePlayerRecord> toRespawn = new ArrayList<>();
         for (FakePlayerRecord record : records.values()) {
             if (!record.isActive()) {
                 continue;
             }
             record.setLastSeenAt(now);
-            platformAdapter.spawnFakeTabEntry(record);
-            count++;
+            toRespawn.add(record);
         }
-        return count;
+
+        int total = toRespawn.size();
+        if (total == 0) {
+            return 0;
+        }
+
+        int batchSize = settings.batching().startupRespawnBatchSize();
+        int intervalTicks = settings.batching().startupRespawnIntervalTicks();
+        for (int start = 0; start < total; start += batchSize) {
+            int from = start;
+            int to = Math.min(start + batchSize, total);
+            long delay = (long) (start / batchSize) * intervalTicks;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                for (int idx = from; idx < to; idx++) {
+                    platformAdapter.spawnFakeTabEntry(toRespawn.get(idx));
+                }
+            }, delay);
+        }
+
+        return total;
     }
 
     /**
@@ -217,7 +255,7 @@ public class FakePlayerService {
         if (record == null) {
             return false;
         }
-        platformAdapter.updateDisplayState(record);
+        queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
         return true;
     }
 
@@ -245,6 +283,40 @@ public class FakePlayerService {
         return owner == null ? "unknown" : owner.trim().toLowerCase();
     }
 
+
+
+    private void startVisualDrainTask() {
+        if (visualDrainTask != null) {
+            visualDrainTask.cancel();
+        }
+        int intervalTicks = settings.batching().visualUpdateIntervalTicks();
+        visualDrainTask = Bukkit.getScheduler().runTaskTimer(plugin, this::drainVisualQueue, intervalTicks, intervalTicks);
+    }
+
+    private void queueVisualUpdate(Runnable update) {
+        if (update == null) {
+            return;
+        }
+        visualUpdateQueue.offer(update);
+    }
+
+    private void drainVisualQueue() {
+        int max = settings.batching().visualUpdateBatchSize();
+        for (int i = 0; i < max; i++) {
+            Runnable update = visualUpdateQueue.poll();
+            if (update == null) {
+                return;
+            }
+            update.run();
+        }
+    }
+
+    private void flushVisualQueue() {
+        Runnable update;
+        while ((update = visualUpdateQueue.poll()) != null) {
+            update.run();
+        }
+    }
     public record SkinUpdateOutcome(boolean success, boolean refreshed, boolean usedFallbackCache, boolean notFound) {
         private static SkinUpdateOutcome notFound() {
             return new SkinUpdateOutcome(false, false, false, true);

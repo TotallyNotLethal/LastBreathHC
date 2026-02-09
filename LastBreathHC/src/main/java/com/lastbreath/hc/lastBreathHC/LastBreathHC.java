@@ -69,6 +69,7 @@ import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerDeathReactionHandler;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRepository;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayersSettings;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.SkinService;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
@@ -126,16 +127,19 @@ public final class LastBreathHC extends JavaPlugin {
     private MobStackManager mobStackManager;
     private AggressiveLogoutMobManager aggressiveLogoutMobManager;
     private FakePlayerService fakePlayerService;
+    private FakePlayersSettings fakePlayersSettings;
 
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
         getLogger().info("LastBreathHC enabled.");
+        fakePlayersSettings = FakePlayersSettings.load(this);
         fakePlayerService = new FakePlayerService(
                 this,
                 new FakePlayerRepository(this, new java.io.File(getDataFolder(), "fake-players.yml")),
-                new SkinService(this)
+                new SkinService(this),
+                fakePlayersSettings
         );
         fakePlayerService.startup();
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
@@ -460,6 +464,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     public FakePlayerService getFakePlayerService() {
         return fakePlayerService;
+    }
+
+    public FakePlayersSettings getFakePlayersSettings() {
+        return fakePlayersSettings;
     }
 
     private void scheduleNextAsteroid() {

@@ -7,19 +7,23 @@
 
 
 fakePlayers:
+  autoRespawnActiveOnStartup: true
   deathReactions:
     enabled: true
     maxReactionsPerMinute: 3
-    reactionCount: 1
     perFakeCooldownSeconds: 30
-    delayTicks:
-      min: 20
-      max: 80
+    delayMinTicks: 20
+    delayMaxTicks: 80
     messages:
       - "o7"
       - "rip"
       - "F"
       - "gg unlucky"
+  batching:
+    startupRespawnBatchSize: 20
+    startupRespawnIntervalTicks: 1
+    visualUpdateBatchSize: 30
+    visualUpdateIntervalTicks: 1
 
 debug: false
 
