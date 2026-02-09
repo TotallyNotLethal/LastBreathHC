@@ -1,5 +1,6 @@
 package com.lastbreath.hc.lastBreathHC.listeners;
 
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Server;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ServerListMotdListener implements Listener {
+    private final FakePlayerService fakePlayerService;
     private static final List<String> BRACKET_STYLES = List.of(
             "[%s]",
             "[%s | Bloodbound]",
@@ -31,6 +33,10 @@ public class ServerListMotdListener implements Listener {
             "Courage hits harder when the clock runs out."
     );
 
+    public ServerListMotdListener(FakePlayerService fakePlayerService) {
+        this.fakePlayerService = fakePlayerService;
+    }
+
     @EventHandler
     public void onServerListPing(ServerListPingEvent event) {
         String serverName = resolveServerName();
@@ -38,6 +44,12 @@ public class ServerListMotdListener implements Listener {
         String topLine = ChatColor.GOLD + bracketed + ChatColor.RED + " Hardcore";
         String bottomLine = ChatColor.GRAY + randomEntry(WITTY_LINES);
         event.setMotd(topLine + "\n" + bottomLine);
+
+        int realOnline = Bukkit.getOnlinePlayers().size();
+        int fakeOnline = Math.max(0, fakePlayerService.getActiveCount());
+        long combined = (long) realOnline + fakeOnline;
+        int reported = combined > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) combined;
+        event.setNumPlayers(reported);
     }
 
     private String resolveServerName() {
