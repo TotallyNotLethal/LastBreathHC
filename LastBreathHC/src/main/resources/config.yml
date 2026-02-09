@@ -1,3 +1,8 @@
+# Fake-player implementation note:
+# - Fake entries are visual simulation only and are NOT real Bukkit online players.
+# - Vanilla /list therefore reports only real connected players.
+# - Use /fake counts to view real, fake(active), and combined totals.
+
 # LastBreathHC Configuration
 
 

@@ -5,6 +5,7 @@ import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRecord;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ public class FakeCommand implements BasicCommand {
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("add", "remove", "list", "mute", "skin");
+            return List.of("add", "remove", "list", "counts", "mute", "skin");
         }
 
         if (args.length == 2 && (args[0].equalsIgnoreCase("remove")
@@ -62,6 +63,7 @@ public class FakeCommand implements BasicCommand {
             case "add" -> handleAdd(sender, args);
             case "remove" -> handleRemove(sender, args);
             case "list" -> handleList(sender, args);
+            case "counts" -> handleCounts(sender, args);
             case "mute" -> handleMute(sender, args);
             case "skin" -> handleSkin(sender, args);
             default -> {
@@ -126,6 +128,7 @@ public class FakeCommand implements BasicCommand {
         List<FakePlayerRecord> records = service().listFakePlayers();
         if (records.isEmpty()) {
             sender.sendMessage("§eNo fake players configured.");
+            sendCounts(sender, records);
             return;
         }
 
@@ -136,6 +139,31 @@ public class FakeCommand implements BasicCommand {
                     + " §8| §7active: " + (record.isActive() ? "§ayes" : "§cno")
                     + " §8| §7muted: " + (record.isMuted() ? "§cyes" : "§ano"));
         }
+        sendCounts(sender, records);
+    }
+
+    private void handleCounts(CommandSender sender, String[] args) {
+        if (args.length != 1) {
+            sender.sendMessage("§cUsage: /fake counts");
+            return;
+        }
+
+        sendCounts(sender, service().listFakePlayers());
+    }
+
+    private void sendCounts(CommandSender sender, List<FakePlayerRecord> records) {
+        int activeFakeCount = 0;
+        for (FakePlayerRecord record : records) {
+            if (record.isActive()) {
+                activeFakeCount++;
+            }
+        }
+        int realOnlineCount = Bukkit.getOnlinePlayers().size();
+
+        sender.sendMessage("§6Online counts §8| §7real: §f" + realOnlineCount
+                + " §8| §7fake(active): §f" + activeFakeCount
+                + " §8| §7combined: §f" + (realOnlineCount + activeFakeCount));
+        sender.sendMessage("§8Note: vanilla §f/list§8 only reports real players on this implementation.");
     }
 
     private void handleMute(CommandSender sender, String[] args) {
@@ -221,6 +249,7 @@ public class FakeCommand implements BasicCommand {
         sender.sendMessage("§e/fake add <name> [skinOwner]");
         sender.sendMessage("§e/fake remove <name>");
         sender.sendMessage("§e/fake list");
+        sender.sendMessage("§e/fake counts");
         sender.sendMessage("§e/fake mute <name|all>");
         sender.sendMessage("§e/fake skin <name> <skinOwner>");
     }
