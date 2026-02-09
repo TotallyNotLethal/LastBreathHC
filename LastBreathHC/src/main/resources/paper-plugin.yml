@@ -3,3 +3,10 @@ version: '1.0-SNAPSHOT'
 main: com.lastbreath.hc.lastBreathHC.LastBreathHC
 api-version: '1.21'
 author: LethalLuck
+permissions:
+  lastbreathhc.showinv:
+    description: Allows chat inventory sharing via [item], [ec], [inv].
+    default: false
+  lastbreathhc.nick:
+    description: Allows players to set nicknames with /nick.
+    default: false
