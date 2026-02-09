@@ -21,17 +21,21 @@ public class FakePlayerService {
     private final LastBreathHC plugin;
     private final FakePlayerRepository repository;
     private final FakePlayerPlatformAdapter platformAdapter;
+    private final SkinService skinService;
     private final Map<UUID, FakePlayerRecord> records = new ConcurrentHashMap<>();
 
-    public FakePlayerService(LastBreathHC plugin, FakePlayerRepository repository) {
+    public FakePlayerService(LastBreathHC plugin, FakePlayerRepository repository, SkinService skinService) {
         this.plugin = plugin;
         this.repository = repository;
+        this.skinService = skinService;
         this.platformAdapter = FakePlayerPlatformAdapterFactory.create(plugin);
     }
 
     public void startup() {
         records.clear();
-        records.putAll(repository.load());
+        Map<String, SkinCacheEntry> skinCache = new ConcurrentHashMap<>();
+        repository.loadInto(records, skinCache);
+        skinService.loadCache(skinCache);
         int respawned = startupAutoRespawn();
         plugin.getLogger().info("Loaded " + records.size() + " fake player(s), auto-respawned " + respawned + ".");
     }
@@ -40,7 +44,7 @@ public class FakePlayerService {
         for (FakePlayerRecord record : records.values()) {
             platformAdapter.despawnFakeTabEntry(record.getUuid());
         }
-        repository.save(records.values());
+        repository.save(records.values(), skinService.snapshotCache());
     }
 
     public FakePlayerRecord addFakePlayer(String name, String skinOwner, String textures, String signature) {
@@ -49,21 +53,46 @@ public class FakePlayerService {
             normalizedName = "unknown";
         }
 
+        String normalizedOwner = normalizeOwner(skinOwner, normalizedName);
+        SkinService.SkinLookupResult skinLookup = skinService.lookup(normalizedOwner, false);
+        String resolvedTextures = skinLookup.hasSkin() ? skinLookup.textures() : textures;
+        String resolvedSignature = skinLookup.hasSkin() ? skinLookup.signature() : signature;
+
         UUID uuid = deterministicUuid(normalizedName);
         FakePlayerRecord record = records.get(uuid);
         if (record == null) {
-            record = new FakePlayerRecord(normalizedName, uuid, skinOwner, textures, signature);
+            record = new FakePlayerRecord(normalizedName, uuid, normalizedOwner, resolvedTextures, resolvedSignature);
             records.put(uuid, record);
         } else {
             record.setName(normalizedName);
-            record.setSkinOwner(skinOwner);
-            record.setTextures(textures);
-            record.setSignature(signature);
+            record.setSkinOwner(normalizedOwner);
+            record.setTextures(resolvedTextures);
+            record.setSignature(resolvedSignature);
             record.setActive(true);
             record.setLastSeenAt(Instant.now());
         }
         platformAdapter.updateDisplayState(record);
         return record;
+    }
+
+    public SkinUpdateOutcome refreshSkin(UUID uuid, String skinOwner, boolean forceRefresh) {
+        FakePlayerRecord record = records.get(uuid);
+        if (record == null) {
+            return SkinUpdateOutcome.notFound();
+        }
+
+        String normalizedOwner = normalizeOwner(skinOwner, record.getName());
+        SkinService.SkinLookupResult lookup = skinService.lookup(normalizedOwner, forceRefresh);
+
+        if (!lookup.hasSkin()) {
+            return SkinUpdateOutcome.failedNoSkin();
+        }
+
+        record.setSkinOwner(normalizedOwner);
+        record.setTextures(lookup.textures());
+        record.setSignature(lookup.signature());
+        platformAdapter.updateDisplayState(record);
+        return new SkinUpdateOutcome(true, lookup.refreshed(), lookup.usedCachedAfterFailure(), false);
     }
 
     public boolean removeFakePlayer(UUID uuid) {
@@ -193,7 +222,7 @@ public class FakePlayerService {
     }
 
     public void saveNow() {
-        repository.save(records.values());
+        repository.save(records.values(), skinService.snapshotCache());
     }
 
     private boolean isCooldownReady(Instant lastReactionAt, Instant now, Duration cooldown) {
@@ -206,5 +235,23 @@ public class FakePlayerService {
     private UUID deterministicUuid(String name) {
         String seed = UUID_NAMESPACE + name.toLowerCase();
         return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String normalizeOwner(String skinOwner, String fallbackName) {
+        String owner = skinOwner;
+        if (owner == null || owner.isBlank()) {
+            owner = fallbackName;
+        }
+        return owner == null ? "unknown" : owner.trim().toLowerCase();
+    }
+
+    public record SkinUpdateOutcome(boolean success, boolean refreshed, boolean usedFallbackCache, boolean notFound) {
+        private static SkinUpdateOutcome notFound() {
+            return new SkinUpdateOutcome(false, false, false, true);
+        }
+
+        private static SkinUpdateOutcome failedNoSkin() {
+            return new SkinUpdateOutcome(false, false, false, false);
+        }
     }
 }
