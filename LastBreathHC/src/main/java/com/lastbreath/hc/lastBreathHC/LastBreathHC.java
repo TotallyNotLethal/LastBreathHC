@@ -66,6 +66,8 @@ import com.lastbreath.hc.lastBreathHC.death.DeathMarkerManager;
 import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
 import com.lastbreath.hc.lastBreathHC.environment.AnvilCrushListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRepository;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantBookRecipeListener;
@@ -121,12 +123,15 @@ public final class LastBreathHC extends JavaPlugin {
     private CosmeticAuraService cosmeticAuraService;
     private MobStackManager mobStackManager;
     private AggressiveLogoutMobManager aggressiveLogoutMobManager;
+    private FakePlayerService fakePlayerService;
 
     @Override
     public void onEnable() {
         instance = this;
         saveDefaultConfig();
         getLogger().info("LastBreathHC enabled.");
+        fakePlayerService = new FakePlayerService(this, new FakePlayerRepository(this, new java.io.File(getDataFolder(), "fake-players.yml")));
+        fakePlayerService.startup();
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
         customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");
         HeadManager.init();
@@ -415,6 +420,10 @@ public final class LastBreathHC extends JavaPlugin {
             teamManager.saveAll();
             teamManager = null;
         }
+        if (fakePlayerService != null) {
+            fakePlayerService.shutdown();
+            fakePlayerService = null;
+        }
         AsteroidManager.clearAllAsteroids();
         BountyManager.save();
         ReviveStateManager.save();
@@ -438,6 +447,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     public WorldBossManager getWorldBossManager() {
         return worldBossManager;
+    }
+
+    public FakePlayerService getFakePlayerService() {
+        return fakePlayerService;
     }
 
     private void scheduleNextAsteroid() {
