@@ -8,6 +8,7 @@ import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonScheduler;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
+import com.lastbreath.hc.lastBreathHC.chat.ChatInventoryShareListener;
 import com.lastbreath.hc.lastBreathHC.chat.ChatPrefixListener;
 import com.lastbreath.hc.lastBreathHC.commands.*;
 import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
@@ -85,6 +86,7 @@ import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectRegistry;
 import com.lastbreath.hc.lastBreathHC.potion.CauldronBrewingListener;
 import com.lastbreath.hc.lastBreathHC.potion.PotionHandler;
 import com.lastbreath.hc.lastBreathHC.potion.PotionDefinitionRegistry;
+import com.lastbreath.hc.lastBreathHC.nickname.NicknamePermissionMonitor;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -102,6 +104,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask bountyCleanupTask;
     private BukkitTask bloodMoonTask;
     private BukkitTask titleEffectTask;
+    private BukkitTask nicknamePermissionTask;
     private BloodMoonManager bloodMoonManager;
     private DeathMarkerManager deathMarkerManager;
     private EnvironmentalEffectsManager environmentalEffectsManager;
@@ -289,6 +292,9 @@ public final class LastBreathHC extends JavaPlugin {
                 new ChatPrefixListener(), this
         );
         getServer().getPluginManager().registerEvents(
+                new ChatInventoryShareListener(this), this
+        );
+        getServer().getPluginManager().registerEvents(
                 new ServerListMotdListener(), this
         );
         worldBossManager = new WorldBossManager(this, bloodMoonManager);
@@ -315,6 +321,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleBountyTimers();
         scheduleBloodMoonChecks();
         scheduleTitleEffects();
+        scheduleNicknamePermissionChecks();
         scheduleTabMenuRefresh();
         cosmeticAuraService.start(this);
         worldBossManager.start();
@@ -338,6 +345,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("worldboss", new WorldBossCommand());
                     event.registrar().register("cosmetics", new CosmeticsCommand(cosmeticsGUI));
                     event.registrar().register("spectate", spectateCommand);
+                    event.registrar().register("lbshowinv", new ChatInventoryShareCommand());
                 }
         );
     }
@@ -363,6 +371,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (titleEffectTask != null) {
             titleEffectTask.cancel();
             titleEffectTask = null;
+        }
+        if (nicknamePermissionTask != null) {
+            nicknamePermissionTask.cancel();
+            nicknamePermissionTask = null;
         }
         if (tabMenuRefreshScheduler != null) {
             tabMenuRefreshScheduler.stop();
@@ -481,6 +493,20 @@ public final class LastBreathHC extends JavaPlugin {
                 TitleManager.refreshEquippedTitleEffects();
             }
         }.runTaskTimer(this, 20L, TitleManager.getTitleEffectRefreshTicks());
+    }
+
+    private void scheduleNicknamePermissionChecks() {
+        if (nicknamePermissionTask != null) {
+            nicknamePermissionTask.cancel();
+        }
+        nicknamePermissionTask = new BukkitRunnable() {
+            private final NicknamePermissionMonitor monitor = new NicknamePermissionMonitor(LastBreathHC.this);
+
+            @Override
+            public void run() {
+                monitor.run();
+            }
+        }.runTaskTimer(this, 20L, 100L);
     }
 
     private void scheduleTabMenuRefresh() {

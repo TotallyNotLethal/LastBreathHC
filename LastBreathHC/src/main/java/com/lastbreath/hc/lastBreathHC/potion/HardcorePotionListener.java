@@ -432,7 +432,7 @@ public class HardcorePotionListener implements Listener {
         if (!triggerWithCooldown(player, "clear_sight", 10 * TICKS_PER_SECOND, 0.5)) {
             return;
         }
-        int radius = 6;
+        int radius = 10;
         Location origin = player.getLocation();
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
@@ -448,7 +448,7 @@ public class HardcorePotionListener implements Listener {
     }
 
     private void spawnClearSightSpoofStand(Player viewer, Block block) {
-        Location standLocation = block.getLocation().add(0.5, 0.0, 0.5);
+        Location standLocation = block.getLocation().add(0.5, -1.0, 0.5);
         ArmorStand stand = block.getWorld().spawn(standLocation, ArmorStand.class, spawned -> {
             spawned.setMarker(true);
             spawned.setInvisible(true);

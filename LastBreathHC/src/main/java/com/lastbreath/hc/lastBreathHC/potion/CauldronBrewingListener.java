@@ -34,7 +34,8 @@ public class CauldronBrewingListener implements Listener {
     private static final double CAULDRON_RADIUS_XZ = 1.2;
     private static final double CAULDRON_RADIUS_Y = 1.0;
     private static final int BREW_PARTICLE_COUNT = 20;
-    private static final int BREW_CHECK_DURATION_TICKS = 40;
+    private static final int BREW_CHECK_DURATION_TICKS = 100;
+    private static final int BREW_CHECK_INTERVAL_TICKS = 10;
 
     private final JavaPlugin plugin;
     private final PotionHandler potionHandler;
@@ -111,9 +112,9 @@ public class CauldronBrewingListener implements Listener {
                 if (logFailures) {
                     loggedFailures = true;
                 }
-                ticks++;
+                ticks += BREW_CHECK_INTERVAL_TICKS;
             }
-        }.runTaskTimer(plugin, 0L, 1L);
+        }.runTaskTimer(plugin, 0L, BREW_CHECK_INTERVAL_TICKS);
     }
 
     private boolean tryCauldronBrew(Item item, boolean logFailures) {
@@ -127,8 +128,6 @@ public class CauldronBrewingListener implements Listener {
             }
             return false;
         }
-
-        sendDebug(item, "Detected valid brewing cauldron (water cauldron on lit soul campfire).");
 
         List<Item> contents = item.getWorld().getNearbyEntities(
                 cauldron.getLocation().add(0.5, 0.5, 0.5),
@@ -379,6 +378,9 @@ public class CauldronBrewingListener implements Listener {
     }
 
     private void sendDebug(Item item, String message) {
+        if (!plugin.getConfig().getBoolean("potion.cauldron.debug", false)) {
+            return;
+        }
         UUID throwerId = item.getThrower();
         if (throwerId != null) {
             Player thrower = Bukkit.getPlayer(throwerId);
@@ -391,10 +393,16 @@ public class CauldronBrewingListener implements Listener {
     }
 
     private void sendDebug(Player player, String message) {
+        if (!plugin.getConfig().getBoolean("potion.cauldron.debug", false)) {
+            return;
+        }
         plugin.getLogger().info("[Cauldron] " + message);
     }
 
     private void sendDebug(Location location, String message) {
+        if (!plugin.getConfig().getBoolean("potion.cauldron.debug", false)) {
+            return;
+        }
         plugin.getLogger().info("[Cauldron] " + message);
     }
 }
