@@ -81,6 +81,16 @@ public class FakePlayerService {
         return List.copyOf(list);
     }
 
+    public int getActiveCount() {
+        int active = 0;
+        for (FakePlayerRecord record : records.values()) {
+            if (record.isActive()) {
+                active++;
+            }
+        }
+        return active;
+    }
+
     public Optional<FakePlayerRecord> getByUuid(UUID uuid) {
         return Optional.ofNullable(records.get(uuid));
     }

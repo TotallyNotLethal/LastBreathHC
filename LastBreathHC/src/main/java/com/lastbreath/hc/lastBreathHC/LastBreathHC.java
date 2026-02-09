@@ -300,7 +300,7 @@ public final class LastBreathHC extends JavaPlugin {
                 new ChatInventoryShareListener(this), this
         );
         getServer().getPluginManager().registerEvents(
-                new ServerListMotdListener(), this
+                new ServerListMotdListener(fakePlayerService), this
         );
         worldBossManager = new WorldBossManager(this, bloodMoonManager);
         getServer().getPluginManager().registerEvents(
