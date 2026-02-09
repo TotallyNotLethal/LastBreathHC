@@ -351,6 +351,8 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("cosmetics", new CosmeticsCommand(cosmeticsGUI));
                     event.registrar().register("spectate", spectateCommand);
                     event.registrar().register("lbshowinv", new ChatInventoryShareCommand());
+                    event.registrar().register("fake", new FakeCommand(this));
+                    event.registrar().register("chat", new FakeChatCommand(this));
                 }
         );
     }
