@@ -1,6 +1,8 @@
 package com.lastbreath.hc.lastBreathHC.fakeplayer;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.platform.FakePlayerPlatformAdapter;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.platform.FakePlayerPlatformAdapterFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -18,11 +20,13 @@ public class FakePlayerService {
 
     private final LastBreathHC plugin;
     private final FakePlayerRepository repository;
+    private final FakePlayerPlatformAdapter platformAdapter;
     private final Map<UUID, FakePlayerRecord> records = new ConcurrentHashMap<>();
 
     public FakePlayerService(LastBreathHC plugin, FakePlayerRepository repository) {
         this.plugin = plugin;
         this.repository = repository;
+        this.platformAdapter = FakePlayerPlatformAdapterFactory.create(plugin);
     }
 
     public void startup() {
@@ -33,6 +37,9 @@ public class FakePlayerService {
     }
 
     public void shutdown() {
+        for (FakePlayerRecord record : records.values()) {
+            platformAdapter.despawnFakeTabEntry(record.getUuid());
+        }
         repository.save(records.values());
     }
 
@@ -55,11 +62,17 @@ public class FakePlayerService {
             record.setActive(true);
             record.setLastSeenAt(Instant.now());
         }
+        platformAdapter.updateDisplayState(record);
         return record;
     }
 
     public boolean removeFakePlayer(UUID uuid) {
-        return records.remove(uuid) != null;
+        FakePlayerRecord removed = records.remove(uuid);
+        if (removed == null) {
+            return false;
+        }
+        platformAdapter.despawnFakeTabEntry(uuid);
+        return true;
     }
 
     public List<FakePlayerRecord> listFakePlayers() {
@@ -90,6 +103,7 @@ public class FakePlayerService {
         if (active) {
             record.setLastSeenAt(Instant.now());
         }
+        platformAdapter.updateDisplayState(record);
         return true;
     }
 
@@ -136,9 +150,24 @@ public class FakePlayerService {
                 continue;
             }
             record.setLastSeenAt(now);
+            platformAdapter.spawnFakeTabEntry(record);
             count++;
         }
         return count;
+    }
+
+    /**
+     * Rebuilds the tab-list visual for an existing fake player record.
+     *
+     * <p>This is still a visual simulation only, not a real client connection.</p>
+     */
+    public boolean refreshVisual(UUID uuid) {
+        FakePlayerRecord record = records.get(uuid);
+        if (record == null) {
+            return false;
+        }
+        platformAdapter.updateDisplayState(record);
+        return true;
     }
 
     public void saveNow() {

@@ -202,6 +202,7 @@ public class FakeCommand implements BasicCommand {
         record.setSkinOwner(skinOwner);
         record.setTextures(null);
         record.setSignature(null);
+        service().refreshVisual(record.getUuid());
         service().saveNow();
         sender.sendMessage("§aUpdated skin owner for §f" + record.getName() + "§a to §f" + skinOwner + "§a.");
     }
