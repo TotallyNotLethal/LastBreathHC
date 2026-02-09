@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.death;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyRecord;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerDeathReactionHandler;
 import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
@@ -32,13 +33,16 @@ public class DeathListener implements Listener {
     private final DeathMarkerManager deathMarkerManager;
     private final TeamChatService teamChatService;
     private final DiscordWebhookService discordWebhookService;
+    private final FakePlayerDeathReactionHandler fakePlayerDeathReactionHandler;
 
     public DeathListener(DeathMarkerManager deathMarkerManager,
                          TeamChatService teamChatService,
-                         DiscordWebhookService discordWebhookService) {
+                         DiscordWebhookService discordWebhookService,
+                         FakePlayerDeathReactionHandler fakePlayerDeathReactionHandler) {
         this.deathMarkerManager = deathMarkerManager;
         this.teamChatService = teamChatService;
         this.discordWebhookService = discordWebhookService;
+        this.fakePlayerDeathReactionHandler = fakePlayerDeathReactionHandler;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -95,6 +99,8 @@ public class DeathListener implements Listener {
             player.removeMetadata(REVIVE_INTERCEPT_METADATA, LastBreathHC.getInstance());
             return;
         }
+        fakePlayerDeathReactionHandler.handlePlayerDeath(player);
+
         String deathMessage = event.getDeathMessage();
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.deaths++;

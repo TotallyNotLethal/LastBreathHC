@@ -66,6 +66,7 @@ import com.lastbreath.hc.lastBreathHC.death.DeathMarkerManager;
 import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
 import com.lastbreath.hc.lastBreathHC.environment.AnvilCrushListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerDeathReactionHandler;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRepository;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
@@ -148,7 +149,8 @@ public final class LastBreathHC extends JavaPlugin {
         int deathMarkerDurationSeconds = getConfig().getInt("deathMarker.durationSeconds", 180);
         deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
 
-        DeathListener deathListener = new DeathListener(deathMarkerManager, teamChatService, discordWebhookService);
+        FakePlayerDeathReactionHandler fakePlayerDeathReactionHandler = new FakePlayerDeathReactionHandler(this, fakePlayerService);
+        DeathListener deathListener = new DeathListener(deathMarkerManager, teamChatService, discordWebhookService, fakePlayerDeathReactionHandler);
         getServer().getPluginManager().registerEvents(
                 deathListener, this
         );

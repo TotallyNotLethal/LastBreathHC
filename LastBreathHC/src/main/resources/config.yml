@@ -6,6 +6,21 @@
 # LastBreathHC Configuration
 
 
+fakePlayers:
+  deathReactions:
+    enabled: true
+    maxReactionsPerMinute: 3
+    reactionCount: 1
+    perFakeCooldownSeconds: 30
+    delayTicks:
+      min: 20
+      max: 80
+    messages:
+      - "o7"
+      - "rip"
+      - "F"
+      - "gg unlucky"
+
 debug: false
 
 customEnchants:

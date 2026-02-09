@@ -130,6 +130,18 @@ public class FakePlayerService {
         return true;
     }
 
+
+    public boolean registerReaction(UUID uuid) {
+        FakePlayerRecord record = records.get(uuid);
+        if (record == null || !record.isActive() || record.isMuted()) {
+            return false;
+        }
+
+        record.setLastReactionAt(Instant.now());
+        record.setReactionCount(record.getReactionCount() + 1L);
+        return true;
+    }
+
     public Optional<FakePlayerRecord> pickReactionCandidate(Duration cooldown) {
         Duration effectiveCooldown = cooldown == null ? Duration.ZERO : cooldown;
         Instant now = Instant.now();
