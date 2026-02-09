@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class FakePlayerRepository {
-    private static final int CURRENT_SCHEMA_VERSION = 1;
+    private static final int CURRENT_SCHEMA_VERSION = 2;
 
     private final LastBreathHC plugin;
     private final File file;
@@ -27,60 +27,87 @@ public class FakePlayerRepository {
     }
 
     public Map<UUID, FakePlayerRecord> load() {
+        Map<UUID, FakePlayerRecord> records = new HashMap<>();
+        loadInto(records, new HashMap<>());
+        return records;
+    }
+
+    public void loadInto(Map<UUID, FakePlayerRecord> records, Map<String, SkinCacheEntry> skinCache) {
+        records.clear();
+        skinCache.clear();
+
         if (!file.exists()) {
-            return new HashMap<>();
+            return;
         }
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         int schemaVersion = config.getInt("schemaVersion", 1);
         if (schemaVersion > CURRENT_SCHEMA_VERSION) {
             plugin.getLogger().warning("Unsupported fake player schema version " + schemaVersion + ", skipping load.");
-            return new HashMap<>();
+            return;
         }
 
-        Map<UUID, FakePlayerRecord> records = new HashMap<>();
         ConfigurationSection section = config.getConfigurationSection("players");
-        if (section == null) {
-            return records;
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                UUID uuid;
+                try {
+                    uuid = UUID.fromString(key);
+                } catch (IllegalArgumentException e) {
+                    continue;
+                }
+
+                ConfigurationSection row = section.getConfigurationSection(key);
+                if (row == null) {
+                    continue;
+                }
+
+                FakePlayerRecord record = new FakePlayerRecord();
+                record.setUuid(uuid);
+                record.setName(row.getString("name", "unknown"));
+                record.setSkinOwner(row.getString("skinOwner"));
+                record.setTextures(row.getString("textures"));
+                record.setSignature(row.getString("signature"));
+                record.setActive(row.getBoolean("active", true));
+                record.setMuted(row.getBoolean("muted", false));
+                record.setCreatedAt(fromEpochMillis(row, "createdAt"));
+                record.setLastSeenAt(fromEpochMillis(row, "lastSeenAt"));
+                record.setLastChatAt(fromEpochMillis(row, "lastChatAt"));
+                record.setLastReactionAt(fromEpochMillis(row, "lastReactionAt"));
+                record.setChatCount(row.getLong("chatCount", 0L));
+                record.setReactionCount(row.getLong("reactionCount", 0L));
+                if (record.getCreatedAt() == null) {
+                    record.setCreatedAt(Instant.now());
+                }
+                records.put(uuid, record);
+            }
         }
 
-        for (String key : section.getKeys(false)) {
-            UUID uuid;
-            try {
-                uuid = UUID.fromString(key);
-            } catch (IllegalArgumentException e) {
-                continue;
-            }
+        ConfigurationSection cacheSection = config.getConfigurationSection("skinCache");
+        if (cacheSection == null) {
+            return;
+        }
 
-            ConfigurationSection row = section.getConfigurationSection(key);
+        for (String ownerKey : cacheSection.getKeys(false)) {
+            ConfigurationSection row = cacheSection.getConfigurationSection(ownerKey);
             if (row == null) {
                 continue;
             }
-
-            FakePlayerRecord record = new FakePlayerRecord();
-            record.setUuid(uuid);
-            record.setName(row.getString("name", "unknown"));
-            record.setSkinOwner(row.getString("skinOwner"));
-            record.setTextures(row.getString("textures"));
-            record.setSignature(row.getString("signature"));
-            record.setActive(row.getBoolean("active", true));
-            record.setMuted(row.getBoolean("muted", false));
-            record.setCreatedAt(fromEpochMillis(row, "createdAt"));
-            record.setLastSeenAt(fromEpochMillis(row, "lastSeenAt"));
-            record.setLastChatAt(fromEpochMillis(row, "lastChatAt"));
-            record.setLastReactionAt(fromEpochMillis(row, "lastReactionAt"));
-            record.setChatCount(row.getLong("chatCount", 0L));
-            record.setReactionCount(row.getLong("reactionCount", 0L));
-            if (record.getCreatedAt() == null) {
-                record.setCreatedAt(Instant.now());
-            }
-            records.put(uuid, record);
+            SkinCacheEntry entry = new SkinCacheEntry();
+            entry.setOwner(ownerKey);
+            entry.setTextures(row.getString("textures"));
+            entry.setSignature(row.getString("signature"));
+            entry.setFetchedAt(fromEpochMillis(row, "fetchedAt"));
+            entry.setExpiresAt(fromEpochMillis(row, "expiresAt"));
+            skinCache.put(ownerKey, entry);
         }
-
-        return records;
     }
 
     public void save(Collection<FakePlayerRecord> records) {
+        save(records, Map.of());
+    }
+
+    public void save(Collection<FakePlayerRecord> records, Map<String, SkinCacheEntry> skinCache) {
         ensureParentDirectory();
 
         YamlConfiguration config = new YamlConfiguration();
@@ -99,6 +126,16 @@ public class FakePlayerRepository {
             config.set(base + ".lastReactionAt", toEpochMillis(record.getLastReactionAt()));
             config.set(base + ".chatCount", record.getChatCount());
             config.set(base + ".reactionCount", record.getReactionCount());
+        }
+
+        for (Map.Entry<String, SkinCacheEntry> cacheEntry : skinCache.entrySet()) {
+            String owner = cacheEntry.getKey();
+            SkinCacheEntry entry = cacheEntry.getValue();
+            String base = "skinCache." + owner;
+            config.set(base + ".textures", entry.getTextures());
+            config.set(base + ".signature", entry.getSignature());
+            config.set(base + ".fetchedAt", toEpochMillis(entry.getFetchedAt()));
+            config.set(base + ".expiresAt", toEpochMillis(entry.getExpiresAt()));
         }
 
         File tempFile = new File(file.getParentFile(), file.getName() + ".tmp");

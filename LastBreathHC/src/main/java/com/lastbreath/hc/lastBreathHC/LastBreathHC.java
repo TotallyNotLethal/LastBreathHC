@@ -69,6 +69,7 @@ import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerDeathReactionHandler;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRepository;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.SkinService;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantBookRecipeListener;
@@ -131,7 +132,11 @@ public final class LastBreathHC extends JavaPlugin {
         instance = this;
         saveDefaultConfig();
         getLogger().info("LastBreathHC enabled.");
-        fakePlayerService = new FakePlayerService(this, new FakePlayerRepository(this, new java.io.File(getDataFolder(), "fake-players.yml")));
+        fakePlayerService = new FakePlayerService(
+                this,
+                new FakePlayerRepository(this, new java.io.File(getDataFolder(), "fake-players.yml")),
+                new SkinService(this)
+        );
         fakePlayerService.startup();
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
         customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");

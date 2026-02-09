@@ -227,11 +227,21 @@ public class FakeCommand implements BasicCommand {
         }
 
         FakePlayerRecord record = optionalRecord.get();
-        record.setSkinOwner(skinOwner);
-        record.setTextures(null);
-        record.setSignature(null);
-        service().refreshVisual(record.getUuid());
+        FakePlayerService.SkinUpdateOutcome outcome = service().refreshSkin(record.getUuid(), skinOwner, true);
+        if (outcome.notFound()) {
+            sender.sendMessage("§cNo fake player found with name: " + targetName);
+            return;
+        }
+        if (!outcome.success()) {
+            sender.sendMessage("§cUnable to resolve skin textures for owner: " + skinOwner);
+            return;
+        }
+
         service().saveNow();
+        if (outcome.usedFallbackCache()) {
+            sender.sendMessage("§eSkin API unavailable, kept cached skin for §f" + record.getName() + "§e (owner: §f" + skinOwner + "§e).");
+            return;
+        }
         sender.sendMessage("§aUpdated skin owner for §f" + record.getName() + "§a to §f" + skinOwner + "§a.");
     }
 
