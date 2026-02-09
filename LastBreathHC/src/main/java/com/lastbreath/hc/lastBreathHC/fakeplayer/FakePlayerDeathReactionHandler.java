@@ -2,7 +2,6 @@ package com.lastbreath.hc.lastBreathHC.fakeplayer;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.time.Duration;
@@ -18,8 +17,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class FakePlayerDeathReactionHandler {
-    private static final String CONFIG_PATH = "fakePlayers.deathReactions";
-
     private final LastBreathHC plugin;
     private final FakePlayerService fakePlayerService;
     private final Random random = new Random();
@@ -34,26 +31,24 @@ public class FakePlayerDeathReactionHandler {
     }
 
     public void handlePlayerDeath(Player deadPlayer) {
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection(CONFIG_PATH);
-        if (section == null || !section.getBoolean("enabled", true)) {
+        FakePlayersSettings.DeathReactionsSettings settings = plugin.getFakePlayersSettings().deathReactions();
+        if (!settings.enabled()) {
             return;
         }
 
-        List<String> messages = section.getStringList("messages");
+        List<String> messages = settings.messages();
         if (messages.isEmpty()) {
             return;
         }
 
-        int maxPerMinute = Math.max(0, section.getInt("maxReactionsPerMinute", 3));
-        int configuredReactionCount = Math.max(1, section.getInt("reactionCount", 1));
-        int availableSlots = getAvailableSlots(maxPerMinute);
+        int availableSlots = getAvailableSlots(settings.maxReactionsPerMinute());
         if (availableSlots <= 0) {
             return;
         }
 
-        long cooldownSeconds = Math.max(0L, section.getLong("perFakeCooldownSeconds", 30L));
-        int minDelayTicks = Math.max(0, section.getInt("delayTicks.min", 20));
-        int maxDelayTicks = Math.max(minDelayTicks, section.getInt("delayTicks.max", 80));
+        long cooldownSeconds = settings.perFakeCooldownSeconds();
+        int minDelayTicks = settings.delayMinTicks();
+        int maxDelayTicks = settings.delayMaxTicks();
 
         List<FakePlayerRecord> eligible = collectEligibleFakePlayers(Instant.now());
         if (eligible.isEmpty()) {
@@ -61,7 +56,7 @@ public class FakePlayerDeathReactionHandler {
         }
 
         Collections.shuffle(eligible, random);
-        int selectedCount = Math.min(configuredReactionCount, Math.min(availableSlots, eligible.size()));
+        int selectedCount = Math.min(1, Math.min(availableSlots, eligible.size()));
         Instant cooldownExpiry = Instant.now().plusSeconds(cooldownSeconds);
 
         for (int index = 0; index < selectedCount; index++) {
