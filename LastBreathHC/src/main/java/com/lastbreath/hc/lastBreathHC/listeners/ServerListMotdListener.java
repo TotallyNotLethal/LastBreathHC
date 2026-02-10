@@ -49,7 +49,7 @@ public class ServerListMotdListener implements Listener {
         int fakeOnline = Math.max(0, fakePlayerService.getActiveCount());
         long combined = (long) realOnline + fakeOnline;
         int reported = combined > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) combined;
-        event.setNumPlayers(reported);
+        applyReportedPlayers(event, reported);
     }
 
     private String resolveServerName() {
@@ -66,5 +66,13 @@ public class ServerListMotdListener implements Listener {
 
     private String randomEntry(List<String> entries) {
         return entries.get(ThreadLocalRandom.current().nextInt(entries.size()));
+    }
+
+    private void applyReportedPlayers(ServerListPingEvent event, int reported) {
+        try {
+            event.getClass().getMethod("setNumPlayers", int.class).invoke(event, reported);
+        } catch (ReflectiveOperationException ignored) {
+            // setNumPlayers is not available on all Bukkit/Spigot APIs.
+        }
     }
 }

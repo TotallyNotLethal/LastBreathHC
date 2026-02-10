@@ -91,8 +91,13 @@ public class FakeCommand implements BasicCommand {
             return;
         }
 
+        Optional<FakePlayerRecord> existing = findByName(name);
+        boolean wasActive = existing.isPresent() && existing.get().isActive();
         FakePlayerRecord record = service().addFakePlayer(name, skinOwner, null, null);
         service().saveNow();
+        if (!wasActive) {
+            service().announceFakeJoin(record);
+        }
         sender.sendMessage("§aFake player saved: §f" + record.getName() + " §7(skin: " + record.getSkinOwner() + ")");
     }
 
@@ -109,6 +114,7 @@ public class FakeCommand implements BasicCommand {
         }
 
         FakePlayerRecord record = optionalRecord.get();
+        boolean wasActive = record.isActive();
         boolean removed = service().removeFakePlayer(record.getUuid());
         if (!removed) {
             sender.sendMessage("§cFailed to remove fake player: " + record.getName());
@@ -116,6 +122,9 @@ public class FakeCommand implements BasicCommand {
         }
 
         service().saveNow();
+        if (wasActive) {
+            service().announceFakeLeave(record);
+        }
         sender.sendMessage("§aRemoved fake player: §f" + record.getName());
     }
 
@@ -163,7 +172,7 @@ public class FakeCommand implements BasicCommand {
         sender.sendMessage("§6Online counts §8| §7real: §f" + realOnlineCount
                 + " §8| §7fake(active): §f" + activeFakeCount
                 + " §8| §7combined: §f" + (realOnlineCount + activeFakeCount));
-        sender.sendMessage("§8Note: vanilla §f/list§8 only reports real players on this implementation.");
+        sender.sendMessage("§8Note: §f/list§8 includes active fake players on this server.");
     }
 
     private void handleMute(CommandSender sender, String[] args) {

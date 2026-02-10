@@ -4,19 +4,40 @@ import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.platform.FakePlayerPlatformAdapter;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.platform.FakePlayerPlatformAdapterFactory;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Collectors;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.Player;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 public class FakePlayerService {
@@ -86,21 +107,22 @@ public class FakePlayerService {
             record.setActive(true);
             record.setLastSeenAt(Instant.now());
         }
-        queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
+        FakePlayerRecord finalRecord = record;
+        queueVisualUpdate(() -> platformAdapter.updateDisplayState(finalRecord));
         return record;
     }
 
     public SkinUpdateOutcome refreshSkin(UUID uuid, String skinOwner, boolean forceRefresh) {
         FakePlayerRecord record = records.get(uuid);
         if (record == null) {
-            return SkinUpdateOutcome.notFound();
+            return SkinUpdateOutcome.notFoundOutcome();
         }
 
         String normalizedOwner = normalizeOwner(skinOwner, record.getName());
         SkinService.SkinLookupResult lookup = skinService.lookup(normalizedOwner, forceRefresh);
 
         if (!lookup.hasSkin()) {
-            return SkinUpdateOutcome.failedNoSkin();
+            return SkinUpdateOutcome.failedNoSkinOutcome();
         }
 
         record.setSkinOwner(normalizedOwner);
@@ -263,6 +285,47 @@ public class FakePlayerService {
         repository.save(records.values(), skinService.snapshotCache());
     }
 
+    public void announceFakeJoin(FakePlayerRecord record) {
+        announceFakePresenceChange(record, true);
+    }
+
+    public void announceFakeLeave(FakePlayerRecord record) {
+        announceFakePresenceChange(record, false);
+    }
+
+    public Optional<Player> resolveBukkitPlayer(FakePlayerRecord record) {
+        return platformAdapter.getBukkitPlayer(record);
+    }
+
+    public void sendFakeChat(FakePlayerRecord record, String message) {
+        if (record == null || message == null) {
+            return;
+        }
+        Optional<Player> player = resolveBukkitPlayer(record);
+        if (player.isPresent()) {
+            try {
+                Player chatPlayer = player.get();
+                AsyncPlayerChatEvent event = new AsyncPlayerChatEvent(
+                        false,
+                        chatPlayer,
+                        message,
+                        new HashSet<>(Bukkit.getOnlinePlayers())
+                );
+                Bukkit.getPluginManager().callEvent(event);
+                if (event.isCancelled()) {
+                    return;
+                }
+                String formatted = String.format(event.getFormat(), chatPlayer.getDisplayName(), event.getMessage());
+                for (Player recipient : event.getRecipients()) {
+                    recipient.sendMessage(formatted);
+                }
+                return;
+            } catch (Exception ignored) {
+            }
+        }
+        Bukkit.broadcastMessage(record.getName() + ": " + message);
+    }
+
     private boolean isCooldownReady(Instant lastReactionAt, Instant now, Duration cooldown) {
         if (lastReactionAt == null) {
             return true;
@@ -281,6 +344,274 @@ public class FakePlayerService {
             owner = fallbackName;
         }
         return owner == null ? "unknown" : owner.trim().toLowerCase();
+    }
+
+    private void announceFakePresenceChange(FakePlayerRecord record, boolean joined) {
+        if (record == null) {
+            return;
+        }
+        String baseMessage = ChatColor.YELLOW + record.getName() + (joined ? " joined the game" : " left the game");
+        Optional<Player> player = platformAdapter.getBukkitPlayer(record);
+        if (joined) {
+            ensureFakePlayerData(record);
+        }
+        if (player.isPresent()) {
+            if (joined) {
+                PlayerJoinEvent event = new PlayerJoinEvent(player.get(), baseMessage);
+                Bukkit.getPluginManager().callEvent(event);
+                broadcastIfPresent(event.getJoinMessage());
+            } else {
+                PlayerQuitEvent event = new PlayerQuitEvent(player.get(), baseMessage);
+                Bukkit.getPluginManager().callEvent(event);
+                broadcastIfPresent(event.getQuitMessage());
+            }
+        } else {
+            Bukkit.broadcastMessage(baseMessage);
+        }
+        notifyDiscordSrvPresence(player.orElse(null), baseMessage, joined);
+    }
+
+    private void broadcastIfPresent(String message) {
+        if (message == null || message.isBlank()) {
+            return;
+        }
+        Bukkit.broadcastMessage(message);
+    }
+
+    private boolean notifyDiscordSrvPresence(Player player, String message, boolean joined) {
+        try {
+            Class<?> discordSrvClass = Class.forName("github.scarsz.discordsrv.DiscordSRV");
+            Object api = resolveDiscordSrvApi(discordSrvClass);
+            if (api == null) {
+                return false;
+            }
+            String eventClassName = joined
+                    ? "github.scarsz.discordsrv.api.events.GamePlayerJoinEvent"
+                    : "github.scarsz.discordsrv.api.events.GamePlayerQuitEvent";
+            Class<?> eventClass = null;
+            try {
+                eventClass = Class.forName(eventClassName);
+            } catch (ClassNotFoundException ignored) {
+                if (!joined) {
+                    eventClass = Class.forName("github.scarsz.discordsrv.api.events.GamePlayerLeaveEvent");
+                }
+            }
+            if (eventClass == null) {
+                return false;
+            }
+            Object event = constructDiscordEvent(eventClass, player, message);
+            if (event == null) {
+                return false;
+            }
+            Method callEvent = resolveDiscordSrvCall(api);
+            if (callEvent == null) {
+                return false;
+            }
+            callEvent.invoke(api, event);
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private Object resolveDiscordSrvApi(Class<?> discordSrvClass) {
+        try {
+            Field apiField = discordSrvClass.getField("api");
+            return apiField.get(null);
+        } catch (Exception ignored) {
+        }
+        try {
+            Field apiField = discordSrvClass.getDeclaredField("api");
+            apiField.setAccessible(true);
+            return apiField.get(null);
+        } catch (Exception ignored) {
+        }
+        try {
+            Method getApi = discordSrvClass.getMethod("getApi");
+            return getApi.invoke(null);
+        } catch (Exception ignored) {
+        }
+        try {
+            Method getPlugin = discordSrvClass.getMethod("getPlugin");
+            Object plugin = getPlugin.invoke(null);
+            if (plugin == null) {
+                return null;
+            }
+            Method getApi = plugin.getClass().getMethod("getApi");
+            return getApi.invoke(plugin);
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private Method resolveDiscordSrvCall(Object api) {
+        for (String methodName : new String[]{"callEvent", "dispatchEvent", "invokeEvent"}) {
+            try {
+                return api.getClass().getMethod(methodName, Object.class);
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    private Object constructDiscordEvent(Class<?> eventClass, Player player, String message) {
+        Constructor<?>[] constructors = eventClass.getConstructors();
+        for (Constructor<?> constructor : constructors) {
+            Class<?>[] params = constructor.getParameterTypes();
+            try {
+                if (params.length == 2 && Player.class.isAssignableFrom(params[0]) && params[1] == String.class) {
+                    return constructor.newInstance(player, message);
+                }
+                if (params.length == 2 && params[0] == String.class && Player.class.isAssignableFrom(params[1])) {
+                    return constructor.newInstance(message, player);
+                }
+                if (params.length == 1 && Player.class.isAssignableFrom(params[0])) {
+                    return constructor.newInstance(player);
+                }
+                if (params.length == 1 && params[0] == String.class) {
+                    return constructor.newInstance(message);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
+    private void ensureFakePlayerData(FakePlayerRecord record) {
+        if (record == null || record.getUuid() == null) {
+            return;
+        }
+        Path worldFolder = resolvePrimaryWorldFolder();
+        if (worldFolder == null) {
+            return;
+        }
+        ensurePlayerDat(worldFolder, record);
+        ensureStatsFile(worldFolder, record);
+        ensureUserCache(worldFolder, record);
+    }
+
+    private Path resolvePrimaryWorldFolder() {
+        if (Bukkit.getWorlds().isEmpty()) {
+            return null;
+        }
+        return Bukkit.getWorlds().get(0).getWorldFolder().toPath();
+    }
+
+    private void ensurePlayerDat(Path worldFolder, FakePlayerRecord record) {
+        try {
+            Path playerDataDir = worldFolder.resolve("playerdata");
+            Files.createDirectories(playerDataDir);
+            Path datFile = playerDataDir.resolve(record.getUuid().toString() + ".dat");
+            if (Files.exists(datFile)) {
+                return;
+            }
+            if (!writeEmptyPlayerDat(datFile)) {
+                Files.write(datFile, new byte[0]);
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private boolean writeEmptyPlayerDat(Path datFile) {
+        try {
+            Class<?> compoundTagClass = Class.forName("net.minecraft.nbt.CompoundTag");
+            Object compoundTag = compoundTagClass.getConstructor().newInstance();
+            Class<?> nbtIoClass = Class.forName("net.minecraft.nbt.NbtIo");
+            Method writeCompressed = nbtIoClass.getMethod("writeCompressed", compoundTagClass, Path.class);
+            writeCompressed.invoke(null, compoundTag, datFile);
+            return true;
+        } catch (Exception ignored) {
+        }
+        try {
+            Class<?> compoundTagClass = Class.forName("net.minecraft.nbt.CompoundTag");
+            Object compoundTag = compoundTagClass.getConstructor().newInstance();
+            Class<?> nbtIoClass = Class.forName("net.minecraft.nbt.NbtIo");
+            Method writeCompressed = nbtIoClass.getMethod("writeCompressed", compoundTagClass, java.io.File.class);
+            writeCompressed.invoke(null, compoundTag, datFile.toFile());
+            return true;
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    private void ensureStatsFile(Path worldFolder, FakePlayerRecord record) {
+        try {
+            Path statsDir = worldFolder.resolve("stats");
+            Files.createDirectories(statsDir);
+            Path statsFile = statsDir.resolve(record.getUuid().toString() + ".json");
+            if (Files.exists(statsFile)) {
+                return;
+            }
+            Files.writeString(statsFile, "{}", StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void ensureUserCache(Path worldFolder, FakePlayerRecord record) {
+        try {
+            Path parent = worldFolder.getParent();
+            if (parent == null) {
+                return;
+            }
+            Path userCache = parent.resolve("usercache.json");
+            JsonArray entries = readUserCache(userCache);
+            String uuid = record.getUuid().toString();
+            String name = record.getName();
+            boolean updated = false;
+            for (JsonElement element : entries) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject obj = element.getAsJsonObject();
+                if (uuid.equalsIgnoreCase(getAsString(obj, "uuid"))
+                        || name.equalsIgnoreCase(getAsString(obj, "name"))) {
+                    obj.addProperty("uuid", uuid);
+                    obj.addProperty("name", name);
+                    obj.addProperty("expiresOn", userCacheExpiry());
+                    updated = true;
+                    break;
+                }
+            }
+            if (!updated) {
+                JsonObject entry = new JsonObject();
+                entry.addProperty("uuid", uuid);
+                entry.addProperty("name", name);
+                entry.addProperty("expiresOn", userCacheExpiry());
+                entries.add(entry);
+            }
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            Files.writeString(userCache, gson.toJson(entries), StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private JsonArray readUserCache(Path userCache) {
+        if (userCache == null || !Files.exists(userCache)) {
+            return new JsonArray();
+        }
+        try {
+            String content = Files.readAllLines(userCache, StandardCharsets.UTF_8).stream()
+                    .collect(Collectors.joining("\n"));
+            JsonElement parsed = new Gson().fromJson(content, JsonElement.class);
+            if (parsed != null && parsed.isJsonArray()) {
+                return parsed.getAsJsonArray();
+            }
+        } catch (Exception ignored) {
+        }
+        return new JsonArray();
+    }
+
+    private String getAsString(JsonObject obj, String key) {
+        if (obj == null || key == null) {
+            return "";
+        }
+        JsonElement element = obj.get(key);
+        return element == null || element.isJsonNull() ? "" : element.getAsString();
+    }
+
+    private String userCacheExpiry() {
+        ZonedDateTime expiry = ZonedDateTime.now(ZoneId.of("UTC")).plusDays(30);
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z").format(expiry);
     }
 
 
@@ -318,11 +649,11 @@ public class FakePlayerService {
         }
     }
     public record SkinUpdateOutcome(boolean success, boolean refreshed, boolean usedFallbackCache, boolean notFound) {
-        private static SkinUpdateOutcome notFound() {
+        private static SkinUpdateOutcome notFoundOutcome() {
             return new SkinUpdateOutcome(false, false, false, true);
         }
 
-        private static SkinUpdateOutcome failedNoSkin() {
+        private static SkinUpdateOutcome failedNoSkinOutcome() {
             return new SkinUpdateOutcome(false, false, false, false);
         }
     }

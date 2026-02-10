@@ -4,7 +4,6 @@ import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRecord;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
@@ -76,7 +75,7 @@ public class FakeChatCommand implements BasicCommand {
         }
 
         plugin.getFakePlayerService().saveNow();
-        Bukkit.broadcastMessage("<" + record.getName() + "> " + message);
+        plugin.getFakePlayerService().sendFakeChat(record, message);
     }
 
     private Optional<FakePlayerRecord> findByName(String name) {

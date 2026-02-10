@@ -2,7 +2,9 @@ package com.lastbreath.hc.lastBreathHC.fakeplayer.platform;
 
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRecord;
 
+import java.util.Optional;
 import java.util.UUID;
+import org.bukkit.entity.Player;
 
 /**
  * Version-agnostic interface for fake-player visuals.
@@ -28,4 +30,8 @@ public interface FakePlayerPlatformAdapter {
      * Updates visual display state (for example listed/unlisted, name, profile presentation).
      */
     void updateDisplayState(FakePlayerRecord record);
+
+    default Optional<Player> getBukkitPlayer(FakePlayerRecord record) {
+        return Optional.empty();
+    }
 }

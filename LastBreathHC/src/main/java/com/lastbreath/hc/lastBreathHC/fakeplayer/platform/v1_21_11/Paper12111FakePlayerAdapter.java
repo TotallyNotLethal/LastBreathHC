@@ -3,17 +3,22 @@ package com.lastbreath.hc.lastBreathHC.fakeplayer.platform.v1_21_11;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRecord;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.platform.FakePlayerPlatformAdapter;
+import com.lastbreath.hc.lastBreathHC.titles.Title;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
 /**
@@ -28,6 +33,7 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
 
     private final LastBreathHC plugin;
     private final Map<UUID, Object> fakeHandles = new ConcurrentHashMap<>();
+    private final Map<UUID, FakeTabMetadata> fakeTabMetadata = new ConcurrentHashMap<>();
     private boolean failed;
 
     public Paper12111FakePlayerAdapter(LastBreathHC plugin) {
@@ -44,8 +50,16 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
             if (serverPlayer == null) {
                 return;
             }
+            try {
+                applyTabListMetadata(serverPlayer, record);
+            } catch (Exception ignored) {
+            }
             Object addPacket = createPlayerInfoUpdatePacket(ACTION_ADD_PLAYER, List.of(serverPlayer));
             broadcastPacket(addPacket);
+            try {
+                sendTabListUpdates(serverPlayer);
+            } catch (Exception ignored) {
+            }
         } catch (Throwable throwable) {
             markFailed("Unable to spawn fake tab entry", throwable);
         }
@@ -58,6 +72,7 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         }
         try {
             fakeHandles.remove(uuid);
+            fakeTabMetadata.remove(uuid);
             Object removePacket = createPlayerInfoRemovePacket(List.of(uuid));
             broadcastPacket(removePacket);
         } catch (Throwable throwable) {
@@ -74,6 +89,27 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         if (record.isActive()) {
             spawnFakeTabEntry(record);
         }
+    }
+
+    @Override
+    public Optional<Player> getBukkitPlayer(FakePlayerRecord record) {
+        if (record == null) {
+            return Optional.empty();
+        }
+        try {
+            Object serverPlayer = fakeHandles.computeIfAbsent(record.getUuid(), key -> createServerPlayer(record));
+            if (serverPlayer == null) {
+                return Optional.empty();
+            }
+            Method getBukkitEntityMethod = serverPlayer.getClass().getMethod("getBukkitEntity");
+            Object bukkitEntity = getBukkitEntityMethod.invoke(serverPlayer);
+            if (bukkitEntity instanceof Player player) {
+                return Optional.of(player);
+            }
+        } catch (Throwable ignored) {
+            // Ignore resolution failures to avoid disabling fake-player visuals.
+        }
+        return Optional.empty();
     }
 
     private Object createServerPlayer(FakePlayerRecord record) {
@@ -119,23 +155,140 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         }
     }
 
-    private void applySkin(Object profile, FakePlayerRecord record) throws Exception {
+    private void applyTabListMetadata(Object serverPlayer, FakePlayerRecord record) {
+        if (serverPlayer == null || record == null) {
+            return;
+        }
+        FakeTabMetadata metadata = fakeTabMetadata.computeIfAbsent(record.getUuid(), key -> randomMetadata());
+        String legacyListName = "§7[" + metadata.title().tabTag() + "§7] " + record.getName();
+        Player bukkitPlayer = getBukkitPlayer(record).orElse(null);
+        if (bukkitPlayer != null) {
+            bukkitPlayer.setPlayerListName(legacyListName);
+        }
+        Object nmsComponent = createNmsComponent(legacyListName);
+        if (nmsComponent != null) {
+            applyTabListName(serverPlayer, nmsComponent);
+        }
+        applyLatency(serverPlayer, metadata.pingMillis());
+    }
+
+    private void sendTabListUpdates(Object serverPlayer) throws Exception {
+        Object displayPacket = createPlayerInfoUpdatePacket("UPDATE_DISPLAY_NAME", List.of(serverPlayer));
+        broadcastPacket(displayPacket);
+        Object latencyPacket = createPlayerInfoUpdatePacket("UPDATE_LATENCY", List.of(serverPlayer));
+        broadcastPacket(latencyPacket);
+    }
+
+    private void applyLatency(Object serverPlayer, int pingMillis) {
+        try {
+            Field field = serverPlayer.getClass().getDeclaredField("latency");
+            field.setAccessible(true);
+            field.setInt(serverPlayer, pingMillis);
+            return;
+        } catch (Exception ignored) {
+        }
+        try {
+            Method method = serverPlayer.getClass().getMethod("setLatency", int.class);
+            method.invoke(serverPlayer, pingMillis);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void applyTabListName(Object serverPlayer, Object component) {
+        try {
+            Method method = serverPlayer.getClass().getMethod("setTabListDisplayName", component.getClass());
+            method.invoke(serverPlayer, component);
+            return;
+        } catch (Exception ignored) {
+        }
+        try {
+            Method method = serverPlayer.getClass().getMethod("setTabListName", component.getClass());
+            method.invoke(serverPlayer, component);
+            return;
+        } catch (Exception ignored) {
+        }
+        try {
+            Field field = serverPlayer.getClass().getDeclaredField("listName");
+            field.setAccessible(true);
+            field.set(serverPlayer, component);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private Object createNmsComponent(String legacyText) {
+        try {
+            Object adventureComponent = LegacyComponentSerializer.legacySection().deserialize(legacyText);
+            Class<?> paperAdventure = Class.forName("io.papermc.paper.adventure.PaperAdventure");
+            Method asVanilla = paperAdventure.getMethod("asVanilla", Class.forName("net.kyori.adventure.text.Component"));
+            return asVanilla.invoke(null, adventureComponent);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private FakeTabMetadata randomMetadata() {
+        Title[] titles = Title.values();
+        Title title = titles[ThreadLocalRandom.current().nextInt(titles.length)];
+        int ping = ThreadLocalRandom.current().nextInt(40, 141);
+        return new FakeTabMetadata(title, ping);
+    }
+
+    private record FakeTabMetadata(Title title, int pingMillis) {
+    }
+
+    private void applySkin(Object profile, FakePlayerRecord record) {
         if (record.getTextures() == null || record.getTextures().isBlank()) {
             return;
         }
 
-        Method getPropertiesMethod = profile.getClass().getMethod("getProperties");
-        Object propertyMap = getPropertiesMethod.invoke(profile);
+        try {
+            Object propertyMap = resolvePropertyMap(profile);
+            if (propertyMap == null) {
+                return;
+            }
 
-        Class<?> propertyClass = Class.forName("com.mojang.authlib.properties.Property");
-        Object property = record.getSignature() == null || record.getSignature().isBlank()
-                ? propertyClass.getConstructor(String.class, String.class)
-                .newInstance("textures", record.getTextures())
-                : propertyClass.getConstructor(String.class, String.class, String.class)
-                .newInstance("textures", record.getTextures(), record.getSignature());
+            Class<?> propertyClass = Class.forName("com.mojang.authlib.properties.Property");
+            Object property = record.getSignature() == null || record.getSignature().isBlank()
+                    ? propertyClass.getConstructor(String.class, String.class)
+                    .newInstance("textures", record.getTextures())
+                    : propertyClass.getConstructor(String.class, String.class, String.class)
+                    .newInstance("textures", record.getTextures(), record.getSignature());
 
-        Method putMethod = propertyMap.getClass().getMethod("put", Object.class, Object.class);
-        putMethod.invoke(propertyMap, "textures", property);
+            Method putMethod;
+            try {
+                putMethod = propertyMap.getClass().getMethod("put", Object.class, Object.class);
+            } catch (NoSuchMethodException ignored) {
+                putMethod = propertyMap.getClass().getMethod("put", String.class, propertyClass);
+            }
+            putMethod.invoke(propertyMap, "textures", property);
+        } catch (Throwable ignored) {
+            // Skin application is best-effort; keep fake player functional even if reflection fails.
+        }
+    }
+
+    private Object resolvePropertyMap(Object profile) throws Exception {
+        try {
+            Method getPropertiesMethod = profile.getClass().getMethod("getProperties");
+            return getPropertiesMethod.invoke(profile);
+        } catch (NoSuchMethodException ignored) {
+            // Fall through to alternate accessors.
+        }
+        try {
+            Method propertiesMethod = profile.getClass().getMethod("properties");
+            return propertiesMethod.invoke(profile);
+        } catch (NoSuchMethodException ignored) {
+            // Fall through to fields.
+        }
+        try {
+            java.lang.reflect.Field propertiesField = profile.getClass().getDeclaredField("properties");
+            propertiesField.setAccessible(true);
+            return propertiesField.get(profile);
+        } catch (NoSuchFieldException ignored) {
+            // Fall through to alternate field names.
+        }
+        java.lang.reflect.Field propertyMapField = profile.getClass().getDeclaredField("propertyMap");
+        propertyMapField.setAccessible(true);
+        return propertyMapField.get(profile);
     }
 
     private Object createPlayerInfoUpdatePacket(String actionName, Collection<?> players) throws Exception {
