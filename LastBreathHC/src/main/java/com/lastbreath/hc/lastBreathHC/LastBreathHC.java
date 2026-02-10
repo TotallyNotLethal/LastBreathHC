@@ -71,6 +71,7 @@ import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRepository;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayersSettings;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerWhisperAliasListener;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerTabSyncListener;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.SkinService;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
@@ -316,6 +317,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new FakePlayerWhisperAliasListener(this, fakePlayerService), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new FakePlayerTabSyncListener(this, fakePlayerService), this
         );
         worldBossManager = new WorldBossManager(this, bloodMoonManager);
         getServer().getPluginManager().registerEvents(

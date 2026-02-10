@@ -50,6 +50,7 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
             }
             try {
                 applyTabListMetadata(serverPlayer, record);
+                applyListed(serverPlayer, true);
             } catch (Exception ignored) {
             }
             Object addPacket = createPlayerInfoUpdatePacket(ACTION_ADD_PLAYER, List.of(serverPlayer));
@@ -170,10 +171,27 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
     }
 
     private void sendTabListUpdates(Object serverPlayer) throws Exception {
+        Object listedPacket = createPlayerInfoUpdatePacket("UPDATE_LISTED", List.of(serverPlayer));
+        broadcastPacket(listedPacket);
         Object displayPacket = createPlayerInfoUpdatePacket("UPDATE_DISPLAY_NAME", List.of(serverPlayer));
         broadcastPacket(displayPacket);
         Object latencyPacket = createPlayerInfoUpdatePacket("UPDATE_LATENCY", List.of(serverPlayer));
         broadcastPacket(latencyPacket);
+    }
+
+    private void applyListed(Object serverPlayer, boolean listed) {
+        try {
+            Method method = serverPlayer.getClass().getMethod("setListed", boolean.class);
+            method.invoke(serverPlayer, listed);
+            return;
+        } catch (Exception ignored) {
+        }
+        try {
+            Field field = serverPlayer.getClass().getDeclaredField("listed");
+            field.setAccessible(true);
+            field.setBoolean(serverPlayer, listed);
+        } catch (Exception ignored) {
+        }
     }
 
     private void applyLatency(Object serverPlayer, int pingMillis) {
