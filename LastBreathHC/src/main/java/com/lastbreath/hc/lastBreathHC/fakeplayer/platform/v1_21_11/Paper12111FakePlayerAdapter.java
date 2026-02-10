@@ -10,9 +10,11 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,6 +46,12 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
             return;
         }
         try {
+            Object entryPacket = createPlayerInfoEntryPacket(record);
+            if (entryPacket != null) {
+                broadcastPacket(entryPacket);
+                return;
+            }
+
             Object serverPlayer = fakeHandles.computeIfAbsent(record.getUuid(), key -> createServerPlayer(record));
             if (serverPlayer == null) {
                 return;
@@ -309,6 +317,91 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         return packetClass.getConstructor(EnumSet.class, Collection.class).newInstance(actionSet, players);
     }
 
+    private Object createPlayerInfoEntryPacket(FakePlayerRecord record) {
+        try {
+            Class<?> packetClass = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket");
+            Class<?> actionClass = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket$Action");
+            Class<?> entryClass = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket$Entry");
+            Class<?> gameProfileClass = Class.forName("com.mojang.authlib.GameProfile");
+            Class<?> gameTypeClass = Class.forName("net.minecraft.world.level.GameType");
+
+            Object profile = gameProfileClass.getConstructor(UUID.class, String.class)
+                    .newInstance(record.getUuid(), record.getName());
+            applySkin(profile, record);
+
+            Object gameType = Enum.valueOf((Class<? extends Enum>) gameTypeClass, "SURVIVAL");
+            Object displayName = createNmsComponent("§7[" + resolveTitle(record.getTabTitleKey()).tabTag() + "§7] " + record.getName());
+
+            Object entry = constructPlayerInfoEntry(entryClass, record, profile, gameType, displayName);
+            if (entry == null) {
+                return null;
+            }
+
+            @SuppressWarnings({"rawtypes", "unchecked"})
+            EnumSet<?> actions = EnumSet.of(
+                    Enum.valueOf((Class<? extends Enum>) actionClass, "ADD_PLAYER"),
+                    Enum.valueOf((Class<? extends Enum>) actionClass, "UPDATE_LISTED"),
+                    Enum.valueOf((Class<? extends Enum>) actionClass, "UPDATE_LATENCY"),
+                    Enum.valueOf((Class<? extends Enum>) actionClass, "UPDATE_GAME_MODE"),
+                    Enum.valueOf((Class<? extends Enum>) actionClass, "UPDATE_DISPLAY_NAME")
+            );
+
+            Constructor<?> ctor = Arrays.stream(packetClass.getConstructors())
+                    .filter(c -> c.getParameterCount() == 2)
+                    .filter(c -> EnumSet.class.isAssignableFrom(c.getParameterTypes()[0]))
+                    .filter(c -> Collection.class.isAssignableFrom(c.getParameterTypes()[1]))
+                    .findFirst()
+                    .orElse(null);
+            if (ctor == null) {
+                return null;
+            }
+            return ctor.newInstance(actions, List.of(entry));
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private Object constructPlayerInfoEntry(Class<?> entryClass,
+                                            FakePlayerRecord record,
+                                            Object gameProfile,
+                                            Object gameType,
+                                            Object displayName) {
+        for (Constructor<?> constructor : entryClass.getConstructors()) {
+            Object[] args = new Object[constructor.getParameterCount()];
+            Class<?>[] params = constructor.getParameterTypes();
+            boolean compatible = true;
+            for (int i = 0; i < params.length; i++) {
+                Class<?> type = params[i];
+                if (type == UUID.class) {
+                    args[i] = record.getUuid();
+                } else if (type.getName().equals("com.mojang.authlib.GameProfile")) {
+                    args[i] = gameProfile;
+                } else if (type == int.class || type == Integer.class) {
+                    args[i] = Math.max(0, record.getTabPingMillis());
+                } else if (type == boolean.class || type == Boolean.class) {
+                    args[i] = true;
+                } else if (type.getName().equals("net.minecraft.world.level.GameType")) {
+                    args[i] = gameType;
+                } else if (type.getName().equals("net.minecraft.network.chat.Component")) {
+                    args[i] = displayName;
+                } else if (type.isPrimitive()) {
+                    compatible = false;
+                    break;
+                } else {
+                    args[i] = null;
+                }
+            }
+            if (!compatible) {
+                continue;
+            }
+            try {
+                return constructor.newInstance(args);
+            } catch (Exception ignored) {
+            }
+        }
+        return null;
+    }
+
     private Object createPlayerInfoRemovePacket(List<UUID> uuids) throws Exception {
         Class<?> removePacketClass = Class.forName("net.minecraft.network.protocol.game.ClientboundPlayerInfoRemovePacket");
         return removePacketClass.getConstructor(List.class).newInstance(uuids);
@@ -377,7 +470,7 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
                 continue;
             }
             Class<?> first = method.getParameterTypes()[0];
-            if (!first.isAssignableFrom(packet.getClass()) && !packetInterface.isAssignableFrom(first)) {
+            if (!first.isAssignableFrom(packet.getClass()) && !first.isAssignableFrom(packetInterface)) {
                 continue;
             }
             Object[] args = new Object[method.getParameterCount()];
