@@ -4,15 +4,19 @@ import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRecord;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModel.PlayerRowFields;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
     private final Map<String, String> lastPlayerNames = new HashMap<>();
+    private final Set<UUID> lastAudience = new HashSet<>();
     private final FakePlayerService fakePlayerService;
 
     public BukkitTabMenuUpdateHandler() {
@@ -43,6 +47,12 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
     }
 
     private void applyPlayers(TabMenuModel model) {
+        Set<UUID> nextAudience = new HashSet<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            nextAudience.add(player.getUniqueId());
+        }
+        boolean audienceChanged = !nextAudience.equals(lastAudience);
+
         Map<String, String> nextNames = new HashMap<>();
         Map<String, String> nextNamesByLower = new HashMap<>();
         for (PlayerRowFields row : model.players()) {
@@ -78,19 +88,23 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
                 boolean changed = !Objects.equals(previous, desired);
                 Player fakePlayer = fakePlayerService.resolveBukkitPlayer(record).orElse(null);
                 if (fakePlayer == null) {
-                    if (changed) {
+                    if (changed || audienceChanged) {
                         fakePlayerService.refreshVisual(record.getUuid());
                     }
                     continue;
                 }
                 if (changed) {
                     fakePlayer.setPlayerListName(desired);
+                }
+                if (changed || audienceChanged) {
                     fakePlayerService.refreshVisual(record.getUuid());
                 }
             }
         }
         lastPlayerNames.clear();
         lastPlayerNames.putAll(nextNames);
+        lastAudience.clear();
+        lastAudience.addAll(nextAudience);
     }
 
     private String formatPlayerListName(PlayerRowFields row) {
