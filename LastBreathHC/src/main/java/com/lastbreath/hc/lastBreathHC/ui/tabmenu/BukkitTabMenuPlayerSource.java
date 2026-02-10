@@ -11,17 +11,11 @@ import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModelBuilder.PlayerEntry
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
     private final FakePlayerService fakePlayerService;
-    private final Map<UUID, Title> fakeTitles = new ConcurrentHashMap<>();
-    private final Map<UUID, Integer> fakePings = new ConcurrentHashMap<>();
 
     public BukkitTabMenuPlayerSource(FakePlayerService fakePlayerService) {
         this.fakePlayerService = fakePlayerService;
@@ -50,8 +44,8 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
                 if (!record.isActive()) {
                     continue;
                 }
-                Title fakeTitle = fakeTitles.computeIfAbsent(record.getUuid(), key -> randomTitle());
-                int fakePing = fakePings.computeIfAbsent(record.getUuid(), key -> randomPingMillis());
+                Title fakeTitle = resolveTitle(record.getTabTitleKey());
+                int fakePing = Math.max(0, record.getTabPingMillis());
                 String prefix = "§7[" + fakeTitle.tabTag() + "§7] ";
                 entries.add(new PlayerEntry(
                         record.getName(),
@@ -84,12 +78,8 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
         return 1;
     }
 
-    private Title randomTitle() {
-        Title[] titles = Title.values();
-        return titles[ThreadLocalRandom.current().nextInt(titles.length)];
-    }
-
-    private int randomPingMillis() {
-        return ThreadLocalRandom.current().nextInt(40, 141);
+    private Title resolveTitle(String tabTitleKey) {
+        Title title = Title.fromInput(tabTitleKey);
+        return title == null ? Title.WANDERER : title;
     }
 }

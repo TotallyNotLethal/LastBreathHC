@@ -17,6 +17,8 @@ public class FakePlayerRecord {
     private Instant lastReactionAt;
     private long chatCount;
     private long reactionCount;
+    private String tabTitleKey;
+    private int tabPingMillis;
 
     public FakePlayerRecord() {
     }
@@ -136,5 +138,21 @@ public class FakePlayerRecord {
 
     public void setReactionCount(long reactionCount) {
         this.reactionCount = reactionCount;
+    }
+
+    public String getTabTitleKey() {
+        return tabTitleKey;
+    }
+
+    public void setTabTitleKey(String tabTitleKey) {
+        this.tabTitleKey = tabTitleKey;
+    }
+
+    public int getTabPingMillis() {
+        return tabPingMillis;
+    }
+
+    public void setTabPingMillis(int tabPingMillis) {
+        this.tabPingMillis = tabPingMillis;
     }
 }

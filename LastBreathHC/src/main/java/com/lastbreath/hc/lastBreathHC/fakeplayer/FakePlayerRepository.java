@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class FakePlayerRepository {
-    private static final int CURRENT_SCHEMA_VERSION = 2;
+    private static final int CURRENT_SCHEMA_VERSION = 3;
 
     private final LastBreathHC plugin;
     private final File file;
@@ -76,6 +76,8 @@ public class FakePlayerRepository {
                 record.setLastReactionAt(fromEpochMillis(row, "lastReactionAt"));
                 record.setChatCount(row.getLong("chatCount", 0L));
                 record.setReactionCount(row.getLong("reactionCount", 0L));
+                record.setTabTitleKey(row.getString("tabTitleKey"));
+                record.setTabPingMillis(row.getInt("tabPingMillis", 0));
                 if (record.getCreatedAt() == null) {
                     record.setCreatedAt(Instant.now());
                 }
@@ -126,6 +128,8 @@ public class FakePlayerRepository {
             config.set(base + ".lastReactionAt", toEpochMillis(record.getLastReactionAt()));
             config.set(base + ".chatCount", record.getChatCount());
             config.set(base + ".reactionCount", record.getReactionCount());
+            config.set(base + ".tabTitleKey", record.getTabTitleKey());
+            config.set(base + ".tabPingMillis", record.getTabPingMillis());
         }
 
         for (Map.Entry<String, SkinCacheEntry> cacheEntry : skinCache.entrySet()) {

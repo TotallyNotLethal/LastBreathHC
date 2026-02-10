@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.fakeplayer;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.platform.FakePlayerPlatformAdapter;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.platform.FakePlayerPlatformAdapterFactory;
+import com.lastbreath.hc.lastBreathHC.titles.Title;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -65,6 +66,9 @@ public class FakePlayerService {
         records.clear();
         Map<String, SkinCacheEntry> skinCache = new ConcurrentHashMap<>();
         repository.loadInto(records, skinCache);
+        for (FakePlayerRecord record : records.values()) {
+            initializeTabPresentationDefaults(record);
+        }
         skinService.loadCache(skinCache);
         startVisualDrainTask();
         int respawned = startupAutoRespawn();
@@ -98,6 +102,7 @@ public class FakePlayerService {
         FakePlayerRecord record = records.get(uuid);
         if (record == null) {
             record = new FakePlayerRecord(normalizedName, uuid, normalizedOwner, resolvedTextures, resolvedSignature);
+            initializeTabPresentationDefaults(record);
             records.put(uuid, record);
         } else {
             record.setName(normalizedName);
@@ -106,6 +111,7 @@ public class FakePlayerService {
             record.setSignature(resolvedSignature);
             record.setActive(true);
             record.setLastSeenAt(Instant.now());
+            initializeTabPresentationDefaults(record);
         }
         FakePlayerRecord finalRecord = record;
         queueVisualUpdate(() -> platformAdapter.updateDisplayState(finalRecord));
@@ -281,6 +287,30 @@ public class FakePlayerService {
         return true;
     }
 
+    public boolean setTabTitle(UUID uuid, String tabTitleKey) {
+        FakePlayerRecord record = records.get(uuid);
+        if (record == null || tabTitleKey == null || tabTitleKey.isBlank()) {
+            return false;
+        }
+        Title title = Title.fromInput(tabTitleKey);
+        if (title == null) {
+            return false;
+        }
+        record.setTabTitleKey(title.name());
+        queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
+        return true;
+    }
+
+    public boolean setTabPing(UUID uuid, int pingMillis) {
+        FakePlayerRecord record = records.get(uuid);
+        if (record == null) {
+            return false;
+        }
+        record.setTabPingMillis(clampTabPingMillis(pingMillis));
+        queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
+        return true;
+    }
+
     public void saveNow() {
         repository.save(records.values(), skinService.snapshotCache());
     }
@@ -344,6 +374,25 @@ public class FakePlayerService {
             owner = fallbackName;
         }
         return owner == null ? "unknown" : owner.trim().toLowerCase();
+    }
+
+    private int clampTabPingMillis(int pingMillis) {
+        return Math.max(0, Math.min(9999, pingMillis));
+    }
+
+    private void initializeTabPresentationDefaults(FakePlayerRecord record) {
+        if (record == null || record.getUuid() == null) {
+            return;
+        }
+        if (record.getTabTitleKey() == null || record.getTabTitleKey().isBlank()) {
+            Title[] titles = Title.values();
+            int index = Math.floorMod(record.getUuid().hashCode(), titles.length);
+            record.setTabTitleKey(titles[index].name());
+        }
+        if (record.getTabPingMillis() <= 0) {
+            int hash = Math.floorMod(record.getUuid().hashCode(), 101);
+            record.setTabPingMillis(40 + hash);
+        }
     }
 
     private void announceFakePresenceChange(FakePlayerRecord record, boolean joined) {
