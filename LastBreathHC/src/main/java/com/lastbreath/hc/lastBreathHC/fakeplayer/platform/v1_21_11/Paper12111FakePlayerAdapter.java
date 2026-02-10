@@ -166,7 +166,8 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
             return;
         }
         Title title = resolveTitle(record.getTabTitleKey());
-        String legacyListName = "§7[" + title.tabTag() + "§7] " + record.getName();
+        int pingMillis = Math.max(0, record.getTabPingMillis());
+        String legacyListName = "§7[" + title.tabTag() + "§7] " + record.getName() + " §7" + pingMillis + "ms";
         Player bukkitPlayer = getBukkitPlayer(record).orElse(null);
         if (bukkitPlayer != null) {
             bukkitPlayer.setPlayerListName(legacyListName);
@@ -175,7 +176,7 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         if (nmsComponent != null) {
             applyTabListName(serverPlayer, nmsComponent);
         }
-        applyLatency(serverPlayer, Math.max(0, record.getTabPingMillis()));
+        applyLatency(serverPlayer, pingMillis);
     }
 
     private void sendTabListUpdates(Object serverPlayer) throws Exception {
