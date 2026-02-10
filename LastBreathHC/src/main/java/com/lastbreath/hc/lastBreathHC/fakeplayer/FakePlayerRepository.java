@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class FakePlayerRepository {
-    private static final int CURRENT_SCHEMA_VERSION = 3;
+    private static final int CURRENT_SCHEMA_VERSION = 4;
 
     private final LastBreathHC plugin;
     private final File file;
@@ -47,12 +47,14 @@ public class FakePlayerRepository {
             return;
         }
 
+        boolean normalizeUuidKeys = schemaVersion < CURRENT_SCHEMA_VERSION;
+        Map<String, FakePlayerRecord> byCanonicalName = new HashMap<>();
         ConfigurationSection section = config.getConfigurationSection("players");
         if (section != null) {
             for (String key : section.getKeys(false)) {
-                UUID uuid;
+                UUID storedUuid;
                 try {
-                    uuid = UUID.fromString(key);
+                    storedUuid = UUID.fromString(key);
                 } catch (IllegalArgumentException e) {
                     continue;
                 }
@@ -63,8 +65,9 @@ public class FakePlayerRepository {
                 }
 
                 FakePlayerRecord record = new FakePlayerRecord();
-                record.setUuid(uuid);
-                record.setName(row.getString("name", "unknown"));
+                record.setName(canonicalName(row.getString("name", "unknown")));
+                UUID expectedUuid = FakePlayerService.deterministicUuid(record.getName());
+                record.setUuid(normalizeUuidKeys ? expectedUuid : storedUuid);
                 record.setSkinOwner(row.getString("skinOwner"));
                 record.setTextures(row.getString("textures"));
                 record.setSignature(row.getString("signature"));
@@ -81,7 +84,12 @@ public class FakePlayerRepository {
                 if (record.getCreatedAt() == null) {
                     record.setCreatedAt(Instant.now());
                 }
-                records.put(uuid, record);
+
+                if (normalizeUuidKeys && !storedUuid.equals(expectedUuid)) {
+                    plugin.getLogger().info("Normalizing fake-player UUID for " + record.getName() + ": " + storedUuid + " -> " + expectedUuid);
+                }
+
+                mergeNormalizedRecord(records, byCanonicalName, record);
             }
         }
 
@@ -115,8 +123,13 @@ public class FakePlayerRepository {
         YamlConfiguration config = new YamlConfiguration();
         config.set("schemaVersion", CURRENT_SCHEMA_VERSION);
         for (FakePlayerRecord record : records) {
-            String base = "players." + record.getUuid();
-            config.set(base + ".name", record.getName());
+            String canonicalName = canonicalName(record.getName());
+            UUID normalizedUuid = FakePlayerService.deterministicUuid(canonicalName);
+            record.setName(canonicalName);
+            record.setUuid(normalizedUuid);
+
+            String base = "players." + normalizedUuid;
+            config.set(base + ".name", canonicalName);
             config.set(base + ".skinOwner", record.getSkinOwner());
             config.set(base + ".textures", record.getTextures());
             config.set(base + ".signature", record.getSignature());
@@ -154,6 +167,56 @@ public class FakePlayerRepository {
                 tempFile.delete();
             }
         }
+    }
+
+    private void mergeNormalizedRecord(Map<UUID, FakePlayerRecord> records,
+                                       Map<String, FakePlayerRecord> byCanonicalName,
+                                       FakePlayerRecord candidate) {
+        if (candidate == null || candidate.getUuid() == null || candidate.getName() == null) {
+            return;
+        }
+
+        String canonicalName = candidate.getName().toLowerCase();
+        FakePlayerRecord existingByName = byCanonicalName.get(canonicalName);
+        if (existingByName != null && existingByName != candidate) {
+            FakePlayerRecord preferred = preferNewest(existingByName, candidate);
+            FakePlayerRecord discarded = preferred == existingByName ? candidate : existingByName;
+            records.remove(discarded.getUuid());
+            records.put(preferred.getUuid(), preferred);
+            byCanonicalName.put(canonicalName, preferred);
+            return;
+        }
+
+        FakePlayerRecord existingByUuid = records.get(candidate.getUuid());
+        if (existingByUuid != null && existingByUuid != candidate) {
+            FakePlayerRecord preferred = preferNewest(existingByUuid, candidate);
+            records.put(preferred.getUuid(), preferred);
+            byCanonicalName.put(preferred.getName().toLowerCase(), preferred);
+            return;
+        }
+
+        records.put(candidate.getUuid(), candidate);
+        byCanonicalName.put(canonicalName, candidate);
+    }
+
+    private FakePlayerRecord preferNewest(FakePlayerRecord first, FakePlayerRecord second) {
+        Instant firstSeenAt = first.getLastSeenAt() == null ? Instant.EPOCH : first.getLastSeenAt();
+        Instant secondSeenAt = second.getLastSeenAt() == null ? Instant.EPOCH : second.getLastSeenAt();
+        if (secondSeenAt.isAfter(firstSeenAt)) {
+            return second;
+        }
+        if (firstSeenAt.isAfter(secondSeenAt)) {
+            return first;
+        }
+
+        Instant firstCreatedAt = first.getCreatedAt() == null ? Instant.EPOCH : first.getCreatedAt();
+        Instant secondCreatedAt = second.getCreatedAt() == null ? Instant.EPOCH : second.getCreatedAt();
+        return secondCreatedAt.isAfter(firstCreatedAt) ? second : first;
+    }
+
+    private String canonicalName(String name) {
+        String normalized = name == null ? "unknown" : name.trim();
+        return normalized.isEmpty() ? "unknown" : normalized;
     }
 
     private void ensureParentDirectory() {

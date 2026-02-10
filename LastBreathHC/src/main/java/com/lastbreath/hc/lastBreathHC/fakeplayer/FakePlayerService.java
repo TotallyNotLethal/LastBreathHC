@@ -363,9 +363,22 @@ public class FakePlayerService {
         return !lastReactionAt.plus(cooldown).isAfter(now);
     }
 
-    private UUID deterministicUuid(String name) {
+    public static UUID deterministicUuid(String name) {
         String seed = UUID_NAMESPACE + name.toLowerCase();
         return UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void ensureNormalizedIdentity(FakePlayerRecord record) {
+        if (record == null) {
+            return;
+        }
+        String name = record.getName();
+        String normalizedName = name == null ? "unknown" : name.trim();
+        if (normalizedName.isEmpty()) {
+            normalizedName = "unknown";
+        }
+        record.setName(normalizedName);
+        record.setUuid(deterministicUuid(normalizedName));
     }
 
     private String normalizeOwner(String skinOwner, String fallbackName) {
@@ -527,9 +540,10 @@ public class FakePlayerService {
     }
 
     private void ensureFakePlayerData(FakePlayerRecord record) {
-        if (record == null || record.getUuid() == null) {
+        if (record == null) {
             return;
         }
+        ensureNormalizedIdentity(record);
         Path worldFolder = resolvePrimaryWorldFolder();
         if (worldFolder == null) {
             return;
