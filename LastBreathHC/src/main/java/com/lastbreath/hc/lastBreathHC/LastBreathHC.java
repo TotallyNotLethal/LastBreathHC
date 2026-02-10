@@ -70,6 +70,7 @@ import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerDeathReactionHandler;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRepository;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayersSettings;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerKillCommandListener;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerWhisperAliasListener;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerTabSyncListener;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.SkinService;
@@ -317,6 +318,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new FakePlayerWhisperAliasListener(fakePlayerService), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new FakePlayerKillCommandListener(fakePlayerService), this
         );
         getServer().getPluginManager().registerEvents(
                 new FakePlayerTabSyncListener(this, fakePlayerService), this

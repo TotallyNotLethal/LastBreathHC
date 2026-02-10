@@ -337,6 +337,31 @@ public class FakePlayerService {
         repository.save(records.values(), skinService.snapshotCache());
     }
 
+    public boolean killFakePlayer(UUID uuid, String killerName) {
+        FakePlayerRecord record = records.get(uuid);
+        if (record == null || !record.isActive()) {
+            return false;
+        }
+
+        String reason = "Killed";
+        if (killerName != null && !killerName.isBlank()) {
+            reason = "Killed by " + killerName;
+        }
+
+        record.setActive(false);
+        queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
+
+        Bukkit.broadcastMessage(
+                "§4☠ " + record.getName() + " has perished permanently. §7(" + reason + ")"
+        );
+        Bukkit.getBanList(org.bukkit.BanList.Type.NAME)
+                .addBan(record.getName(), "You have died.", null, null);
+
+        announceFakeLeave(record);
+        saveNow();
+        return true;
+    }
+
     public void announceFakeJoin(FakePlayerRecord record) {
         announceFakePresenceChange(record, true);
     }

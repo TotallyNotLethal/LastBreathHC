@@ -26,10 +26,11 @@ public class FakeCommand implements BasicCommand {
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("add", "remove", "list", "counts", "mute", "skin", "title", "ping");
+            return List.of("add", "remove", "kill", "list", "counts", "mute", "skin", "title", "ping");
         }
 
         if (args.length == 2 && (args[0].equalsIgnoreCase("remove")
+                || args[0].equalsIgnoreCase("kill")
                 || args[0].equalsIgnoreCase("mute")
                 || args[0].equalsIgnoreCase("skin")
                 || args[0].equalsIgnoreCase("title")
@@ -64,6 +65,7 @@ public class FakeCommand implements BasicCommand {
         switch (subcommand) {
             case "add" -> handleAdd(sender, args);
             case "remove" -> handleRemove(sender, args);
+            case "kill" -> handleKill(sender, args);
             case "list" -> handleList(sender, args);
             case "counts" -> handleCounts(sender, args);
             case "mute" -> handleMute(sender, args);
@@ -130,6 +132,34 @@ public class FakeCommand implements BasicCommand {
             service().announceFakeLeave(record);
         }
         sender.sendMessage("§aRemoved fake player: §f" + record.getName());
+    }
+
+    private void handleKill(CommandSender sender, String[] args) {
+        if (args.length != 2) {
+            sender.sendMessage("§cUsage: /fake kill <name>");
+            return;
+        }
+
+        Optional<FakePlayerRecord> optionalRecord = findByName(args[1]);
+        if (optionalRecord.isEmpty()) {
+            sender.sendMessage("§cNo fake player found with name: " + args[1]);
+            return;
+        }
+
+        FakePlayerRecord record = optionalRecord.get();
+        if (!record.isActive()) {
+            sender.sendMessage("§e" + record.getName() + " is already inactive.");
+            return;
+        }
+
+        String killerName = sender.getName();
+        boolean killed = service().killFakePlayer(record.getUuid(), killerName);
+        if (!killed) {
+            sender.sendMessage("§cFailed to kill fake player: " + record.getName());
+            return;
+        }
+
+        sender.sendMessage("§aKilled fake player: §f" + record.getName());
     }
 
     private void handleList(CommandSender sender, String[] args) {
@@ -352,6 +382,7 @@ public class FakeCommand implements BasicCommand {
         sender.sendMessage("§6Fake command usage:");
         sender.sendMessage("§e/fake add <name> [skinOwner]");
         sender.sendMessage("§e/fake remove <name>");
+        sender.sendMessage("§e/fake kill <name>");
         sender.sendMessage("§e/fake list");
         sender.sendMessage("§e/fake counts");
         sender.sendMessage("§e/fake mute <name|all>");
