@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 
 /**
@@ -33,7 +32,6 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
 
     private final LastBreathHC plugin;
     private final Map<UUID, Object> fakeHandles = new ConcurrentHashMap<>();
-    private final Map<UUID, FakeTabMetadata> fakeTabMetadata = new ConcurrentHashMap<>();
     private boolean failed;
 
     public Paper12111FakePlayerAdapter(LastBreathHC plugin) {
@@ -72,7 +70,6 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         }
         try {
             fakeHandles.remove(uuid);
-            fakeTabMetadata.remove(uuid);
             Object removePacket = createPlayerInfoRemovePacket(List.of(uuid));
             broadcastPacket(removePacket);
         } catch (Throwable throwable) {
@@ -159,8 +156,8 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         if (serverPlayer == null || record == null) {
             return;
         }
-        FakeTabMetadata metadata = fakeTabMetadata.computeIfAbsent(record.getUuid(), key -> randomMetadata());
-        String legacyListName = "§7[" + metadata.title().tabTag() + "§7] " + record.getName();
+        Title title = resolveTitle(record.getTabTitleKey());
+        String legacyListName = "§7[" + title.tabTag() + "§7] " + record.getName();
         Player bukkitPlayer = getBukkitPlayer(record).orElse(null);
         if (bukkitPlayer != null) {
             bukkitPlayer.setPlayerListName(legacyListName);
@@ -169,7 +166,7 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         if (nmsComponent != null) {
             applyTabListName(serverPlayer, nmsComponent);
         }
-        applyLatency(serverPlayer, metadata.pingMillis());
+        applyLatency(serverPlayer, Math.max(0, record.getTabPingMillis()));
     }
 
     private void sendTabListUpdates(Object serverPlayer) throws Exception {
@@ -226,14 +223,9 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         }
     }
 
-    private FakeTabMetadata randomMetadata() {
-        Title[] titles = Title.values();
-        Title title = titles[ThreadLocalRandom.current().nextInt(titles.length)];
-        int ping = ThreadLocalRandom.current().nextInt(40, 141);
-        return new FakeTabMetadata(title, ping);
-    }
-
-    private record FakeTabMetadata(Title title, int pingMillis) {
+    private Title resolveTitle(String tabTitleKey) {
+        Title title = Title.fromInput(tabTitleKey);
+        return title == null ? Title.WANDERER : title;
     }
 
     private void applySkin(Object profile, FakePlayerRecord record) {

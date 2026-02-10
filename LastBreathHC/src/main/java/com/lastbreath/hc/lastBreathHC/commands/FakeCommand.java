@@ -26,12 +26,14 @@ public class FakeCommand implements BasicCommand {
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("add", "remove", "list", "counts", "mute", "skin");
+            return List.of("add", "remove", "list", "counts", "mute", "skin", "title", "ping");
         }
 
         if (args.length == 2 && (args[0].equalsIgnoreCase("remove")
                 || args[0].equalsIgnoreCase("mute")
-                || args[0].equalsIgnoreCase("skin"))) {
+                || args[0].equalsIgnoreCase("skin")
+                || args[0].equalsIgnoreCase("title")
+                || args[0].equalsIgnoreCase("ping"))) {
             List<String> names = new ArrayList<>();
             if (args[0].equalsIgnoreCase("mute")) {
                 names.add("all");
@@ -66,6 +68,8 @@ public class FakeCommand implements BasicCommand {
             case "counts" -> handleCounts(sender, args);
             case "mute" -> handleMute(sender, args);
             case "skin" -> handleSkin(sender, args);
+            case "title" -> handleTitle(sender, args);
+            case "ping" -> handlePing(sender, args);
             default -> {
                 sender.sendMessage("§cUnknown subcommand: " + args[0]);
                 sendUsage(sender);
@@ -254,6 +258,77 @@ public class FakeCommand implements BasicCommand {
         sender.sendMessage("§aUpdated skin owner for §f" + record.getName() + "§a to §f" + skinOwner + "§a.");
     }
 
+
+    private void handleTitle(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage("§cUsage: /fake title <name> <title>");
+            return;
+        }
+
+        String targetName = args[1].trim();
+        String titleInput = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length)).trim();
+        if (titleInput.isEmpty()) {
+            sender.sendMessage("§cTitle cannot be empty.");
+            return;
+        }
+
+        Optional<FakePlayerRecord> optionalRecord = findByName(targetName);
+        if (optionalRecord.isEmpty()) {
+            sender.sendMessage("§cNo fake player found with name: " + targetName);
+            return;
+        }
+
+        FakePlayerRecord record = optionalRecord.get();
+        boolean updated = service().setTabTitle(record.getUuid(), titleInput);
+        if (!updated) {
+            sender.sendMessage("§cUnknown title. Use a valid configured title name.");
+            return;
+        }
+
+        service().refreshVisual(record.getUuid());
+        service().saveNow();
+        sender.sendMessage("§aUpdated tab title for §f" + record.getName() + "§a to §f" + service().getByUuid(record.getUuid()).map(FakePlayerRecord::getTabTitleKey).orElse("unknown") + "§a.");
+    }
+
+    private void handlePing(CommandSender sender, String[] args) {
+        if (args.length != 3) {
+            sender.sendMessage("§cUsage: /fake ping <name> <ms>");
+            return;
+        }
+
+        String targetName = args[1].trim();
+        int pingMillis;
+        try {
+            pingMillis = Integer.parseInt(args[2].trim());
+        } catch (NumberFormatException ex) {
+            sender.sendMessage("§cPing must be a whole number in milliseconds.");
+            return;
+        }
+
+        if (pingMillis < 0) {
+            sender.sendMessage("§cPing must be zero or greater.");
+            return;
+        }
+
+        Optional<FakePlayerRecord> optionalRecord = findByName(targetName);
+        if (optionalRecord.isEmpty()) {
+            sender.sendMessage("§cNo fake player found with name: " + targetName);
+            return;
+        }
+
+        FakePlayerRecord record = optionalRecord.get();
+        boolean updated = service().setTabPing(record.getUuid(), pingMillis);
+        if (!updated) {
+            sender.sendMessage("§cFailed to update ping for fake player: " + record.getName());
+            return;
+        }
+
+        service().refreshVisual(record.getUuid());
+        service().saveNow();
+        int effectivePing = service().getByUuid(record.getUuid()).map(FakePlayerRecord::getTabPingMillis).orElse(pingMillis);
+        sender.sendMessage("§aUpdated tab ping for §f" + record.getName() + "§a to §f" + effectivePing + "ms§a.");
+    }
+
     private Optional<FakePlayerRecord> findByName(String name) {
         for (FakePlayerRecord record : service().listFakePlayers()) {
             if (record.getName().equalsIgnoreCase(name)) {
@@ -271,6 +346,8 @@ public class FakeCommand implements BasicCommand {
         sender.sendMessage("§e/fake counts");
         sender.sendMessage("§e/fake mute <name|all>");
         sender.sendMessage("§e/fake skin <name> <skinOwner>");
+        sender.sendMessage("§e/fake title <name> <title>");
+        sender.sendMessage("§e/fake ping <name> <ms>");
     }
 
     private boolean hasAccess(CommandSender sender) {
