@@ -36,7 +36,10 @@ import com.google.gson.JsonObject;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.advancement.Advancement;
+import org.bukkit.advancement.AdvancementProgress;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -333,6 +336,39 @@ public class FakePlayerService {
         return true;
     }
 
+    public boolean announceAdvancement(UUID uuid, NamespacedKey advancementKey) {
+        if (advancementKey == null) {
+            return false;
+        }
+
+        FakePlayerRecord record = records.get(uuid);
+        if (record == null || !record.isActive()) {
+            return false;
+        }
+
+        Advancement advancement = Bukkit.getAdvancement(advancementKey);
+        if (advancement == null) {
+            return false;
+        }
+
+        Optional<Player> fakeBukkitPlayer = resolveBukkitPlayer(record);
+        if (fakeBukkitPlayer.isPresent()) {
+            try {
+                AdvancementProgress progress = fakeBukkitPlayer.get().getAdvancementProgress(advancement);
+                for (String criterion : progress.getRemainingCriteria()) {
+                    progress.awardCriteria(criterion);
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        String advancementTitle = humanizeAdvancementKey(advancement.getKey());
+        Bukkit.broadcastMessage(ChatColor.GREEN + record.getName() + " has made the advancement [" + advancementTitle + "]");
+
+        record.setLastSeenAt(Instant.now());
+        return true;
+    }
+
     public void saveNow() {
         repository.save(records.values(), skinService.snapshotCache());
     }
@@ -401,6 +437,32 @@ public class FakePlayerService {
             }
         }
         Bukkit.broadcastMessage(record.getName() + ": " + message);
+    }
+
+    private String humanizeAdvancementKey(NamespacedKey key) {
+        if (key == null) {
+            return "Unknown";
+        }
+        String value = key.getKey();
+        int slash = value.lastIndexOf('/');
+        if (slash >= 0 && slash < value.length() - 1) {
+            value = value.substring(slash + 1);
+        }
+        String[] words = value.replace('_', ' ').split("\\s+");
+        StringBuilder builder = new StringBuilder();
+        for (String word : words) {
+            if (word == null || word.isBlank()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(word.charAt(0)));
+            if (word.length() > 1) {
+                builder.append(word.substring(1));
+            }
+        }
+        return builder.length() == 0 ? key.toString() : builder.toString();
     }
 
     private boolean isCooldownReady(Instant lastReactionAt, Instant now, Duration cooldown) {
