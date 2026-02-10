@@ -10,3 +10,9 @@ permissions:
   lastbreathhc.nick:
     description: Allows players to set nicknames with /nick.
     default: false
+  lastbreathhc.fake:
+    description: Allows use of /fake management command.
+    default: false
+  lastbreathhc.fake.chat:
+    description: Allows use of /chat fake message command.
+    default: false

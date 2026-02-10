@@ -51,7 +51,7 @@ public class FakeCommand implements BasicCommand {
     public void execute(CommandSourceStack source, String[] args) {
         CommandSender sender = source.getSender();
         if (!hasAccess(sender)) {
-            sender.sendMessage("§cOnly operators can use this command.");
+            sender.sendMessage("§cYou do not have permission to use this command.");
             return;
         }
 
@@ -361,15 +361,7 @@ public class FakeCommand implements BasicCommand {
     }
 
     private boolean hasAccess(CommandSender sender) {
-        if (sender.isOp()) {
-            return true;
-        }
-        // Secondary permission-node check retained for future LuckPerms rollout.
-        boolean hasPermissionNode = sender.hasPermission(PERMISSION_NODE);
-        if (hasPermissionNode) {
-            // Intentionally not granting access yet; OP gate remains default behavior.
-        }
-        return false;
+        return sender.isOp() || sender.hasPermission(PERMISSION_NODE);
     }
 
     private boolean isValidName(String name) {
