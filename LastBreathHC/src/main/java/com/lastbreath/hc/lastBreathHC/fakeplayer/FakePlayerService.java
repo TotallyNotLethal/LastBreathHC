@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -165,6 +166,27 @@ public class FakePlayerService {
 
     public Optional<FakePlayerRecord> getByUuid(UUID uuid) {
         return Optional.ofNullable(records.get(uuid));
+    }
+
+    public Optional<FakePlayerRecord> findActiveByName(String name) {
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
+        }
+        String normalized = name.toLowerCase(Locale.ROOT);
+        return records.values().stream()
+                .filter(FakePlayerRecord::isActive)
+                .filter(record -> record.getName() != null)
+                .filter(record -> record.getName().toLowerCase(Locale.ROOT).equals(normalized))
+                .findFirst();
+    }
+
+    public List<String> listActiveNames() {
+        return records.values().stream()
+                .filter(FakePlayerRecord::isActive)
+                .map(FakePlayerRecord::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
     public boolean mute(UUID uuid, boolean muted) {
