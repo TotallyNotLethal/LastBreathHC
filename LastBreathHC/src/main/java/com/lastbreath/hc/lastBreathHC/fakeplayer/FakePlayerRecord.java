@@ -19,7 +19,6 @@ public class FakePlayerRecord {
     private long reactionCount;
     private String tabTitleKey;
     private int tabPingMillis;
-    private transient String tabListDisplayNameOverride;
 
     public FakePlayerRecord() {
     }
@@ -155,13 +154,5 @@ public class FakePlayerRecord {
 
     public void setTabPingMillis(int tabPingMillis) {
         this.tabPingMillis = tabPingMillis;
-    }
-
-    public String getTabListDisplayNameOverride() {
-        return tabListDisplayNameOverride;
-    }
-
-    public void setTabListDisplayNameOverride(String tabListDisplayNameOverride) {
-        this.tabListDisplayNameOverride = tabListDisplayNameOverride;
     }
 }
