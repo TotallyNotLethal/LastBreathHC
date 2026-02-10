@@ -1,9 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.fakeplayer;
 
-import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -17,7 +15,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Random;
 import java.util.Set;
 
 /**
@@ -30,12 +27,9 @@ public class FakePlayerWhisperAliasListener implements Listener {
             "pm", "dm", "privatemessage", "message"
     );
 
-    private final LastBreathHC plugin;
     private final FakePlayerService fakePlayerService;
-    private final Random random = new Random();
 
-    public FakePlayerWhisperAliasListener(LastBreathHC plugin, FakePlayerService fakePlayerService) {
-        this.plugin = plugin;
+    public FakePlayerWhisperAliasListener(FakePlayerService fakePlayerService) {
         this.fakePlayerService = fakePlayerService;
     }
 
@@ -79,19 +73,7 @@ public class FakePlayerWhisperAliasListener implements Listener {
         Player sender = event.getPlayer();
         FakePlayerRecord fakeTarget = targetRecord.get();
 
-        sender.sendMessage(ChatColor.GRAY + "to " + fakeTarget.getName() + ChatColor.DARK_GRAY + ": " + ChatColor.WHITE + payload);
-
-        boolean tracked = fakePlayerService.registerReaction(fakeTarget.getUuid());
-        if (!tracked) {
-            return;
-        }
-
-        String reply = pickReplyMessage(payload);
-        if (!fakePlayerService.registerChat(fakeTarget.getUuid(), reply)) {
-            return;
-        }
-
-        Bukkit.getScheduler().runTaskLater(plugin, () -> sendFakeWhisperToSender(fakeTarget, sender, reply), randomReplyDelayTicks());
+        sender.sendMessage(ChatColor.GRAY + "You whisper to " + fakeTarget.getName() + ": " + payload);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -147,27 +129,4 @@ public class FakePlayerWhisperAliasListener implements Listener {
         return lower;
     }
 
-    private long randomReplyDelayTicks() {
-        int min = plugin.getFakePlayersSettings().deathReactions().delayMinTicks();
-        int max = plugin.getFakePlayersSettings().deathReactions().delayMaxTicks();
-        if (max <= min) {
-            return min;
-        }
-        return random.nextInt((max - min) + 1) + min;
-    }
-
-    private String pickReplyMessage(String senderPayload) {
-        List<String> configured = plugin.getFakePlayersSettings().deathReactions().messages();
-        if (configured != null && !configured.isEmpty()) {
-            String selected = configured.get(random.nextInt(configured.size()));
-            if (selected != null && !selected.isBlank()) {
-                return selected;
-            }
-        }
-        return "Got it: " + senderPayload;
-    }
-
-    private void sendFakeWhisperToSender(FakePlayerRecord sourceFake, CommandSender recipient, String message) {
-        recipient.sendMessage(ChatColor.GRAY + "from " + sourceFake.getName() + ChatColor.DARK_GRAY + ": " + ChatColor.WHITE + message);
-    }
 }

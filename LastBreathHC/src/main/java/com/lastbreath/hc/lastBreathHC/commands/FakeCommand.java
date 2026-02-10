@@ -6,6 +6,8 @@ import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.advancement.Advancement;
 import org.bukkit.command.CommandSender;
 
 import java.util.ArrayList;
@@ -26,14 +28,16 @@ public class FakeCommand implements BasicCommand {
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("add", "remove", "list", "counts", "mute", "skin", "title", "ping");
+            return List.of("add", "remove", "kill", "list", "counts", "mute", "skin", "title", "ping", "advancement");
         }
 
         if (args.length == 2 && (args[0].equalsIgnoreCase("remove")
+                || args[0].equalsIgnoreCase("kill")
                 || args[0].equalsIgnoreCase("mute")
                 || args[0].equalsIgnoreCase("skin")
                 || args[0].equalsIgnoreCase("title")
-                || args[0].equalsIgnoreCase("ping"))) {
+                || args[0].equalsIgnoreCase("ping")
+                || args[0].equalsIgnoreCase("advancement"))) {
             List<String> names = new ArrayList<>();
             if (args[0].equalsIgnoreCase("mute")) {
                 names.add("all");
@@ -42,6 +46,20 @@ public class FakeCommand implements BasicCommand {
                 names.add(record.getName());
             }
             return names;
+        }
+
+        if (args.length == 3 && args[0].equalsIgnoreCase("advancement")) {
+            String prefix = args[2].toLowerCase(Locale.ROOT);
+            List<String> keys = new ArrayList<>();
+            java.util.Iterator<Advancement> iterator = Bukkit.advancementIterator();
+            while (iterator.hasNext()) {
+                Advancement advancement = iterator.next();
+                String key = advancement.getKey().toString();
+                if (key.toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                    keys.add(key);
+                }
+            }
+            return keys;
         }
 
         return List.of();
@@ -64,12 +82,14 @@ public class FakeCommand implements BasicCommand {
         switch (subcommand) {
             case "add" -> handleAdd(sender, args);
             case "remove" -> handleRemove(sender, args);
+            case "kill" -> handleKill(sender, args);
             case "list" -> handleList(sender, args);
             case "counts" -> handleCounts(sender, args);
             case "mute" -> handleMute(sender, args);
             case "skin" -> handleSkin(sender, args);
             case "title" -> handleTitle(sender, args);
             case "ping" -> handlePing(sender, args);
+            case "advancement" -> handleAdvancement(sender, args);
             default -> {
                 sender.sendMessage("§cUnknown subcommand: " + args[0]);
                 sendUsage(sender);
@@ -130,6 +150,67 @@ public class FakeCommand implements BasicCommand {
             service().announceFakeLeave(record);
         }
         sender.sendMessage("§aRemoved fake player: §f" + record.getName());
+    }
+
+    private void handleKill(CommandSender sender, String[] args) {
+        if (args.length != 2) {
+            sender.sendMessage("§cUsage: /fake kill <name>");
+            return;
+        }
+
+        Optional<FakePlayerRecord> optionalRecord = findByName(args[1]);
+        if (optionalRecord.isEmpty()) {
+            sender.sendMessage("§cNo fake player found with name: " + args[1]);
+            return;
+        }
+
+        FakePlayerRecord record = optionalRecord.get();
+        if (!record.isActive()) {
+            sender.sendMessage("§e" + record.getName() + " is already inactive.");
+            return;
+        }
+
+        String killerName = sender.getName();
+        boolean killed = service().killFakePlayer(record.getUuid(), killerName);
+        if (!killed) {
+            sender.sendMessage("§cFailed to kill fake player: " + record.getName());
+            return;
+        }
+
+        sender.sendMessage("§aKilled fake player: §f" + record.getName());
+    }
+
+    private void handleAdvancement(CommandSender sender, String[] args) {
+        if (args.length != 3) {
+            sender.sendMessage("§cUsage: /fake advancement <name> <namespace:key>");
+            return;
+        }
+
+        Optional<FakePlayerRecord> optionalRecord = findByName(args[1]);
+        if (optionalRecord.isEmpty()) {
+            sender.sendMessage("§cNo fake player found with name: " + args[1]);
+            return;
+        }
+
+        FakePlayerRecord record = optionalRecord.get();
+        if (!record.isActive()) {
+            sender.sendMessage("§c" + record.getName() + " is inactive and cannot gain advancements.");
+            return;
+        }
+
+        NamespacedKey advancementKey = NamespacedKey.fromString(args[2]);
+        if (advancementKey == null) {
+            sender.sendMessage("§cInvalid advancement key. Use namespace:key format.");
+            return;
+        }
+
+        boolean announced = service().announceAdvancement(record.getUuid(), advancementKey);
+        if (!announced) {
+            sender.sendMessage("§cUnknown advancement: " + advancementKey);
+            return;
+        }
+
+        sender.sendMessage("§aGranted advancement to fake player: §f" + record.getName() + " §7(" + advancementKey + ")");
     }
 
     private void handleList(CommandSender sender, String[] args) {
@@ -352,12 +433,14 @@ public class FakeCommand implements BasicCommand {
         sender.sendMessage("§6Fake command usage:");
         sender.sendMessage("§e/fake add <name> [skinOwner]");
         sender.sendMessage("§e/fake remove <name>");
+        sender.sendMessage("§e/fake kill <name>");
         sender.sendMessage("§e/fake list");
         sender.sendMessage("§e/fake counts");
         sender.sendMessage("§e/fake mute <name|all>");
         sender.sendMessage("§e/fake skin <name> <skinOwner>");
         sender.sendMessage("§e/fake title <name> <title>");
         sender.sendMessage("§e/fake ping <name> <ms>");
+        sender.sendMessage("§e/fake advancement <name> <namespace:key>");
     }
 
     private boolean hasAccess(CommandSender sender) {
