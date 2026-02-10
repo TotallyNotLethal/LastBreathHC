@@ -364,6 +364,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("lbshowinv", new ChatInventoryShareCommand());
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
+                    event.registrar().register("list", new ListCommand(this));
                 }
         );
     }
@@ -542,13 +543,13 @@ public final class LastBreathHC extends JavaPlugin {
     private void scheduleTabMenuRefresh() {
         long refreshTicks = Math.max(1L, getConfig().getLong("tabMenu.refreshTicks", 40L));
         long statsRefreshSeconds = Math.max(1L, getConfig().getLong("tabMenu.statsRefreshSeconds", 10L));
-        TabMenuModelProvider modelProvider = new TabMenuModelProvider(this, Duration.ofSeconds(statsRefreshSeconds));
+        TabMenuModelProvider modelProvider = new TabMenuModelProvider(this, fakePlayerService, Duration.ofSeconds(statsRefreshSeconds));
         tabMenuRefreshScheduler = new TabMenuRefreshScheduler(
                 this,
                 modelProvider,
                 new TabMenuRenderer(),
-                new BukkitTabMenuPlayerSource(),
-                new BukkitTabMenuUpdateHandler(),
+                new BukkitTabMenuPlayerSource(fakePlayerService),
+                new BukkitTabMenuUpdateHandler(fakePlayerService),
                 refreshTicks
         );
         tabMenuRefreshScheduler.start();

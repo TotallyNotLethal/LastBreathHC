@@ -1,5 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.ui.tabmenu;
 
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRecord;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModel.PlayerRowFields;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,6 +12,15 @@ import org.bukkit.entity.Player;
 
 public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
     private final Map<String, String> lastPlayerNames = new HashMap<>();
+    private final FakePlayerService fakePlayerService;
+
+    public BukkitTabMenuUpdateHandler() {
+        this(null);
+    }
+
+    public BukkitTabMenuUpdateHandler(FakePlayerService fakePlayerService) {
+        this.fakePlayerService = fakePlayerService;
+    }
 
     @Override
     public void apply(TabMenuUpdate update) {
@@ -45,6 +56,26 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
             String previous = lastPlayerNames.get(username);
             if (!Objects.equals(previous, desired)) {
                 player.setPlayerListName(desired);
+            }
+        }
+        if (fakePlayerService != null) {
+            for (FakePlayerRecord record : fakePlayerService.listFakePlayers()) {
+                if (!record.isActive()) {
+                    continue;
+                }
+                String username = record.getName();
+                String desired = nextNames.get(username);
+                if (desired == null) {
+                    continue;
+                }
+                Player fakePlayer = fakePlayerService.resolveBukkitPlayer(record).orElse(null);
+                if (fakePlayer == null) {
+                    continue;
+                }
+                String previous = lastPlayerNames.get(username);
+                if (!Objects.equals(previous, desired)) {
+                    fakePlayer.setPlayerListName(desired);
+                }
             }
         }
         lastPlayerNames.clear();

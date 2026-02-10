@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.ui.tabmenu;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager.StatsSummary;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuConfig.DateTimeSettings;
@@ -21,23 +22,27 @@ public final class TabMenuDataSource {
 
     private final LastBreathHC plugin;
     private final Duration refreshInterval;
+    private final FakePlayerService fakePlayerService;
     private final Clock clock;
     private final DateTimeSettings dateTimeSettings;
     private TabMenuModelBuilder.TabMenuContext cachedContext;
     private Instant lastRefresh = Instant.EPOCH;
 
-    public TabMenuDataSource(LastBreathHC plugin, DateTimeSettings dateTimeSettings) {
-        this(plugin, dateTimeSettings, DEFAULT_REFRESH_INTERVAL, Clock.systemUTC());
+    public TabMenuDataSource(LastBreathHC plugin, DateTimeSettings dateTimeSettings, FakePlayerService fakePlayerService) {
+        this(plugin, dateTimeSettings, fakePlayerService, DEFAULT_REFRESH_INTERVAL, Clock.systemUTC());
     }
 
-    public TabMenuDataSource(LastBreathHC plugin, DateTimeSettings dateTimeSettings, Duration refreshInterval) {
-        this(plugin, dateTimeSettings, refreshInterval, Clock.systemUTC());
+    public TabMenuDataSource(LastBreathHC plugin, DateTimeSettings dateTimeSettings, FakePlayerService fakePlayerService,
+                             Duration refreshInterval) {
+        this(plugin, dateTimeSettings, fakePlayerService, refreshInterval, Clock.systemUTC());
     }
 
-    public TabMenuDataSource(LastBreathHC plugin, DateTimeSettings dateTimeSettings, Duration refreshInterval, Clock clock) {
+    public TabMenuDataSource(LastBreathHC plugin, DateTimeSettings dateTimeSettings, FakePlayerService fakePlayerService,
+                             Duration refreshInterval, Clock clock) {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.dateTimeSettings = Objects.requireNonNull(dateTimeSettings, "dateTimeSettings");
         this.refreshInterval = Objects.requireNonNull(refreshInterval, "refreshInterval");
+        this.fakePlayerService = fakePlayerService;
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
@@ -59,10 +64,13 @@ public final class TabMenuDataSource {
     private TabMenuModelBuilder.TabMenuContext buildSnapshot() {
         String serverName = "Last Breath";
         StatsSummary summary = StatsManager.summarize();
-        int onlineCount = Bukkit.getOnlinePlayers().size();
+        int realOnline = Bukkit.getOnlinePlayers().size();
+        int fakeOnline = fakePlayerService == null ? 0 : Math.max(0, fakePlayerService.getActiveCount());
+        int onlineCount = realOnline + fakeOnline;
         int pingMillis = calculateAveragePing(Bukkit.getOnlinePlayers());
         String dateTimeLine = buildDateTimeLine();
-        String playerCountLine = "Online players: " + onlineCount + " | Ping: " + pingMillis + "ms";
+        String playerCountLine = "Online players: " + onlineCount + " (" + realOnline + " real, " + fakeOnline + " fake)"
+                + " | Ping: " + pingMillis + "ms";
         String totalPlaytimeLine = formatDuration(summary.totalPlaytimeTicks());
         return new TabMenuModelBuilder.TabMenuContext(
                 serverName,
