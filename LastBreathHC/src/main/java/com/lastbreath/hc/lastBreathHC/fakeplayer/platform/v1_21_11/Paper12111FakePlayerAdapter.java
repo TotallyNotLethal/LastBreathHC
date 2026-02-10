@@ -321,9 +321,9 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
 
         Class<?> craftPlayerClass = Class.forName("org.bukkit.craftbukkit.entity.CraftPlayer");
         Class<?> serverPlayerClass = Class.forName("net.minecraft.server.level.ServerPlayer");
+        Class<?> packetInterface = Class.forName("net.minecraft.network.protocol.Packet");
 
         Method getHandleMethod = craftPlayerClass.getMethod("getHandle");
-        Method sendMethod = null;
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (!craftPlayerClass.isInstance(player)) {
@@ -333,16 +333,61 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
             if (!serverPlayerClass.isInstance(handle)) {
                 continue;
             }
-            Object connection = serverPlayerClass.getField("connection").get(handle);
+            Object connection = resolveConnection(handle, serverPlayerClass);
             if (connection == null) {
                 continue;
             }
-            if (sendMethod == null) {
-                Class<?> packetInterface = Class.forName("net.minecraft.network.protocol.Packet");
-                sendMethod = connection.getClass().getMethod("send", packetInterface);
-            }
-            sendMethod.invoke(connection, packet);
+            sendPacket(connection, packet, packetInterface);
         }
+    }
+
+    private Object resolveConnection(Object serverPlayer, Class<?> serverPlayerClass) {
+        try {
+            return serverPlayerClass.getField("connection").get(serverPlayer);
+        } catch (Exception ignored) {
+        }
+        try {
+            Field declared = serverPlayerClass.getDeclaredField("connection");
+            declared.setAccessible(true);
+            return declared.get(serverPlayer);
+        } catch (Exception ignored) {
+        }
+        try {
+            Method getter = serverPlayerClass.getMethod("connection");
+            return getter.invoke(serverPlayer);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void sendPacket(Object connection, Object packet, Class<?> packetInterface) throws Exception {
+        Method sendMethod = null;
+        try {
+            sendMethod = connection.getClass().getMethod("send", packetInterface);
+        } catch (NoSuchMethodException ignored) {
+            // Fall through to overloaded variants.
+        }
+        if (sendMethod != null) {
+            sendMethod.invoke(connection, packet);
+            return;
+        }
+
+        for (Method method : connection.getClass().getMethods()) {
+            if (!method.getName().equals("send") || method.getParameterCount() == 0) {
+                continue;
+            }
+            Class<?> first = method.getParameterTypes()[0];
+            if (!first.isAssignableFrom(packet.getClass()) && !packetInterface.isAssignableFrom(first)) {
+                continue;
+            }
+            Object[] args = new Object[method.getParameterCount()];
+            args[0] = packet;
+            method.invoke(connection, args);
+            return;
+        }
+
+        throw new NoSuchMethodException("Unable to locate connection.send(Packet) for "
+                + connection.getClass().getName());
     }
 
     private boolean hasFailed() {
