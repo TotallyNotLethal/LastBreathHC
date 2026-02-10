@@ -46,12 +46,6 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
             return;
         }
         try {
-            Object entryPacket = createPlayerInfoEntryPacket(record);
-            if (entryPacket != null) {
-                broadcastPacket(entryPacket);
-                return;
-            }
-
             Object serverPlayer = fakeHandles.computeIfAbsent(record.getUuid(), key -> createServerPlayer(record));
             if (serverPlayer == null) {
                 return;
