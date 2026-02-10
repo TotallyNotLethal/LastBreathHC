@@ -330,8 +330,18 @@ public class FakeCommand implements BasicCommand {
     }
 
     private Optional<FakePlayerRecord> findByName(String name) {
+        if (name == null || name.isBlank()) {
+            return Optional.empty();
+        }
+
+        String trimmedName = name.trim();
+        Optional<FakePlayerRecord> normalizedHit = service().getByUuid(FakePlayerService.deterministicUuid(trimmedName));
+        if (normalizedHit.isPresent()) {
+            return normalizedHit;
+        }
+
         for (FakePlayerRecord record : service().listFakePlayers()) {
-            if (record.getName().equalsIgnoreCase(name)) {
+            if (record.getName().equalsIgnoreCase(trimmedName)) {
                 return Optional.of(record);
             }
         }
