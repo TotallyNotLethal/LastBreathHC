@@ -4,6 +4,7 @@ import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRecord;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModel.PlayerRowFields;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import org.bukkit.Bukkit;
@@ -43,9 +44,11 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
 
     private void applyPlayers(TabMenuModel model) {
         Map<String, String> nextNames = new HashMap<>();
+        Map<String, String> nextNamesByLower = new HashMap<>();
         for (PlayerRowFields row : model.players()) {
             String nextName = formatPlayerListName(row);
             nextNames.put(row.username(), nextName);
+            nextNamesByLower.put(row.username().toLowerCase(Locale.ROOT), nextName);
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
             String username = player.getName();
@@ -66,15 +69,23 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
                 String username = record.getName();
                 String desired = nextNames.get(username);
                 if (desired == null) {
-                    continue;
+                    desired = nextNamesByLower.get(username.toLowerCase(Locale.ROOT));
                 }
-                Player fakePlayer = fakePlayerService.resolveBukkitPlayer(record).orElse(null);
-                if (fakePlayer == null) {
+                if (desired == null) {
                     continue;
                 }
                 String previous = lastPlayerNames.get(username);
-                if (!Objects.equals(previous, desired)) {
+                boolean changed = !Objects.equals(previous, desired);
+                Player fakePlayer = fakePlayerService.resolveBukkitPlayer(record).orElse(null);
+                if (fakePlayer == null) {
+                    if (changed) {
+                        fakePlayerService.refreshVisual(record.getUuid());
+                    }
+                    continue;
+                }
+                if (changed) {
                     fakePlayer.setPlayerListName(desired);
+                    fakePlayerService.refreshVisual(record.getUuid());
                 }
             }
         }
