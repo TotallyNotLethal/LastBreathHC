@@ -333,6 +333,19 @@ public class FakePlayerService {
         return true;
     }
 
+    public boolean setTabListDisplayNameOverride(UUID uuid, String displayName) {
+        FakePlayerRecord record = records.get(uuid);
+        if (record == null) {
+            return false;
+        }
+        String normalized = displayName == null ? null : displayName.trim();
+        if (normalized != null && normalized.isEmpty()) {
+            normalized = null;
+        }
+        record.setTabListDisplayNameOverride(normalized);
+        return true;
+    }
+
     public void saveNow() {
         repository.save(records.values(), skinService.snapshotCache());
     }

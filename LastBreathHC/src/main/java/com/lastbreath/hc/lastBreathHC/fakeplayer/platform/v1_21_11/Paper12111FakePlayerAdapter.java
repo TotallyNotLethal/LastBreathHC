@@ -46,12 +46,6 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
             return;
         }
         try {
-            Object entryPacket = createPlayerInfoEntryPacket(record);
-            if (entryPacket != null) {
-                broadcastPacket(entryPacket);
-                return;
-            }
-
             Object serverPlayer = fakeHandles.computeIfAbsent(record.getUuid(), key -> createServerPlayer(record));
             if (serverPlayer == null) {
                 return;
@@ -167,7 +161,10 @@ public class Paper12111FakePlayerAdapter implements FakePlayerPlatformAdapter {
         }
         Title title = resolveTitle(record.getTabTitleKey());
         int pingMillis = Math.max(0, record.getTabPingMillis());
-        String legacyListName = "§7[" + title.tabTag() + "§7] " + record.getName() + " §7" + pingMillis + "ms";
+        String legacyListName = record.getTabListDisplayNameOverride();
+        if (legacyListName == null || legacyListName.isBlank()) {
+            legacyListName = "§7[" + title.tabTag() + "§7] " + record.getName() + " §7" + pingMillis + "ms";
+        }
         Player bukkitPlayer = getBukkitPlayer(record).orElse(null);
         if (bukkitPlayer != null) {
             bukkitPlayer.setPlayerListName(legacyListName);
