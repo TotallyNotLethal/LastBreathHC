@@ -316,7 +316,7 @@ public final class LastBreathHC extends JavaPlugin {
                 new ServerListMotdListener(fakePlayerService), this
         );
         getServer().getPluginManager().registerEvents(
-                new FakePlayerWhisperAliasListener(this, fakePlayerService), this
+                new FakePlayerWhisperAliasListener(fakePlayerService), this
         );
         getServer().getPluginManager().registerEvents(
                 new FakePlayerTabSyncListener(this, fakePlayerService), this
