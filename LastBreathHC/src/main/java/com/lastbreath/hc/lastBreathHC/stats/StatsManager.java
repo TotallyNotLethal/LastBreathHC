@@ -6,6 +6,9 @@ import com.lastbreath.hc.lastBreathHC.cosmetics.BossKillMessage;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossPrefix;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -13,7 +16,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -22,6 +28,7 @@ import java.util.stream.Collectors;
 public class StatsManager {
 
     private static final Map<UUID, PlayerStats> stats = new HashMap<>();
+    private static final Set<UUID> dirtyStats = new HashSet<>();
     private static final String FILE_NAME = "player-stats.yml";
 
     public static PlayerStats get(UUID uuid) {
@@ -40,6 +47,7 @@ public class StatsManager {
             return;
         }
         saveStats(playerStats, true);
+        dirtyStats.remove(uuid);
     }
 
     public static void saveAll() {
@@ -55,8 +63,41 @@ public class StatsManager {
 
         try {
             config.save(file);
+            dirtyStats.clear();
         } catch (IOException e) {
             LastBreathHC.getInstance().getLogger().warning("Unable to save player stats: " + e.getMessage());
+        }
+    }
+
+    public static void saveDirty() {
+        if (dirtyStats.isEmpty()) {
+            return;
+        }
+
+        File file = getFile();
+        ensureDirectory(file.getParentFile());
+        YamlConfiguration config = file.exists()
+                ? YamlConfiguration.loadConfiguration(file)
+                : new YamlConfiguration();
+
+        for (UUID uuid : new HashSet<>(dirtyStats)) {
+            PlayerStats entry = stats.get(uuid);
+            if (entry != null) {
+                writeStats(config, entry);
+            }
+        }
+
+        try {
+            config.save(file);
+            dirtyStats.clear();
+        } catch (IOException e) {
+            LastBreathHC.getInstance().getLogger().warning("Unable to save dirty player stats: " + e.getMessage());
+        }
+    }
+
+    public static void markDirty(UUID uuid) {
+        if (uuid != null) {
+            dirtyStats.add(uuid);
         }
     }
 
@@ -101,6 +142,8 @@ public class StatsManager {
             playerStats.timeAlive = config.getLong(base + ".timeAlive", 0L);
             playerStats.deaths = config.getInt(base + ".deaths", 0);
             playerStats.revives = config.getInt(base + ".revives", 0);
+            playerStats.mobsKilled = config.getInt(base + ".mobsKilled", 0);
+            playerStats.asteroidLoots = config.getInt(base + ".asteroidLoots", 0);
             playerStats.cropsHarvested = config.getInt(base + ".cropsHarvested", 0);
             playerStats.blocksMined = config.getInt(base + ".blocksMined", 0);
             playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
@@ -192,6 +235,8 @@ public class StatsManager {
         config.set(base + ".timeAlive", playerStats.timeAlive);
         config.set(base + ".deaths", playerStats.deaths);
         config.set(base + ".revives", playerStats.revives);
+        config.set(base + ".mobsKilled", playerStats.mobsKilled);
+        config.set(base + ".asteroidLoots", playerStats.asteroidLoots);
         config.set(base + ".cropsHarvested", playerStats.cropsHarvested);
         config.set(base + ".blocksMined", playerStats.blocksMined);
         config.set(base + ".rareOresMined", playerStats.rareOresMined);
@@ -228,6 +273,177 @@ public class StatsManager {
                     "Unable to create stats directory at " + directory.getAbsolutePath()
             );
         }
+    }
+
+    public static List<LeaderboardEntry> getLeaderboard(LeaderboardMetric metric, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+
+        Map<UUID, PlayerStats> merged = loadAllFromDisk();
+        for (Map.Entry<UUID, PlayerStats> entry : stats.entrySet()) {
+            merged.put(entry.getKey(), entry.getValue());
+        }
+
+        Comparator<LeaderboardEntry> comparator = Comparator
+                .comparingLong(LeaderboardEntry::value).reversed()
+                .thenComparing(entry -> entry.displayName().toLowerCase(Locale.US))
+                .thenComparing(entry -> entry.uuid().toString());
+
+        return merged.entrySet().stream()
+                .map(entry -> {
+                    UUID uuid = entry.getKey();
+                    OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+                    return new LeaderboardEntry(
+                            uuid,
+                            resolveDisplayName(uuid, entry.getValue()),
+                            metric.extractValue(entry.getValue()),
+                            offlinePlayer.isBanned()
+                    );
+                })
+                .sorted(comparator)
+                .limit(limit)
+                .collect(Collectors.toList());
+    }
+
+    public static String formatTicks(long ticks) {
+        long totalSeconds = Math.max(0L, ticks / 20L);
+        long days = totalSeconds / 86400L;
+        long hours = (totalSeconds % 86400L) / 3600L;
+        long minutes = (totalSeconds % 3600L) / 60L;
+
+        List<String> segments = new ArrayList<>();
+        if (days > 0) {
+            segments.add(days + "d");
+        }
+        if (hours > 0 || !segments.isEmpty()) {
+            segments.add(hours + "h");
+        }
+        segments.add(minutes + "m");
+        return String.join(" ", segments);
+    }
+
+    private static Map<UUID, PlayerStats> loadAllFromDisk() {
+        Map<UUID, PlayerStats> loaded = new HashMap<>();
+        File file = getFile();
+        if (!file.exists()) {
+            return loaded;
+        }
+
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        ConfigurationSection playersSection = config.getConfigurationSection("players");
+        if (playersSection == null) {
+            return loaded;
+        }
+
+        for (String key : playersSection.getKeys(false)) {
+            try {
+                UUID uuid = UUID.fromString(key);
+                loaded.put(uuid, readStats(config, uuid));
+            } catch (IllegalArgumentException ignored) {
+                LastBreathHC.getInstance().getLogger().warning("Invalid UUID in stats file: " + key);
+            }
+        }
+        return loaded;
+    }
+
+    private static PlayerStats readStats(YamlConfiguration config, UUID uuid) {
+        PlayerStats playerStats = new PlayerStats(uuid);
+        String base = "players." + uuid;
+        playerStats.timeAlive = config.getLong(base + ".timeAlive", 0L);
+        playerStats.deaths = config.getInt(base + ".deaths", 0);
+        playerStats.revives = config.getInt(base + ".revives", 0);
+        playerStats.mobsKilled = config.getInt(base + ".mobsKilled", 0);
+        playerStats.asteroidLoots = config.getInt(base + ".asteroidLoots", 0);
+        playerStats.cropsHarvested = config.getInt(base + ".cropsHarvested", 0);
+        playerStats.blocksMined = config.getInt(base + ".blocksMined", 0);
+        playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
+        playerStats.nickname = config.getString(base + ".nickname");
+        return playerStats;
+    }
+
+    private static String resolveDisplayName(UUID uuid, PlayerStats playerStats) {
+        if (playerStats.nickname != null && !playerStats.nickname.isBlank()) {
+            return playerStats.nickname;
+        }
+        Player online = Bukkit.getPlayer(uuid);
+        if (online != null) {
+            return online.getName();
+        }
+        return uuid.toString();
+    }
+
+    public enum LeaderboardMetric {
+        MOBS_KILLED("mobs_killed", "Mobs Killed") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.mobsKilled;
+            }
+        },
+        ASTEROIDS_LOOTED("asteroids_looted", "Asteroids Looted") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.asteroidLoots;
+            }
+        },
+        PLAYTIME("playtime", "Playtime") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.timeAlive;
+            }
+        },
+        BLOCKS_MINED("blocks_mined", "Blocks Mined") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.blocksMined;
+            }
+        },
+        CROPS_HARVESTED("crops_harvested", "Crops Harvested") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.cropsHarvested;
+            }
+        },
+        RARE_ORES_MINED("rare_ores_mined", "Rare Ores Mined") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.rareOresMined;
+            }
+        };
+
+        private final String key;
+        private final String displayName;
+
+        LeaderboardMetric(String key, String displayName) {
+            this.key = key;
+            this.displayName = displayName;
+        }
+
+        public String key() {
+            return key;
+        }
+
+        public String displayName() {
+            return displayName;
+        }
+
+        public abstract long extractValue(PlayerStats stats);
+
+        public static LeaderboardMetric fromInput(String input) {
+            if (input == null || input.isBlank()) {
+                return null;
+            }
+            String normalized = input.trim().toLowerCase(Locale.US).replace('-', '_');
+            for (LeaderboardMetric metric : values()) {
+                if (metric.key.equals(normalized) || metric.name().equalsIgnoreCase(normalized)) {
+                    return metric;
+                }
+            }
+            return null;
+        }
+    }
+
+    public record LeaderboardEntry(UUID uuid, String displayName, long value, boolean banned) {
     }
 
     public record StatsSummary(int uniqueJoins, int totalDeaths, long totalPlaytimeTicks) {

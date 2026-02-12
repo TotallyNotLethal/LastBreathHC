@@ -50,6 +50,7 @@ public class StatsListener implements Listener {
         }
         PlayerStats stats = StatsManager.get(killer.getUniqueId());
         stats.mobsKilled++;
+        StatsManager.markDirty(killer.getUniqueId());
         TitleManager.checkProgressTitles(killer);
     }
 
@@ -75,6 +76,7 @@ public class StatsListener implements Listener {
             updated = true;
         }
         if (updated) {
+            StatsManager.markDirty(player.getUniqueId());
             TitleManager.checkProgressTitles(player);
         }
     }

@@ -97,6 +97,7 @@ public class AsteroidListener implements Listener {
 
                 PlayerStats stats = StatsManager.get(player.getUniqueId());
                 stats.asteroidLoots++;
+                StatsManager.markDirty(player.getUniqueId());
 
                 TitleManager.unlockTitle(
                         player,
