@@ -379,7 +379,11 @@ public class StatsManager {
         if (online != null) {
             return online.getName();
         }
-        return uuid.toString();
+        OfflinePlayer offlinePlayer = Bukkit.getOfflinePlayer(uuid);
+        if (offlinePlayer.getName() != null && !offlinePlayer.getName().isBlank()) {
+            return offlinePlayer.getName();
+        }
+        return "Unknown Player";
     }
 
     public enum LeaderboardMetric {
