@@ -208,6 +208,7 @@ public class FakePlayerService {
         }
         record.setActive(active);
         if (active) {
+            hydrateMissingSkin(record);
             record.setLastSeenAt(Instant.now());
         }
         queueVisualUpdate(() -> platformAdapter.updateDisplayState(record));
@@ -273,6 +274,7 @@ public class FakePlayerService {
             if (!record.isActive()) {
                 continue;
             }
+            hydrateMissingSkin(record);
             record.setLastSeenAt(now);
             toRespawn.add(record);
         }
@@ -496,6 +498,22 @@ public class FakePlayerService {
             owner = fallbackName;
         }
         return owner == null ? "unknown" : owner.trim().toLowerCase();
+    }
+
+    private void hydrateMissingSkin(FakePlayerRecord record) {
+        if (record == null || (record.getTextures() != null && !record.getTextures().isBlank())) {
+            return;
+        }
+
+        String skinOwner = normalizeOwner(record.getSkinOwner(), record.getName());
+        SkinService.SkinLookupResult lookup = skinService.lookup(skinOwner, false);
+        if (!lookup.hasSkin()) {
+            return;
+        }
+
+        record.setSkinOwner(skinOwner);
+        record.setTextures(lookup.textures());
+        record.setSignature(lookup.signature());
     }
 
     private int clampTabPingMillis(int pingMillis) {
