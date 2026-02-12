@@ -515,3 +515,57 @@ environment:
         - DEEP_COLD_OCEAN
         - DEEP_FROZEN_OCEAN
         - DEEP_LUKEWARM_OCEAN
+
+dailyRewards:
+  notifyOnJoin: true
+  autoOpenOnFirstJoinOfDay: false
+  rewardsByDay:
+    "1":
+      - type: ITEM
+        material: COOKED_BEEF
+        amount: 12
+      - type: ITEM
+        material: GOLDEN_CARROT
+        amount: 4
+    "2":
+      - type: ITEM
+        material: ARROW
+        amount: 24
+      - type: ITEM
+        material: COOKED_BEEF
+        amount: 10
+    "3":
+      - type: ITEM
+        material: IRON_INGOT
+        amount: 6
+      - type: ITEM
+        material: GOLDEN_APPLE
+        amount: 1
+    "4":
+      - type: ITEM
+        material: EXPERIENCE_BOTTLE
+        amount: 16
+      - type: EFFECT
+        effect: SPEED
+        durationSeconds: 180
+        amplifier: 0
+    "5":
+      - type: ITEM
+        material: DIAMOND
+        amount: 2
+      - type: ITEM
+        material: ENCHANTED_GOLDEN_APPLE
+        amount: 1
+  streakMilestones:
+    "3":
+      - type: ITEM
+        material: EXPERIENCE_BOTTLE
+        amount: 24
+    "5":
+      - type: ITEM
+        material: TOTEM_OF_UNDYING
+        amount: 1
+    "7":
+      - type: ITEM
+        material: NETHERITE_SCRAP
+        amount: 1

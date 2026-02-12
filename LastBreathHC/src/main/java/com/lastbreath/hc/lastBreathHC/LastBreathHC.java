@@ -14,9 +14,12 @@ import com.lastbreath.hc.lastBreathHC.commands.*;
 import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticAuraService;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenListener;
+import com.lastbreath.hc.lastBreathHC.daily.DailyJoinListener;
+import com.lastbreath.hc.lastBreathHC.daily.DailyRewardManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.gui.CosmeticsGUI;
+import com.lastbreath.hc.lastBreathHC.gui.DailyRewardGUI;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TeamManagementGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TitlesGUI;
@@ -130,6 +133,7 @@ public final class LastBreathHC extends JavaPlugin {
     private AggressiveLogoutMobManager aggressiveLogoutMobManager;
     private FakePlayerService fakePlayerService;
     private FakePlayersSettings fakePlayersSettings;
+    private DailyRewardManager dailyRewardManager;
 
     @Override
     public void onEnable() {
@@ -144,6 +148,7 @@ public final class LastBreathHC extends JavaPlugin {
                 fakePlayersSettings
         );
         fakePlayerService.startup();
+        dailyRewardManager = new DailyRewardManager(this);
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
         customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");
         HeadManager.init();
@@ -287,6 +292,7 @@ public final class LastBreathHC extends JavaPlugin {
         effectsStatusGUI = new EffectsStatusGUI(customPotionEffectManager, customPotionEffectRegistry);
         titlesGUI = new TitlesGUI();
         cosmeticsGUI = new CosmeticsGUI();
+        DailyRewardGUI dailyRewardGUI = new DailyRewardGUI(dailyRewardManager);
         cosmeticAuraService = new CosmeticAuraService();
         getServer().getPluginManager().registerEvents(
                 customPotionEffectManager, this
@@ -302,6 +308,12 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 cosmeticsGUI, this
+        );
+        getServer().getPluginManager().registerEvents(
+                dailyRewardGUI, this
+        );
+        getServer().getPluginManager().registerEvents(
+                new DailyJoinListener(this, dailyRewardManager, dailyRewardGUI), this
         );
         getServer().getPluginManager().registerEvents(
                 new CosmeticTokenListener(), this
@@ -373,6 +385,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
+                    event.registrar().register("daily", new DailyCommand(dailyRewardGUI));
                 }
         );
     }
@@ -450,6 +463,10 @@ public final class LastBreathHC extends JavaPlugin {
         BountyManager.save();
         ReviveStateManager.save();
         StatsManager.saveAll();
+        if (dailyRewardManager != null) {
+            dailyRewardManager.saveAll();
+            dailyRewardManager = null;
+        }
         potionDefinitionRegistry = null;
         customPotionEffectRegistry = null;
         customPotionEffectManager = null;
