@@ -137,7 +137,20 @@ public final class LastBreathHC extends JavaPlugin {
     private FakePlayerService fakePlayerService;
     private FakePlayersSettings fakePlayersSettings;
     private DailyRewardManager dailyRewardManager;
+    private DailyRewardGUI dailyRewardGUI;
     private DailyCosmeticListener dailyCosmeticListener;
+
+
+    @Override
+    public void onLoad() {
+        getLifecycleManager().registerEventHandler(
+                LifecycleEvents.COMMANDS,
+                event -> {
+                    event.registrar().register("daily", new DailyCommand(() -> dailyRewardGUI));
+                    event.registrar().register("leaderboard", new LeaderboardCommand());
+                }
+        );
+    }
 
     @Override
     public void onEnable() {
@@ -297,7 +310,7 @@ public final class LastBreathHC extends JavaPlugin {
         titlesGUI = new TitlesGUI();
         cosmeticsGUI = new CosmeticsGUI();
         LeaderboardGUI leaderboardGUI = new LeaderboardGUI();
-        DailyRewardGUI dailyRewardGUI = new DailyRewardGUI(dailyRewardManager);
+        dailyRewardGUI = new DailyRewardGUI(dailyRewardManager);
         dailyCosmeticListener = new DailyCosmeticListener(this, dailyRewardManager);
         cosmeticAuraService = new CosmeticAuraService();
         getServer().getPluginManager().registerEvents(
@@ -399,8 +412,6 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
-                    event.registrar().register("daily", new DailyCommand(dailyRewardGUI));
-                    event.registrar().register("leaderboard", new LeaderboardCommand());
                 }
         );
     }
@@ -490,6 +501,7 @@ public final class LastBreathHC extends JavaPlugin {
             dailyRewardManager.saveAll();
             dailyRewardManager = null;
         }
+        dailyRewardGUI = null;
         potionDefinitionRegistry = null;
         customPotionEffectRegistry = null;
         customPotionEffectManager = null;
