@@ -14,21 +14,22 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public class DailyRewardManager {
 
     private static final String FILE_NAME = "daily-rewards.yml";
 
     private final LastBreathHC plugin;
-    private final Map<UUID, DailyRewardData> cache = new HashMap<>();
-    private final Map<Integer, List<DailyRewardAction>> rewardsByDay = new HashMap<>();
-    private final Map<Integer, List<DailyRewardAction>> streakMilestones = new HashMap<>();
+    private final Map<UUID, DailyRewardData> cache = new java.util.HashMap<>();
+    private final Map<Integer, List<DailyRewardAction>> rewardsByDay = new java.util.HashMap<>();
+    private final Map<Integer, List<DailyRewardAction>> streakMilestones = new java.util.HashMap<>();
     private boolean notifyOnJoin;
     private boolean autoOpenOnFirstJoinOfDay;
 
@@ -47,7 +48,7 @@ public class DailyRewardManager {
 
         if (section == null) {
             plugin.getLogger().warning("dailyRewards section missing in config.yml. Using fallback reward.");
-            rewardsByDay.put(1, List.of(new ItemRewardAction(Material.COOKED_BEEF, 8)));
+            rewardsByDay.put(1, List.of(new ItemRewardAction(Material.EXPERIENCE_BOTTLE, 12)));
             return;
         }
 
@@ -56,7 +57,7 @@ public class DailyRewardManager {
 
         if (rewardsByDay.isEmpty()) {
             plugin.getLogger().warning("No valid daily rewards found. Adding safe fallback reward.");
-            rewardsByDay.put(1, List.of(new ItemRewardAction(Material.COOKED_BEEF, 8)));
+            rewardsByDay.put(1, List.of(new ItemRewardAction(Material.EXPERIENCE_BOTTLE, 12)));
         }
     }
 
@@ -109,6 +110,8 @@ public class DailyRewardManager {
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + "Current streak: " + ChatColor.GOLD + data.getCurrentStreak());
         lore.add(ChatColor.GRAY + "Best streak: " + ChatColor.GOLD + data.getMaxStreak());
+        lore.add(ChatColor.GRAY + "Daily cosmetics: " + ChatColor.AQUA + data.getUnlockedCosmetics().size() + "/" + DailyCosmeticType.values().length);
+        lore.add(ChatColor.GRAY + "Equipped: " + ChatColor.WHITE + (data.getEquippedCosmetic() == null ? "None" : data.getEquippedCosmetic().displayName()));
         lore.add(canClaim
                 ? ChatColor.GREEN + "You can claim today's reward."
                 : ChatColor.RED + "Already claimed today.");
@@ -143,6 +146,26 @@ public class DailyRewardManager {
         }
 
         return lore;
+    }
+
+    public DailyCosmeticType unlockRandomCosmetic(UUID uuid) {
+        DailyRewardData data = get(uuid);
+        List<DailyCosmeticType> pool = DailyCosmeticType.all().stream()
+                .filter(type -> !data.getUnlockedCosmetics().contains(type))
+                .toList();
+        if (pool.isEmpty()) {
+            return null;
+        }
+
+        DailyCosmeticType selected = pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
+        data.getUnlockedCosmetics().add(selected);
+        data.setEquippedCosmetic(selected);
+        save(uuid);
+        return selected;
+    }
+
+    public DailyCosmeticType getEquippedCosmetic(UUID uuid) {
+        return get(uuid).getEquippedCosmetic();
     }
 
     public boolean markJoin(UUID uuid) {
@@ -180,6 +203,8 @@ public class DailyRewardManager {
         config.set(base + ".currentStreak", data.getCurrentStreak());
         config.set(base + ".maxStreak", data.getMaxStreak());
         config.set(base + ".lastJoinEpochDay", data.getLastJoinEpochDay());
+        config.set(base + ".unlockedCosmetics", data.getUnlockedCosmetics().stream().map(Enum::name).sorted().collect(Collectors.toList()));
+        config.set(base + ".equippedCosmetic", data.getEquippedCosmetic() == null ? null : data.getEquippedCosmetic().name());
 
         try {
             config.save(file);
@@ -199,6 +224,8 @@ public class DailyRewardManager {
             config.set(base + ".currentStreak", data.getCurrentStreak());
             config.set(base + ".maxStreak", data.getMaxStreak());
             config.set(base + ".lastJoinEpochDay", data.getLastJoinEpochDay());
+            config.set(base + ".unlockedCosmetics", data.getUnlockedCosmetics().stream().map(Enum::name).sorted().collect(Collectors.toList()));
+            config.set(base + ".equippedCosmetic", data.getEquippedCosmetic() == null ? null : data.getEquippedCosmetic().name());
         }
 
         try {
@@ -223,6 +250,19 @@ public class DailyRewardManager {
         if (config.contains(base + ".lastJoinEpochDay")) {
             data.setLastJoinEpochDay(config.getLong(base + ".lastJoinEpochDay"));
         }
+
+        for (String cosmeticId : config.getStringList(base + ".unlockedCosmetics")) {
+            DailyCosmeticType type = DailyCosmeticType.fromInput(cosmeticId);
+            if (type != null) {
+                data.getUnlockedCosmetics().add(type);
+            }
+        }
+
+        DailyCosmeticType equipped = DailyCosmeticType.fromInput(config.getString(base + ".equippedCosmetic"));
+        if (equipped != null && data.getUnlockedCosmetics().contains(equipped)) {
+            data.setEquippedCosmetic(equipped);
+        }
+
         return data;
     }
 
@@ -232,7 +272,7 @@ public class DailyRewardManager {
         }
         int maxConfiguredDay = rewardsByDay.keySet().stream().max(Integer::compareTo).orElse(1);
         int safeDay = Math.max(1, maxConfiguredDay);
-        return rewardsByDay.getOrDefault(safeDay, List.of(new ItemRewardAction(Material.COOKED_BEEF, 8)));
+        return rewardsByDay.getOrDefault(safeDay, List.of(new ItemRewardAction(Material.EXPERIENCE_BOTTLE, 12)));
     }
 
     private List<Integer> sortedMilestoneDays() {
@@ -315,6 +355,10 @@ public class DailyRewardManager {
             int durationSeconds = integer(entry.getOrDefault("durationSeconds", 30), 30);
             int amplifier = integer(entry.getOrDefault("amplifier", 0), 0);
             return new EffectRewardAction(effectType, durationSeconds, amplifier);
+        }
+
+        if ("DAILY_RANDOM_COSMETIC".equals(type)) {
+            return new RandomDailyCosmeticRewardAction(this);
         }
 
         plugin.getLogger().warning("Unsupported reward type in " + pathLabel + ": " + type);

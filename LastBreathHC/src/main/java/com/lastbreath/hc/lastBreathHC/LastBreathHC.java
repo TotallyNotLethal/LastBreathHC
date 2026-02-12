@@ -14,6 +14,7 @@ import com.lastbreath.hc.lastBreathHC.commands.*;
 import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticAuraService;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenListener;
+import com.lastbreath.hc.lastBreathHC.daily.DailyCosmeticListener;
 import com.lastbreath.hc.lastBreathHC.daily.DailyJoinListener;
 import com.lastbreath.hc.lastBreathHC.daily.DailyRewardManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
@@ -134,6 +135,7 @@ public final class LastBreathHC extends JavaPlugin {
     private FakePlayerService fakePlayerService;
     private FakePlayersSettings fakePlayersSettings;
     private DailyRewardManager dailyRewardManager;
+    private DailyCosmeticListener dailyCosmeticListener;
 
     @Override
     public void onEnable() {
@@ -293,6 +295,7 @@ public final class LastBreathHC extends JavaPlugin {
         titlesGUI = new TitlesGUI();
         cosmeticsGUI = new CosmeticsGUI();
         DailyRewardGUI dailyRewardGUI = new DailyRewardGUI(dailyRewardManager);
+        dailyCosmeticListener = new DailyCosmeticListener(this, dailyRewardManager);
         cosmeticAuraService = new CosmeticAuraService();
         getServer().getPluginManager().registerEvents(
                 customPotionEffectManager, this
@@ -314,6 +317,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new DailyJoinListener(this, dailyRewardManager, dailyRewardGUI), this
+        );
+        getServer().getPluginManager().registerEvents(
+                dailyCosmeticListener, this
         );
         getServer().getPluginManager().registerEvents(
                 new CosmeticTokenListener(), this
@@ -362,6 +368,7 @@ public final class LastBreathHC extends JavaPlugin {
         cosmeticAuraService.start(this);
         worldBossManager.start();
         mobStackManager.start();
+        dailyCosmeticListener.start();
 
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS,
@@ -463,6 +470,10 @@ public final class LastBreathHC extends JavaPlugin {
         BountyManager.save();
         ReviveStateManager.save();
         StatsManager.saveAll();
+        if (dailyCosmeticListener != null) {
+            dailyCosmeticListener.stop();
+            dailyCosmeticListener = null;
+        }
         if (dailyRewardManager != null) {
             dailyRewardManager.saveAll();
             dailyRewardManager = null;

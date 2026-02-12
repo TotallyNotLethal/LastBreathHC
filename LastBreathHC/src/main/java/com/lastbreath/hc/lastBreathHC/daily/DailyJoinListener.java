@@ -27,7 +27,7 @@ public class DailyJoinListener implements Listener {
         boolean canClaim = dailyRewardManager.canClaimToday(player.getUniqueId());
 
         if (canClaim && dailyRewardManager.isNotifyOnJoin()) {
-            player.sendMessage(ChatColor.GOLD + "Daily reward ready! " + ChatColor.YELLOW + "Use /daily to claim it.");
+            player.sendMessage(ChatColor.GOLD + "Reminder: " + ChatColor.YELLOW + "check /daily - your reward is ready to claim.");
         }
 
         if (canClaim && firstJoinToday && dailyRewardManager.isAutoOpenOnFirstJoinOfDay()) {

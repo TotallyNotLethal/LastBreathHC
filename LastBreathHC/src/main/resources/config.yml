@@ -522,29 +522,30 @@ dailyRewards:
   rewardsByDay:
     "1":
       - type: ITEM
-        material: COOKED_BEEF
-        amount: 12
-      - type: ITEM
-        material: GOLDEN_CARROT
-        amount: 4
-    "2":
+        material: EXPERIENCE_BOTTLE
+        amount: 16
       - type: ITEM
         material: ARROW
-        amount: 24
+        amount: 16
+    "2":
       - type: ITEM
-        material: COOKED_BEEF
-        amount: 10
+        material: EXPERIENCE_BOTTLE
+        amount: 20
+      - type: EFFECT
+        effect: NIGHT_VISION
+        durationSeconds: 300
+        amplifier: 0
     "3":
       - type: ITEM
         material: IRON_INGOT
-        amount: 6
+        amount: 8
       - type: ITEM
         material: GOLDEN_APPLE
         amount: 1
     "4":
       - type: ITEM
         material: EXPERIENCE_BOTTLE
-        amount: 16
+        amount: 24
       - type: EFFECT
         effect: SPEED
         durationSeconds: 180
@@ -554,18 +555,21 @@ dailyRewards:
         material: DIAMOND
         amount: 2
       - type: ITEM
-        material: ENCHANTED_GOLDEN_APPLE
-        amount: 1
-  streakMilestones:
-    "3":
+        material: GOLDEN_APPLE
+        amount: 2
+    "6":
       - type: ITEM
         material: EXPERIENCE_BOTTLE
-        amount: 24
+        amount: 32
+      - type: ITEM
+        material: OBSIDIAN
+        amount: 8
+    "7":
+      - type: DAILY_RANDOM_COSMETIC
+  streakMilestones:
     "5":
       - type: ITEM
         material: TOTEM_OF_UNDYING
         amount: 1
     "7":
-      - type: ITEM
-        material: NETHERITE_SCRAP
-        amount: 1
+      - type: DAILY_RANDOM_COSMETIC
