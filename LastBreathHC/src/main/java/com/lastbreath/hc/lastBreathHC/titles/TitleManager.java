@@ -330,54 +330,54 @@ public class TitleManager {
         StatsManager.markDirty(player.getUniqueId());
         long seconds = stats.timeAlive / 20;
         if (seconds >= ONE_HOUR_SECONDS) {
-            unlockTitle(player, Title.TIME_TOUCHED, "Survived for at least one hour.");
+            unlockTitle(player, Title.TIME_TOUCHED, Title.TIME_TOUCHED.requirementDescription());
         }
         if (seconds >= TEN_HOURS_SECONDS) {
-            unlockTitle(player, Title.IRON_WILL, "Survived for at least 10 hours.");
+            unlockTitle(player, Title.IRON_WILL, Title.IRON_WILL.requirementDescription());
         }
         if (seconds >= TWENTY_FIVE_HOURS_SECONDS) {
-            unlockTitle(player, Title.VOID_WALKER, "Survived for at least 25 hours.");
+            unlockTitle(player, Title.VOID_WALKER, Title.VOID_WALKER.requirementDescription());
         }
         if (seconds >= ONE_HUNDRED_HOURS_SECONDS) {
-            unlockTitle(player, Title.LAST_SURVIVOR, "Survived for at least 100 hours.");
+            unlockTitle(player, Title.LAST_SURVIVOR, Title.LAST_SURVIVOR.requirementDescription());
         }
         if (seconds >= AGELESS_SECONDS) {
-            unlockTitle(player, Title.AGELESS, "Survived for at least 250 hours.");
+            unlockTitle(player, Title.AGELESS, Title.AGELESS.requirementDescription());
         }
     }
 
     public static void checkProgressTitles(Player player) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         if (stats.mobsKilled >= MONSTER_HUNTER_KILLS) {
-            unlockTitle(player, Title.MONSTER_HUNTER, "Slayed " + MONSTER_HUNTER_KILLS + " mobs.");
+            unlockTitle(player, Title.MONSTER_HUNTER, Title.MONSTER_HUNTER.requirementDescription());
         }
         if (stats.mobsKilled >= SOUL_REAPER_KILLS) {
-            unlockTitle(player, Title.SOUL_REAPER, "Slayed " + SOUL_REAPER_KILLS + " mobs.");
+            unlockTitle(player, Title.SOUL_REAPER, Title.SOUL_REAPER.requirementDescription());
         }
         if (stats.mobsKilled >= DOOMBRINGER_KILLS) {
-            unlockTitle(player, Title.DOOMBRINGER, "Slayed " + DOOMBRINGER_KILLS + " mobs.");
+            unlockTitle(player, Title.DOOMBRINGER, Title.DOOMBRINGER.requirementDescription());
         }
         long travelDistance = getTravelDistanceCm(player);
         if (travelDistance >= TRAILBLAZER_DISTANCE_CM) {
-            unlockTitle(player, Title.TRAILBLAZER, "Traveled over " + (TRAILBLAZER_DISTANCE_CM / 100_000) + " km.");
+            unlockTitle(player, Title.TRAILBLAZER, Title.TRAILBLAZER.requirementDescription());
         }
         if (stats.cropsHarvested >= HARVESTER_CROPS) {
-            unlockTitle(player, Title.HARVESTER, "Harvested " + HARVESTER_CROPS + " crops.");
+            unlockTitle(player, Title.HARVESTER, Title.HARVESTER.requirementDescription());
         }
         if (stats.blocksMined >= DEEP_DELVER_BLOCKS) {
-            unlockTitle(player, Title.DEEP_DELVER, "Mined " + DEEP_DELVER_BLOCKS + " deep blocks.");
+            unlockTitle(player, Title.DEEP_DELVER, Title.DEEP_DELVER.requirementDescription());
         }
         if (stats.rareOresMined >= PROSPECTOR_RARES) {
-            unlockTitle(player, Title.PROSPECTOR, "Unearthed " + PROSPECTOR_RARES + " rare ores.");
+            unlockTitle(player, Title.PROSPECTOR, Title.PROSPECTOR.requirementDescription());
         }
         if (player.getStatistic(Statistic.FISH_CAUGHT) >= ANGLER_FISH) {
-            unlockTitle(player, Title.ANGLER, "Caught " + ANGLER_FISH + " fish.");
+            unlockTitle(player, Title.ANGLER, Title.ANGLER.requirementDescription());
         }
         if (player.getStatistic(Statistic.AVIATE_ONE_CM) >= SKYBOUND_DISTANCE_CM) {
-            unlockTitle(player, Title.SKYBOUND, "Glided over " + (SKYBOUND_DISTANCE_CM / 100_000) + " km.");
+            unlockTitle(player, Title.SKYBOUND, Title.SKYBOUND.requirementDescription());
         }
         if (stats.asteroidLoots >= STARFORGED_ASTEROIDS) {
-            unlockTitle(player, Title.STARFORGED, "Mastered " + STARFORGED_ASTEROIDS + " asteroid raids.");
+            unlockTitle(player, Title.STARFORGED, Title.STARFORGED.requirementDescription());
         }
     }
 
