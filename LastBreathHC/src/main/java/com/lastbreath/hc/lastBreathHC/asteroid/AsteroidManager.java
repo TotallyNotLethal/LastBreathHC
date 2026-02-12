@@ -4,10 +4,13 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.Chunk;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.AreaEffectCloud;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
@@ -48,6 +51,7 @@ public class AsteroidManager {
     public static final String ASTEROID_KEY_TAG_PREFIX = "asteroid_key:";
     public static final String ASTEROID_SCALE_TAG_PREFIX = "asteroid_scale:";
     public static final String ASTEROID_TIER_TAG_PREFIX = "asteroid_tier:";
+    public static final String ASTEROID_MARKER_TAG = "asteroid_marker";
     private static final Set<String> PERSISTED_ASTEROIDS = new HashSet<>();
     private static File dataFile;
     private static JavaPlugin plugin;
@@ -118,6 +122,7 @@ public class AsteroidManager {
         }
         saveAsteroids();
         removeAsteroidMobs(blockLoc, entry);
+        removeAsteroidMarker(blockLoc);
         blockLoc.getBlock().setType(Material.AIR);
     }
 
@@ -126,6 +131,7 @@ public class AsteroidManager {
         ASTEROIDS.put(blockLoc, new AsteroidEntry(AsteroidLoot.createLoot(tier), tier));
         PERSISTED_ASTEROIDS.add(toKey(blockLoc, tier));
         saveAsteroids();
+        ensureAsteroidMarker(blockLoc);
     }
 
     public static void initialize(JavaPlugin plugin) {
@@ -138,10 +144,54 @@ public class AsteroidManager {
     public static void clearAllAsteroids() {
         for (Location location : ASTEROIDS.keySet().toArray(new Location[0])) {
             location.getBlock().setType(Material.AIR);
+            removeAsteroidMarker(location);
         }
         ASTEROIDS.clear();
         PERSISTED_ASTEROIDS.clear();
         saveAsteroids();
+    }
+
+    public static int purgeAsteroidMobsFromMemory() {
+        int removed = 0;
+        for (AsteroidEntry entry : ASTEROIDS.values()) {
+            entry.mobs().clear();
+        }
+
+        for (World world : Bukkit.getWorlds()) {
+            for (LivingEntity entity : world.getEntitiesByClass(LivingEntity.class)) {
+                if (entity.getScoreboardTags().contains(ASTEROID_MOB_TAG)) {
+                    entity.remove();
+                    removed++;
+                }
+            }
+        }
+
+        int leashRadius = getMobLeashRadius();
+        int chunkRadius = Math.max(1, (int) Math.ceil(leashRadius / 16.0));
+        for (Location asteroidLoc : ASTEROIDS.keySet()) {
+            World world = asteroidLoc.getWorld();
+            if (world == null) {
+                continue;
+            }
+            int baseChunkX = asteroidLoc.getBlockX() >> 4;
+            int baseChunkZ = asteroidLoc.getBlockZ() >> 4;
+            for (int x = baseChunkX - chunkRadius; x <= baseChunkX + chunkRadius; x++) {
+                for (int z = baseChunkZ - chunkRadius; z <= baseChunkZ + chunkRadius; z++) {
+                    Chunk chunk = world.getChunkAt(x, z);
+                    if (!chunk.isLoaded()) {
+                        chunk.load();
+                    }
+                    for (Entity entity : chunk.getEntities()) {
+                        if (entity instanceof LivingEntity living && living.getScoreboardTags().contains(ASTEROID_MOB_TAG)) {
+                            living.remove();
+                            removed++;
+                        }
+                    }
+                }
+            }
+        }
+
+        return removed;
     }
 
     private static void cleanupPersistedAsteroids() {
@@ -214,6 +264,70 @@ public class AsteroidManager {
                 mob.remove();
             }
         }
+    }
+
+    private static void ensureAsteroidMarker(Location blockLoc) {
+        World world = blockLoc.getWorld();
+        if (world == null) {
+            return;
+        }
+        if (findAsteroidMarker(blockLoc) != null) {
+            return;
+        }
+        Location markerLoc = blockLoc.clone().add(0.5, -1.0, 0.5);
+        ArmorStand marker = world.spawn(markerLoc, ArmorStand.class);
+        marker.setInvisible(true);
+        marker.setInvulnerable(true);
+        marker.setGravity(false);
+        marker.setMarker(true);
+        marker.setPersistent(true);
+        marker.setCanPickupItems(false);
+        marker.setSilent(true);
+        marker.addScoreboardTag(ASTEROID_MARKER_TAG);
+        marker.addScoreboardTag(ASTEROID_KEY_TAG_PREFIX + asteroidKey(blockLoc));
+        marker.setGlowing(true);
+        EntityEquipment equipment = marker.getEquipment();
+        if (equipment != null) {
+            equipment.setHelmet(new ItemStack(Material.NETHERITE_ORE));
+        }
+    }
+
+    private static void removeAsteroidMarker(Location blockLoc) {
+        ArmorStand marker = findAsteroidMarker(blockLoc);
+        if (marker != null) {
+            marker.remove();
+        }
+    }
+
+    private static ArmorStand findAsteroidMarker(Location blockLoc) {
+        World world = blockLoc.getWorld();
+        if (world == null) {
+            return null;
+        }
+        String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey(blockLoc);
+        Location markerLoc = blockLoc.clone().add(0.5, -1.0, 0.5);
+        for (Entity entity : world.getNearbyEntities(markerLoc, 0.6, 0.8, 0.6)) {
+            if (entity instanceof ArmorStand stand
+                    && stand.getScoreboardTags().contains(ASTEROID_MARKER_TAG)
+                    && stand.getScoreboardTags().contains(keyTag)) {
+                return stand;
+            }
+        }
+        return null;
+    }
+
+    private static void syncAsteroidMarker(Location blockLoc) {
+        World world = blockLoc.getWorld();
+        if (world == null) {
+            return;
+        }
+        Location center = blockLoc.clone().add(0.5, 0.5, 0.5);
+        boolean playerNearby = !world.getNearbyPlayers(center, 3.0).isEmpty();
+        if (playerNearby) {
+            removeAsteroidMarker(blockLoc);
+            return;
+        }
+        ensureAsteroidMarker(blockLoc);
     }
 
     private static String toKey(Location loc) {
@@ -806,6 +920,7 @@ public class AsteroidManager {
             public void run() {
                 int leashRadius = getMobLeashRadius();
                 for (Map.Entry<Location, AsteroidEntry> entry : ASTEROIDS.entrySet()) {
+                    syncAsteroidMarker(entry.getKey());
                     Location center = entry.getKey().clone().add(0.5, 1.0, 0.5);
                     World world = center.getWorld();
                     if (world == null) {

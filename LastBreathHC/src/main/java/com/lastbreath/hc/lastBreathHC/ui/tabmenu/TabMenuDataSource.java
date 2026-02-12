@@ -70,7 +70,7 @@ public final class TabMenuDataSource {
         int pingMillis = calculateAveragePing(Bukkit.getOnlinePlayers());
         String dateTimeLine = buildDateTimeLine();
         String playerCountLine = "Online players: " + onlineCount + " (" + realOnline + " real, " + fakeOnline + " fake)"
-                + " | Ping: " + pingMillis + "ms";
+                + " | Ping: " + pingMillis;
         String totalPlaytimeLine = formatDuration(summary.totalPlaytimeTicks());
         return new TabMenuModelBuilder.TabMenuContext(
                 serverName,

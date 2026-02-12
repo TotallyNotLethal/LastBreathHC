@@ -51,7 +51,7 @@ public record TabMenuConfig(Header header,
         if (lines.isEmpty()) {
             lines = List.of(
                     new TemplateLine("{serverName}", "gold"),
-                    new TemplateLine("Online players: {onlineCountFormatted} | Ping: {pingMillisFormatted}ms", "gray"),
+                    new TemplateLine("Online players: {onlineCountFormatted} | Ping: {pingMillisFormatted}", "gray"),
                     new TemplateLine("Unique Joins: {uniqueJoinsFormatted} | Total Deaths: {totalDeathsFormatted}", "gray")
             );
         }
@@ -158,7 +158,7 @@ public record TabMenuConfig(Header header,
         public static Segments defaultSegments() {
             return new Segments(
                     "Online: {onlineCountFormatted}  ",
-                    "Ping: {pingMillisFormatted}ms  ",
+                    "Ping: {pingMillisFormatted}  ",
                     "Unique Joins: {uniqueJoinsFormatted}  ",
                     "Total Deaths: {totalDeathsFormatted}"
             );
