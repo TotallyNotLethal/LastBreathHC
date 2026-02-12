@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +26,7 @@ public class LeaderboardGUI implements Listener {
 
     public static void openMetricSelect(Player player) {
         Inventory inventory = Bukkit.createInventory(null, INVENTORY_SIZE, METRIC_TITLE);
+        decorate(inventory);
 
         StatsManager.LeaderboardMetric[] metrics = StatsManager.LeaderboardMetric.values();
         int[] slots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22};
@@ -41,6 +43,7 @@ public class LeaderboardGUI implements Listener {
         int page = Math.min(Math.max(requestedPage, 1), totalPages);
 
         Inventory inventory = Bukkit.createInventory(null, INVENTORY_SIZE, entryTitle(metric, page, totalPages));
+        decorate(inventory);
 
         int start = (page - 1) * ENTRIES_PER_PAGE;
         int end = Math.min(start + ENTRIES_PER_PAGE, entries.size());
@@ -144,9 +147,22 @@ public class LeaderboardGUI implements Listener {
         String displayName = entry.banned()
                 ? ChatColor.STRIKETHROUGH + entry.displayName() + ChatColor.RESET
                 : entry.displayName();
-        return buildInfo(Material.PAPER, ChatColor.YELLOW + "#" + rank + " " + ChatColor.WHITE + displayName, List.of(
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta rawMeta = item.getItemMeta();
+        SkullMeta meta = rawMeta instanceof SkullMeta ? (SkullMeta) rawMeta : null;
+        if (meta != null) {
+            meta.setOwningPlayer(Bukkit.getOfflinePlayer(entry.uuid()));
+            meta.setDisplayName(ChatColor.YELLOW + "#" + rank + " " + ChatColor.WHITE + displayName);
+            meta.setLore(new ArrayList<>(List.of(
                 ChatColor.GRAY + metric.displayName() + ": " + ChatColor.WHITE + value,
-                ChatColor.DARK_GRAY + entry.uuid().toString()
+                entry.banned() ? ChatColor.RED + "Banned account" : ChatColor.DARK_GRAY + "Top survivor"
+            )));
+            item.setItemMeta(meta);
+            return item;
+        }
+
+        return buildInfo(Material.PAPER, ChatColor.YELLOW + "#" + rank + " " + ChatColor.WHITE + displayName, List.of(
+                ChatColor.GRAY + metric.displayName() + ": " + ChatColor.WHITE + value
         ));
     }
 
@@ -204,5 +220,17 @@ public class LeaderboardGUI implements Listener {
     }
 
     private record ViewData(StatsManager.LeaderboardMetric metric, int page) {
+    }
+
+    private static void decorate(Inventory inventory) {
+        ItemStack filler = buildInfo(Material.BLACK_STAINED_GLASS_PANE, ChatColor.BLACK + " ", List.of());
+        int[] borderSlots = {
+                0, 1, 2, 3, 4, 5, 6, 7, 8,
+                9, 17, 18, 26, 27, 35, 36, 44,
+                46, 47, 49, 51, 52
+        };
+        for (int slot : borderSlots) {
+            inventory.setItem(slot, filler);
+        }
     }
 }
