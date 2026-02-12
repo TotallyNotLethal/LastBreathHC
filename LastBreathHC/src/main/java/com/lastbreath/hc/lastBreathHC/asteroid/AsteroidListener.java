@@ -102,14 +102,14 @@ public class AsteroidListener implements Listener {
                 TitleManager.unlockTitle(
                         player,
                         Title.ASTEROID_HUNTER,
-                        "You looted your first asteroid."
+                        Title.ASTEROID_HUNTER.requirementDescription()
                 );
 
                 if (stats.asteroidLoots >= 25) {
                     TitleManager.unlockTitle(
                             player,
                             Title.RELIC_SEEKER,
-                            "You have looted multiple asteroids."
+                            Title.RELIC_SEEKER.requirementDescription()
                     );
                 }
 
@@ -118,7 +118,7 @@ public class AsteroidListener implements Listener {
                     TitleManager.unlockTitle(
                             player,
                             Title.STAR_FORGER,
-                            "You have mastered asteroid hunting."
+                            Title.STAR_FORGER.requirementDescription()
                     );
                 }
 

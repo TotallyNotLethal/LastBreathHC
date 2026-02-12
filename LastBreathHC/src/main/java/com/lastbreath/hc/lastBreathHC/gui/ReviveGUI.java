@@ -61,9 +61,9 @@ public class ReviveGUI implements Listener {
             }
             PlayerStats stats = StatsManager.get(player.getUniqueId());
             stats.revives++;
-            TitleManager.unlockTitle(player, Title.REVIVED, "You returned from the brink.");
+            TitleManager.unlockTitle(player, Title.REVIVED, Title.REVIVED.requirementDescription());
             if (stats.revives >= 3) {
-                TitleManager.unlockTitle(player, Title.SOUL_RECLAIMER, "You have reclaimed your soul multiple times.");
+                TitleManager.unlockTitle(player, Title.SOUL_RECLAIMER, Title.SOUL_RECLAIMER.requirementDescription());
             }
 
             player.setGameMode(GameMode.SURVIVAL);

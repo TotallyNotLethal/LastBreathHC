@@ -104,9 +104,9 @@ public class DeathListener implements Listener {
         String deathMessage = event.getDeathMessage();
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.deaths++;
-        TitleManager.unlockTitle(player, Title.THE_FALLEN, "You have tasted defeat.");
+        TitleManager.unlockTitle(player, Title.THE_FALLEN, Title.THE_FALLEN.requirementDescription());
         if (stats.deaths >= 3) {
-            TitleManager.unlockTitle(player, Title.DEATH_DEFIER, "You keep fighting after repeated deaths.");
+            TitleManager.unlockTitle(player, Title.DEATH_DEFIER, Title.DEATH_DEFIER.requirementDescription());
         }
         TitleManager.checkTimeBasedTitles(player);
         Player killer = event.getEntity().getKiller();
@@ -201,9 +201,9 @@ public class DeathListener implements Listener {
     private void applyRevive(Player player) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.revives++;
-        TitleManager.unlockTitle(player, Title.REVIVED, "You returned from the brink.");
+        TitleManager.unlockTitle(player, Title.REVIVED, Title.REVIVED.requirementDescription());
         if (stats.revives >= 3) {
-            TitleManager.unlockTitle(player, Title.SOUL_RECLAIMER, "You have reclaimed your soul multiple times.");
+            TitleManager.unlockTitle(player, Title.SOUL_RECLAIMER, Title.SOUL_RECLAIMER.requirementDescription());
         }
 
         player.setGameMode(GameMode.SURVIVAL);

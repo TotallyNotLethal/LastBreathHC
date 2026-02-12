@@ -643,8 +643,7 @@ public class WorldBossManager implements Listener {
         if (killer != null && titleName != null && !titleName.isBlank()) {
             Title title = Title.fromInput(titleName);
             if (title != null) {
-                TitleManager.unlockTitle(killer, title,
-                        "You conquered " + type.getConfigKey() + ".");
+                TitleManager.unlockTitle(killer, title, title.requirementDescription());
             }
         }
     }
