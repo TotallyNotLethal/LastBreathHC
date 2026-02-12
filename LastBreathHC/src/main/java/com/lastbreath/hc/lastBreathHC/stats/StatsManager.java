@@ -146,6 +146,9 @@ public class StatsManager {
             playerStats.asteroidLoots = config.getInt(base + ".asteroidLoots", 0);
             playerStats.cropsHarvested = config.getInt(base + ".cropsHarvested", 0);
             playerStats.blocksMined = config.getInt(base + ".blocksMined", 0);
+            playerStats.blocksPlaced = config.getInt(base + ".blocksPlaced", 0);
+            playerStats.fishCaught = config.getInt(base + ".fishCaught", 0);
+            playerStats.playerKills = config.getInt(base + ".playerKills", 0);
             playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
             playerStats.nickname = config.getString(base + ".nickname");
 
@@ -239,6 +242,9 @@ public class StatsManager {
         config.set(base + ".asteroidLoots", playerStats.asteroidLoots);
         config.set(base + ".cropsHarvested", playerStats.cropsHarvested);
         config.set(base + ".blocksMined", playerStats.blocksMined);
+        config.set(base + ".blocksPlaced", playerStats.blocksPlaced);
+        config.set(base + ".fishCaught", playerStats.fishCaught);
+        config.set(base + ".playerKills", playerStats.playerKills);
         config.set(base + ".rareOresMined", playerStats.rareOresMined);
         config.set(base + ".nickname", playerStats.nickname);
         config.set(base + ".unlockedTitles", playerStats.unlockedTitles.stream()
@@ -357,6 +363,9 @@ public class StatsManager {
         playerStats.asteroidLoots = config.getInt(base + ".asteroidLoots", 0);
         playerStats.cropsHarvested = config.getInt(base + ".cropsHarvested", 0);
         playerStats.blocksMined = config.getInt(base + ".blocksMined", 0);
+        playerStats.blocksPlaced = config.getInt(base + ".blocksPlaced", 0);
+        playerStats.fishCaught = config.getInt(base + ".fishCaught", 0);
+        playerStats.playerKills = config.getInt(base + ".playerKills", 0);
         playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
         playerStats.nickname = config.getString(base + ".nickname");
         return playerStats;
@@ -374,22 +383,34 @@ public class StatsManager {
     }
 
     public enum LeaderboardMetric {
+        PLAYTIME("playtime", "Playtime") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.timeAlive;
+            }
+        },
         MOBS_KILLED("mobs_killed", "Mobs Killed") {
             @Override
             public long extractValue(PlayerStats stats) {
                 return stats.mobsKilled;
             }
         },
-        ASTEROIDS_LOOTED("asteroids_looted", "Asteroids Looted") {
+        PLAYER_KILLS("player_kills", "Player Kills") {
             @Override
             public long extractValue(PlayerStats stats) {
-                return stats.asteroidLoots;
+                return stats.playerKills;
             }
         },
-        PLAYTIME("playtime", "Playtime") {
+        DEATHS("deaths", "Deaths") {
             @Override
             public long extractValue(PlayerStats stats) {
-                return stats.timeAlive;
+                return stats.deaths;
+            }
+        },
+        REVIVES("revives", "Revives") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.revives;
             }
         },
         BLOCKS_MINED("blocks_mined", "Blocks Mined") {
@@ -398,16 +419,34 @@ public class StatsManager {
                 return stats.blocksMined;
             }
         },
-        CROPS_HARVESTED("crops_harvested", "Crops Harvested") {
+        BLOCKS_PLACED("blocks_placed", "Blocks Placed") {
             @Override
             public long extractValue(PlayerStats stats) {
-                return stats.cropsHarvested;
+                return stats.blocksPlaced;
             }
         },
         RARE_ORES_MINED("rare_ores_mined", "Rare Ores Mined") {
             @Override
             public long extractValue(PlayerStats stats) {
                 return stats.rareOresMined;
+            }
+        },
+        CROPS_HARVESTED("crops_harvested", "Crops Harvested") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.cropsHarvested;
+            }
+        },
+        FISH_CAUGHT("fish_caught", "Fish Caught") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.fishCaught;
+            }
+        },
+        ASTEROIDS_LOOTED("asteroids_looted", "Asteroids Looted") {
+            @Override
+            public long extractValue(PlayerStats stats) {
+                return stats.asteroidLoots;
             }
         };
 

@@ -18,6 +18,9 @@ public class PlayerStats {
     public int asteroidLoots;
     public int cropsHarvested;
     public int blocksMined;
+    public int blocksPlaced;
+    public int fishCaught;
+    public int playerKills;
     public int rareOresMined;
     public String nickname;
     public Set<Title> unlockedTitles = new HashSet<>();

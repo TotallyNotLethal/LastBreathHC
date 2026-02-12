@@ -24,10 +24,10 @@ public class LeaderboardGUI implements Listener {
     private static final String ENTRY_TITLE_PREFIX = "Leaderboard: ";
 
     public static void openMetricSelect(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, 27, METRIC_TITLE);
+        Inventory inventory = Bukkit.createInventory(null, INVENTORY_SIZE, METRIC_TITLE);
 
         StatsManager.LeaderboardMetric[] metrics = StatsManager.LeaderboardMetric.values();
-        int[] slots = {10, 11, 12, 14, 15, 16};
+        int[] slots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22};
         for (int i = 0; i < Math.min(metrics.length, slots.length); i++) {
             inventory.setItem(slots[i], buildMetricItem(metrics[i]));
         }
@@ -118,12 +118,17 @@ public class LeaderboardGUI implements Listener {
 
     private static ItemStack buildMetricItem(StatsManager.LeaderboardMetric metric) {
         Material material = switch (metric) {
-            case MOBS_KILLED -> Material.IRON_SWORD;
-            case ASTEROIDS_LOOTED -> Material.NETHER_STAR;
             case PLAYTIME -> Material.CLOCK;
+            case MOBS_KILLED -> Material.IRON_SWORD;
+            case PLAYER_KILLS -> Material.DIAMOND_SWORD;
+            case DEATHS -> Material.SKELETON_SKULL;
+            case REVIVES -> Material.TOTEM_OF_UNDYING;
             case BLOCKS_MINED -> Material.DIAMOND_PICKAXE;
-            case CROPS_HARVESTED -> Material.WHEAT;
+            case BLOCKS_PLACED -> Material.BRICKS;
             case RARE_ORES_MINED -> Material.DIAMOND_ORE;
+            case CROPS_HARVESTED -> Material.WHEAT;
+            case FISH_CAUGHT -> Material.FISHING_ROD;
+            case ASTEROIDS_LOOTED -> Material.NETHER_STAR;
         };
 
         return buildInfo(material, ChatColor.GOLD + metric.displayName(), List.of(

@@ -9,7 +9,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.EnumSet;
@@ -46,6 +48,9 @@ public class StatsListener implements Listener {
             return;
         }
         if (event.getEntity() instanceof Player) {
+            PlayerStats killerStats = StatsManager.get(killer.getUniqueId());
+            killerStats.playerKills++;
+            StatsManager.markDirty(killer.getUniqueId());
             return;
         }
         PlayerStats stats = StatsManager.get(killer.getUniqueId());
@@ -79,6 +84,29 @@ public class StatsListener implements Listener {
             StatsManager.markDirty(player.getUniqueId());
             TitleManager.checkProgressTitles(player);
         }
+    }
+
+    @EventHandler
+    public void onBlockPlace(BlockPlaceEvent event) {
+        if (event.isCancelled()) {
+            return;
+        }
+        Player player = event.getPlayer();
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        stats.blocksPlaced++;
+        StatsManager.markDirty(player.getUniqueId());
+    }
+
+    @EventHandler
+    public void onFishCatch(PlayerFishEvent event) {
+        if (event.getState() != PlayerFishEvent.State.CAUGHT_FISH) {
+            return;
+        }
+        Player player = event.getPlayer();
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        stats.fishCaught++;
+        StatsManager.markDirty(player.getUniqueId());
+        TitleManager.checkProgressTitles(player);
     }
 
     private boolean isCropBlock(Material type) {
