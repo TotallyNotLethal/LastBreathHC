@@ -363,7 +363,7 @@ public class FakePlayerService {
         }
 
         String advancementTitle = humanizeAdvancementKey(advancement.getKey());
-        Bukkit.broadcastMessage(ChatColor.GREEN + record.getName() + " has made the advancement [" + advancementTitle + "]");
+        //Bukkit.broadcastMessage(ChatColor.GREEN + record.getName() + " has made the advancement [" + advancementTitle + "]");
 
         record.setLastSeenAt(Instant.now());
         return true;

@@ -1,5 +1,6 @@
 package com.lastbreath.hc.lastBreathHC.fakeplayer;
 
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -29,7 +30,7 @@ public class FakePlayerWhisperAliasListener implements Listener {
 
     private final FakePlayerService fakePlayerService;
 
-    public FakePlayerWhisperAliasListener(FakePlayerService fakePlayerService) {
+    public FakePlayerWhisperAliasListener(LastBreathHC lastBreathHC, FakePlayerService fakePlayerService) {
         this.fakePlayerService = fakePlayerService;
     }
 

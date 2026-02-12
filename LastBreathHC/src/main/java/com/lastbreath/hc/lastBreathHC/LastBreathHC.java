@@ -70,7 +70,6 @@ import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerDeathReactionHandler;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRepository;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayersSettings;
-import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerKillCommandListener;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerWhisperAliasListener;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerTabSyncListener;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.SkinService;
@@ -317,10 +316,7 @@ public final class LastBreathHC extends JavaPlugin {
                 new ServerListMotdListener(fakePlayerService), this
         );
         getServer().getPluginManager().registerEvents(
-                new FakePlayerWhisperAliasListener(fakePlayerService), this
-        );
-        getServer().getPluginManager().registerEvents(
-                new FakePlayerKillCommandListener(fakePlayerService), this
+                new FakePlayerWhisperAliasListener(this, fakePlayerService), this
         );
         getServer().getPluginManager().registerEvents(
                 new FakePlayerTabSyncListener(this, fakePlayerService), this
@@ -376,7 +372,6 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("lbshowinv", new ChatInventoryShareCommand());
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
-                    event.registrar().register("fwhisper", new FakeWhisperCommand(this));
                     event.registrar().register("list", new ListCommand(this));
                 }
         );
