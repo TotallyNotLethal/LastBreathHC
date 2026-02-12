@@ -327,6 +327,7 @@ public class TitleManager {
     public static void checkTimeBasedTitles(Player player) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         stats.timeAlive = player.getStatistic(Statistic.PLAY_ONE_MINUTE);
+        StatsManager.markDirty(player.getUniqueId());
         long seconds = stats.timeAlive / 20;
         if (seconds >= ONE_HOUR_SECONDS) {
             unlockTitle(player, Title.TIME_TOUCHED, "Survived for at least one hour.");

@@ -22,6 +22,7 @@ import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.gui.CosmeticsGUI;
 import com.lastbreath.hc.lastBreathHC.gui.DailyRewardGUI;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
+import com.lastbreath.hc.lastBreathHC.gui.LeaderboardGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TeamManagementGUI;
 import com.lastbreath.hc.lastBreathHC.gui.TitlesGUI;
 import com.lastbreath.hc.lastBreathHC.mobs.MobScalingListener;
@@ -116,6 +117,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask bloodMoonTask;
     private BukkitTask titleEffectTask;
     private BukkitTask nicknamePermissionTask;
+    private BukkitTask statsAutosaveTask;
     private BloodMoonManager bloodMoonManager;
     private DeathMarkerManager deathMarkerManager;
     private EnvironmentalEffectsManager environmentalEffectsManager;
@@ -294,6 +296,7 @@ public final class LastBreathHC extends JavaPlugin {
         effectsStatusGUI = new EffectsStatusGUI(customPotionEffectManager, customPotionEffectRegistry);
         titlesGUI = new TitlesGUI();
         cosmeticsGUI = new CosmeticsGUI();
+        LeaderboardGUI leaderboardGUI = new LeaderboardGUI();
         DailyRewardGUI dailyRewardGUI = new DailyRewardGUI(dailyRewardManager);
         dailyCosmeticListener = new DailyCosmeticListener(this, dailyRewardManager);
         cosmeticAuraService = new CosmeticAuraService();
@@ -311,6 +314,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 cosmeticsGUI, this
+        );
+        getServer().getPluginManager().registerEvents(
+                leaderboardGUI, this
         );
         getServer().getPluginManager().registerEvents(
                 dailyRewardGUI, this
@@ -364,6 +370,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleBloodMoonChecks();
         scheduleTitleEffects();
         scheduleNicknamePermissionChecks();
+        scheduleStatsAutosave();
         scheduleTabMenuRefresh();
         cosmeticAuraService.start(this);
         worldBossManager.start();
@@ -393,6 +400,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
                     event.registrar().register("daily", new DailyCommand(dailyRewardGUI));
+                    event.registrar().register("leaderboard", new LeaderboardCommand());
                 }
         );
     }
@@ -426,6 +434,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (tabMenuRefreshScheduler != null) {
             tabMenuRefreshScheduler.stop();
             tabMenuRefreshScheduler = null;
+        }
+        if (statsAutosaveTask != null) {
+            statsAutosaveTask.cancel();
+            statsAutosaveTask = null;
         }
         if (cosmeticAuraService != null) {
             cosmeticAuraService.stop();
@@ -574,6 +586,13 @@ public final class LastBreathHC extends JavaPlugin {
                 monitor.run();
             }
         }.runTaskTimer(this, 20L, 100L);
+    }
+
+    private void scheduleStatsAutosave() {
+        if (statsAutosaveTask != null) {
+            statsAutosaveTask.cancel();
+        }
+        statsAutosaveTask = getServer().getScheduler().runTaskTimer(this, StatsManager::saveDirty, 20L * 60L, 20L * 60L);
     }
 
     private void scheduleTabMenuRefresh() {
