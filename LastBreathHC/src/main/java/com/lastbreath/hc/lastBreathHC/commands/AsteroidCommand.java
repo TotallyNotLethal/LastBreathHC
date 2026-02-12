@@ -20,7 +20,11 @@ public class AsteroidCommand implements BasicCommand {
         }
 
         if (args.length == 0) {
-            return List.of("<x>", "<z>");
+            return List.of("<x>", "<z>", "clear-mobs");
+        }
+
+        if (args.length == 1) {
+            return List.of("clear-mobs");
         }
 
         return List.of();
@@ -41,6 +45,12 @@ public class AsteroidCommand implements BasicCommand {
             return;
         }
 
+        if (args.length == 1 && args[0].equalsIgnoreCase("clear-mobs")) {
+            int removed = AsteroidManager.purgeAsteroidMobsFromMemory();
+            sender.sendMessage("§aRemoved " + removed + " asteroid-tagged mobs and cleared asteroid mob memory.");
+            return;
+        }
+
         if (args.length == 2) {
             int blockX;
             int blockZ;
@@ -48,7 +58,7 @@ public class AsteroidCommand implements BasicCommand {
                 blockX = Integer.parseInt(args[0]);
                 blockZ = Integer.parseInt(args[1]);
             } catch (Exception e) {
-                sender.sendMessage("§cUsage: /asteroid [x z]");
+                sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs]");
                 return;
             }
             World world = (sender instanceof Player player) ? player.getWorld() : plugin.resolveAsteroidCommandWorld(sender);
@@ -84,7 +94,7 @@ public class AsteroidCommand implements BasicCommand {
         }
 
         if (args.length != 0) {
-            sender.sendMessage("§cUsage: /asteroid [x z]");
+            sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs]");
             return;
         }
 
