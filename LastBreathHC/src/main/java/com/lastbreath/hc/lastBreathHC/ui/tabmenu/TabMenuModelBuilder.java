@@ -77,7 +77,7 @@ public final class TabMenuModelBuilder {
                     player.prefix(),
                     player.suffix(),
                     player.pingBars(),
-                    player.pingMillis(),
+                    //player.pingMillis(),
                     color
             ));
         }
