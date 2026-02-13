@@ -288,7 +288,7 @@ public class AsteroidManager {
         marker.setGlowing(true);
         EntityEquipment equipment = marker.getEquipment();
         if (equipment != null) {
-            equipment.setHelmet(new ItemStack(Material.NETHERITE_ORE));
+            equipment.setHelmet(new ItemStack(Material.ANCIENT_DEBRIS));
         }
     }
 
