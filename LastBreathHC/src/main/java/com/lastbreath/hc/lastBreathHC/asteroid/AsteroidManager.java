@@ -293,8 +293,21 @@ public class AsteroidManager {
     }
 
     private static void removeAsteroidMarker(Location blockLoc) {
-        ArmorStand marker = findAsteroidMarker(blockLoc);
-        if (marker != null) {
+        World world = blockLoc.getWorld();
+        if (world == null) {
+            return;
+        }
+        String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey(blockLoc);
+        for (ArmorStand marker : world.getEntitiesByClass(ArmorStand.class)) {
+            Set<String> tags = marker.getScoreboardTags();
+            if (!tags.contains(ASTEROID_MARKER_TAG) || !tags.contains(keyTag)) {
+                continue;
+            }
+            EntityEquipment equipment = marker.getEquipment();
+            if (equipment != null) {
+                equipment.setHelmet(null);
+            }
+            marker.setGlowing(false);
             marker.remove();
         }
     }
@@ -310,6 +323,13 @@ public class AsteroidManager {
             if (entity instanceof ArmorStand stand
                     && stand.getScoreboardTags().contains(ASTEROID_MARKER_TAG)
                     && stand.getScoreboardTags().contains(keyTag)) {
+                return stand;
+            }
+        }
+
+        for (ArmorStand stand : world.getEntitiesByClass(ArmorStand.class)) {
+            Set<String> tags = stand.getScoreboardTags();
+            if (tags.contains(ASTEROID_MARKER_TAG) && tags.contains(keyTag)) {
                 return stand;
             }
         }

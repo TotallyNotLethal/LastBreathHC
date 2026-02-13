@@ -33,6 +33,7 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -755,10 +756,19 @@ public class CustomPotionEffectApplier implements Listener {
             }
 
             private void cleanup() {
+                clearStandVisuals(stand);
                 stand.remove();
                 cancel();
             }
         }.runTaskTimer(plugin, 5L, 5L);
+    }
+
+    private void clearStandVisuals(ArmorStand stand) {
+        stand.setGlowing(false);
+        EntityEquipment equipment = stand.getEquipment();
+        if (equipment != null) {
+            equipment.setHelmet(null);
+        }
     }
 
     private void applyBeastTamer(Player player, EntityTameEvent event) {
@@ -1431,6 +1441,7 @@ public class CustomPotionEffectApplier implements Listener {
             }
 
             private void cleanup() {
+                clearStandVisuals(stand);
                 stand.remove();
                 cancel();
             }
