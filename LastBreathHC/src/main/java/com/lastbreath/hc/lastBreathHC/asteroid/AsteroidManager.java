@@ -241,13 +241,19 @@ public class AsteroidManager {
                 int batchMaxChunkZ = Math.min(nextBatchZ + ASTEROID_CLEANUP_BATCH_SIZE - 1, maxChunk);
 
                 Set<Long> forcedChunks = new HashSet<>();
+                Set<Long> loadedChunks = new HashSet<>();
                 for (int chunkX = nextBatchX; chunkX <= batchMaxChunkX; chunkX++) {
                     for (int chunkZ = nextBatchZ; chunkZ <= batchMaxChunkZ; chunkZ++) {
+                        long chunkKey = Chunk.getChunkKey(chunkX, chunkZ);
                         if (world.isChunkForceLoaded(chunkX, chunkZ)) {
-                            continue;
+                            // no-op; this chunk was force-loaded before cleanup started
+                        } else {
+                            world.setChunkForceLoaded(chunkX, chunkZ, true);
+                            forcedChunks.add(chunkKey);
                         }
-                        world.setChunkForceLoaded(chunkX, chunkZ, true);
-                        forcedChunks.add(Chunk.getChunkKey(chunkX, chunkZ));
+                        if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                            loadedChunks.add(chunkKey);
+                        }
                     }
                 }
 
@@ -278,6 +284,12 @@ public class AsteroidManager {
                     world.setChunkForceLoaded(chunkX, chunkZ, false);
                 }
 
+                for (long key : loadedChunks) {
+                    int chunkX = (int) (key >> 32);
+                    int chunkZ = (int) key;
+                    world.unloadChunkRequest(chunkX, chunkZ);
+                }
+
                 processedBatches++;
                 if (processedBatches % 200 == 0 || processedBatches == totalBatches) {
                     sender.sendMessage("§7Asteroid cleanup progress: §f" + processedBatches + "§7/" + totalBatches
@@ -300,6 +312,21 @@ public class AsteroidManager {
             }
         }.runTaskTimer(plugin, 1L, 1L);
 
+        return true;
+    }
+
+    public static boolean stopChunkCleanup(CommandSender sender) {
+        if (sender == null) {
+            return false;
+        }
+        if (asteroidCleanupTask == null || asteroidCleanupTask.isCancelled()) {
+            sender.sendMessage("§cAsteroid cleanup is not currently running.");
+            return false;
+        }
+
+        asteroidCleanupTask.cancel();
+        asteroidCleanupTask = null;
+        sender.sendMessage("§eStopped asteroid cleanup.");
         return true;
     }
 

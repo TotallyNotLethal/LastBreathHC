@@ -20,11 +20,15 @@ public class AsteroidCommand implements BasicCommand {
         }
 
         if (args.length == 0) {
-            return List.of("<x>", "<z>", "clear-mobs", "cleanup");
+            return List.of("<x>", "<z>", "clear-mobs", "cleanup", "stop");
         }
 
         if (args.length == 1) {
-            return List.of("clear-mobs", "cleanup");
+            return List.of("clear-mobs", "cleanup", "stop");
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("cleanup")) {
+            return List.of("stop");
         }
 
         return List.of();
@@ -61,6 +65,12 @@ public class AsteroidCommand implements BasicCommand {
             return;
         }
 
+        if ((args.length == 1 && args[0].equalsIgnoreCase("stop"))
+                || (args.length == 2 && args[0].equalsIgnoreCase("cleanup") && args[1].equalsIgnoreCase("stop"))) {
+            AsteroidManager.stopChunkCleanup(sender);
+            return;
+        }
+
         if (args.length == 2) {
             int blockX;
             int blockZ;
@@ -68,7 +78,7 @@ public class AsteroidCommand implements BasicCommand {
                 blockX = Integer.parseInt(args[0]);
                 blockZ = Integer.parseInt(args[1]);
             } catch (Exception e) {
-                sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs|cleanup]");
+                sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs|cleanup|stop]");
                 return;
             }
             World world = (sender instanceof Player player) ? player.getWorld() : plugin.resolveAsteroidCommandWorld(sender);
@@ -104,7 +114,7 @@ public class AsteroidCommand implements BasicCommand {
         }
 
         if (args.length != 0) {
-            sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs|cleanup]");
+            sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs|cleanup|stop]");
             return;
         }
 
