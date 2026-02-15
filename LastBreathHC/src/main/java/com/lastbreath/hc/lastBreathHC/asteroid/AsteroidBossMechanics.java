@@ -29,6 +29,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 
 public class AsteroidBossMechanics implements Listener {
+    private static final long FIREWALL_FIRE_DURATION_TICKS = 60L;
     private static final Set<EntityType> TIER3_BOSS_TYPES = EnumSet.of(
             EntityType.RAVAGER,
             EntityType.WARDEN,
@@ -178,6 +179,7 @@ public class AsteroidBossMechanics implements Listener {
         if (world == null) {
             return;
         }
+        Set<Location> temporaryFireBlocks = new java.util.HashSet<>();
         for (int degrees = 0; degrees < 360; degrees += 20) {
             double radians = Math.toRadians(degrees);
             int x = (int) Math.round(Math.cos(radians) * radius);
@@ -189,7 +191,17 @@ public class AsteroidBossMechanics implements Listener {
             Location below = fireLoc.clone().add(0, -1, 0);
             if (below.getBlock().getType().isSolid()) {
                 fireLoc.getBlock().setType(Material.FIRE);
+                temporaryFireBlocks.add(fireLoc.getBlock().getLocation());
             }
+        }
+        if (!temporaryFireBlocks.isEmpty()) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                for (Location fireBlock : temporaryFireBlocks) {
+                    if (fireBlock.getBlock().getType() == Material.FIRE) {
+                        fireBlock.getBlock().setType(Material.AIR);
+                    }
+                }
+            }, FIREWALL_FIRE_DURATION_TICKS);
         }
         world.spawnParticle(Particle.FLAME, center, 80, radius, 0.5, radius, 0.02);
         for (LivingEntity nearby : center.getNearbyLivingEntities(radius, 2.0, radius)) {
