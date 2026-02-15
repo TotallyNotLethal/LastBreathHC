@@ -290,10 +290,12 @@ worldBoss:
     - DARK_FOREST
     - WINDSWEPT_HILLS
     - BADLANDS
+    - DESERT
   biomeBossMap:
     DARK_FOREST: Gravewarden
     WINDSWEPT_HILLS: StormHerald
     BADLANDS: HollowColossus
+    DESERT: AshenOracle
   triggers:
     thunderstorm:
       enabled: true
