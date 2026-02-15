@@ -20,11 +20,11 @@ public class AsteroidCommand implements BasicCommand {
         }
 
         if (args.length == 0) {
-            return List.of("<x>", "<z>", "clear-mobs");
+            return List.of("<x>", "<z>", "clear-mobs", "cleanup");
         }
 
         if (args.length == 1) {
-            return List.of("clear-mobs");
+            return List.of("clear-mobs", "cleanup");
         }
 
         return List.of();
@@ -51,6 +51,16 @@ public class AsteroidCommand implements BasicCommand {
             return;
         }
 
+        if (args.length == 1 && args[0].equalsIgnoreCase("cleanup")) {
+            World world = (sender instanceof Player player) ? player.getWorld() : plugin.resolveAsteroidCommandWorld(sender);
+            if (world == null) {
+                sender.sendMessage("§cUnable to find a valid asteroid world.");
+                return;
+            }
+            AsteroidManager.startChunkCleanup(sender, world);
+            return;
+        }
+
         if (args.length == 2) {
             int blockX;
             int blockZ;
@@ -58,7 +68,7 @@ public class AsteroidCommand implements BasicCommand {
                 blockX = Integer.parseInt(args[0]);
                 blockZ = Integer.parseInt(args[1]);
             } catch (Exception e) {
-                sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs]");
+                sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs|cleanup]");
                 return;
             }
             World world = (sender instanceof Player player) ? player.getWorld() : plugin.resolveAsteroidCommandWorld(sender);
@@ -94,7 +104,7 @@ public class AsteroidCommand implements BasicCommand {
         }
 
         if (args.length != 0) {
-            sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs]");
+            sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs|cleanup]");
             return;
         }
 
