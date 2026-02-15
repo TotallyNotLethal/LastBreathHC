@@ -12,10 +12,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Collection;
 import java.util.Objects;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 
 public final class TabMenuDataSource {
     private static final Duration DEFAULT_REFRESH_INTERVAL = Duration.ofSeconds(10);
@@ -67,15 +65,12 @@ public final class TabMenuDataSource {
         int realOnline = Bukkit.getOnlinePlayers().size();
         int fakeOnline = fakePlayerService == null ? 0 : Math.max(0, fakePlayerService.getActiveCount());
         int onlineCount = realOnline + fakeOnline;
-        int pingMillis = calculateAveragePing(Bukkit.getOnlinePlayers());
         String dateTimeLine = buildDateTimeLine();
-        String playerCountLine = "Online players: " + onlineCount + " (" + realOnline + " real, " + fakeOnline + " fake)"
-                + " | Ping: " + pingMillis;
+        String playerCountLine = "Online players: " + onlineCount + " (" + realOnline + " real, " + fakeOnline + " fake)";
         String totalPlaytimeLine = formatDuration(summary.totalPlaytimeTicks());
         return new TabMenuModelBuilder.TabMenuContext(
                 serverName,
                 onlineCount,
-                pingMillis,
                 summary.uniqueJoins(),
                 Bukkit.getBannedPlayers().size(),
                 totalPlaytimeLine,
@@ -83,14 +78,6 @@ public final class TabMenuDataSource {
                 null,
                 playerCountLine
         );
-    }
-
-    private int calculateAveragePing(Collection<? extends Player> players) {
-        if (players.isEmpty()) {
-            return 0;
-        }
-        double average = players.stream().mapToInt(Player::getPing).average().orElse(0.0);
-        return (int) Math.round(average);
     }
 
     private String buildDateTimeLine() {

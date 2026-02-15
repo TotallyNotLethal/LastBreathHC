@@ -28,8 +28,6 @@ public final class TabMenuModelBuilder {
         tokens.put("serverName", context.serverName());
         tokens.put("onlineCount", Integer.toString(context.onlineCount()));
         tokens.put("onlineCountFormatted", formatNumber(context.onlineCount()));
-        tokens.put("pingMillis", Integer.toString(context.pingMillis()));
-        tokens.put("pingMillisFormatted", formatNumber(context.pingMillis()));
         tokens.put("uniqueJoins", Integer.toString(context.uniqueJoins()));
         tokens.put("uniqueJoinsFormatted", formatNumber(context.uniqueJoins()));
         tokens.put("totalDeaths", Integer.toString(context.totalDeaths()));
@@ -42,9 +40,6 @@ public final class TabMenuModelBuilder {
         String onlineSection = config.sections().showOnline()
                 ? resolveTokens(config.segments().online(), tokens)
                 : "";
-        String pingSection = config.sections().showPing()
-                ? resolveTokens(config.segments().ping(), tokens)
-                : "";
         String joinsSection = config.sections().showJoins()
                 ? resolveTokens(config.segments().joins(), tokens)
                 : "";
@@ -53,7 +48,6 @@ public final class TabMenuModelBuilder {
                 : "";
 
         tokens.put("onlineSection", onlineSection);
-        tokens.put("pingSection", pingSection);
         tokens.put("joinsSection", joinsSection);
         tokens.put("deathsSection", deathsSection);
 
@@ -76,8 +70,6 @@ public final class TabMenuModelBuilder {
                     icon,
                     player.prefix(),
                     player.suffix(),
-                    player.pingBars(),
-                    //player.pingMillis(),
                     color
             ));
         }
@@ -127,7 +119,6 @@ public final class TabMenuModelBuilder {
 
     public record TabMenuContext(String serverName,
                                  int onlineCount,
-                                 int pingMillis,
                                  int uniqueJoins,
                                  int totalDeaths,
                                  String totalPlaytime,
@@ -140,8 +131,6 @@ public final class TabMenuModelBuilder {
                               String displayName,
                               String rank,
                               String prefix,
-                              String suffix,
-                              int pingBars,
-                              int pingMillis) {
+                              String suffix) {
     }
 }

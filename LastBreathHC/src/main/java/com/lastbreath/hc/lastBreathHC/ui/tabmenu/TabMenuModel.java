@@ -68,8 +68,6 @@ public record TabMenuModel(HeaderFields header,
                                   String rankIcon,
                                   String prefix,
                                   String suffix,
-                                  int pingBars,
-                                  int pingMillis,
                                   String customColor) implements Serializable {
 
         @Serial
@@ -82,8 +80,6 @@ public record TabMenuModel(HeaderFields header,
             payload.put("rankIcon", rankIcon);
             payload.put("prefix", prefix);
             payload.put("suffix", suffix);
-            payload.put("pingBars", pingBars);
-            payload.put("pingMillis", pingMillis);
             payload.put("customColor", customColor);
             return payload;
         }
