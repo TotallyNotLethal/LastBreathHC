@@ -82,6 +82,14 @@ anvilCrush:
 
 asteroid:
   mobLeashRadius: 16
+  mobReactionRadius: 32
+  reactionRangeMultiplier:
+    default: 1.5
+    witherSkeleton: 2.2
+    piglinBrute: 2.0
+  reactionRangeMinimum:
+    witherSkeleton: 48.0
+    piglinBrute: 40.0
   impact:
     radius: 2
   spawn:

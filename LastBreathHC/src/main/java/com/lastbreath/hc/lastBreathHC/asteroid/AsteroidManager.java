@@ -896,8 +896,55 @@ public class AsteroidManager {
             mob.setAware(true);
         }
         applyAttributeMultiplier(livingEntity, Attribute.MOVEMENT_SPEED, 1.3);
-        applyAttributeMultiplier(livingEntity, Attribute.FOLLOW_RANGE, 1.5);
+        applyFollowRangeTuning(livingEntity);
         applyAttributeMultiplierByName(livingEntity, "WATER_MOVEMENT_EFFICIENCY", 1.3);
+    }
+
+    private static void applyFollowRangeTuning(LivingEntity livingEntity) {
+        AttributeInstance followRange = livingEntity.getAttribute(Attribute.FOLLOW_RANGE);
+        if (followRange == null) {
+            return;
+        }
+
+        EntityType entityType = livingEntity.getType();
+        double multiplier = getFollowRangeMultiplier(entityType);
+        double tunedValue = followRange.getBaseValue() * multiplier;
+        double minimum = getFollowRangeMinimum(entityType);
+        if (minimum > 0.0) {
+            tunedValue = Math.max(tunedValue, minimum);
+        }
+        followRange.setBaseValue(tunedValue);
+    }
+
+    private static double getFollowRangeMultiplier(EntityType entityType) {
+        if (plugin == null) {
+            return 1.5;
+        }
+
+        String basePath = "asteroid.reactionRangeMultiplier";
+        double multiplier = plugin.getConfig().getDouble(basePath + ".default", 1.5);
+        if (entityType == EntityType.WITHER_SKELETON) {
+            return plugin.getConfig().getDouble(basePath + ".witherSkeleton", Math.max(multiplier, 2.2));
+        }
+        if (entityType == EntityType.PIGLIN_BRUTE) {
+            return plugin.getConfig().getDouble(basePath + ".piglinBrute", Math.max(multiplier, 2.0));
+        }
+        return multiplier;
+    }
+
+    private static double getFollowRangeMinimum(EntityType entityType) {
+        if (plugin == null) {
+            return 0.0;
+        }
+
+        String basePath = "asteroid.reactionRangeMinimum";
+        if (entityType == EntityType.WITHER_SKELETON) {
+            return plugin.getConfig().getDouble(basePath + ".witherSkeleton", 48.0);
+        }
+        if (entityType == EntityType.PIGLIN_BRUTE) {
+            return plugin.getConfig().getDouble(basePath + ".piglinBrute", 40.0);
+        }
+        return 0.0;
     }
 
     private static void applyAttributeMultiplier(LivingEntity livingEntity, Attribute attribute, double multiplier) {
@@ -982,7 +1029,7 @@ public class AsteroidManager {
                             }
                         }
                         if (mob instanceof Mob aggressiveMob && aggressiveMob.getTarget() == null) {
-                            Player nearest = findNearestPlayer(center, leashRadius);
+                            Player nearest = findNearestPlayer(center, getMobReactionRadius(leashRadius));
                             if (nearest != null) {
                                 aggressiveMob.setTarget(nearest);
                             }
@@ -1016,6 +1063,14 @@ public class AsteroidManager {
             return 16;
         }
         return plugin.getConfig().getInt("asteroid.mobLeashRadius", 16);
+    }
+
+    private static double getMobReactionRadius(int leashRadius) {
+        if (plugin == null) {
+            return leashRadius;
+        }
+        double configured = plugin.getConfig().getDouble("asteroid.mobReactionRadius", leashRadius);
+        return Math.max(leashRadius, configured);
     }
 
     private static void applyReturnRegeneration(LivingEntity mob) {
