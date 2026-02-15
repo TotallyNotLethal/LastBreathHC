@@ -9,7 +9,8 @@ import org.bukkit.event.entity.EntityDamageEvent;
 
 public class CustomEnchantDamageListener implements Listener {
 
-    private static final double REDUCTION_PER_PIECE = 0.25;
+    private static final double STANDARD_REDUCTION_PER_PIECE = 0.25;
+    private static final double SONIC_REDUCTION_PER_PIECE = 0.20;
     private static final int MAX_PIECES = 4;
 
     @EventHandler(ignoreCancelled = true)
@@ -19,18 +20,20 @@ public class CustomEnchantDamageListener implements Listener {
         }
         EntityDamageEvent.DamageCause cause = event.getCause();
         if (cause == EntityDamageEvent.DamageCause.LIGHTNING) {
-            applyReduction(event, player, CustomEnchant.STORM_GUARD.getId());
+            applyReduction(event, player, CustomEnchant.STORM_GUARD.getId(), STANDARD_REDUCTION_PER_PIECE);
         } else if (cause == EntityDamageEvent.DamageCause.WITHER) {
-            applyReduction(event, player, CustomEnchant.WITHER_GUARD.getId());
+            applyReduction(event, player, CustomEnchant.WITHER_GUARD.getId(), STANDARD_REDUCTION_PER_PIECE);
+        } else if (cause == EntityDamageEvent.DamageCause.SONIC_BOOM) {
+            applyReduction(event, player, CustomEnchant.SONIC_GUARD.getId(), SONIC_REDUCTION_PER_PIECE);
         }
     }
 
-    private void applyReduction(EntityDamageEvent event, Player player, String enchantId) {
+    private void applyReduction(EntityDamageEvent event, Player player, String enchantId, double reductionPerPiece) {
         int pieces = Math.min(CustomEnchantments.countArmorPiecesWithEnchant(player, enchantId), MAX_PIECES);
         if (pieces <= 0) {
             return;
         }
-        double reduction = Math.min(1.0, pieces * REDUCTION_PER_PIECE);
+        double reduction = Math.min(1.0, pieces * reductionPerPiece);
         event.setDamage(event.getDamage() * (1.0 - reduction));
     }
 }

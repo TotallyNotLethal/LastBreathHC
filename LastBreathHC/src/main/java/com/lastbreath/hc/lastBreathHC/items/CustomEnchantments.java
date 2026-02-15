@@ -32,7 +32,8 @@ public class CustomEnchantments {
     private static final Set<String> EXCLUSIVE_GUARD_ENCHANTS = Set.of(
             "lb:wither_guard",
             "lb:storm_guard",
-            "lb:lifesteal_ward"
+            "lb:lifesteal_ward",
+            "lb:sonic_guard"
     );
 
     private CustomEnchantments() {

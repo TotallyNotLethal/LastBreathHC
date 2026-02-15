@@ -94,6 +94,17 @@ public class TitlesGUI implements Listener {
             return;
         }
 
+        if (TitleManager.isBackgroundOnlyTitle(title)) {
+            boolean enabled = TitleManager.isWorldScalerEnabled(player);
+            if (!TitleManager.setWorldScalerEnabled(player, !enabled)) {
+                player.sendMessage("§cYou have not unlocked that title yet.");
+                return;
+            }
+            player.sendMessage("§aBackground title " + title.displayName() + " is now " + (!enabled ? "enabled" : "disabled") + ".");
+            open(player);
+            return;
+        }
+
         if (TitleManager.getEquippedTitle(player) == title) {
             player.sendMessage("§e" + title.displayName() + " is already equipped.");
             return;
@@ -139,6 +150,7 @@ public class TitlesGUI implements Listener {
 
         Set<Title> unlockedTitles = new HashSet<>(TitleManager.getUnlockedTitles(player));
         Title equippedTitle = TitleManager.getEquippedTitle(player);
+        boolean worldScalerEnabled = TitleManager.isWorldScalerEnabled(player);
 
         int start = state.page * TITLE_SLOTS.size();
         for (int i = 0; i < TITLE_SLOTS.size(); i++) {
@@ -148,7 +160,7 @@ public class TitlesGUI implements Listener {
             }
             Title title = filteredTitles.get(titleIndex);
             boolean acquired = unlockedTitles.contains(title);
-            inventory.setItem(TITLE_SLOTS.get(i), buildTitleItem(title, acquired, equippedTitle == title));
+            inventory.setItem(TITLE_SLOTS.get(i), buildTitleItem(title, acquired, equippedTitle == title, worldScalerEnabled));
         }
 
         if (state.page > 0) {
@@ -182,14 +194,17 @@ public class TitlesGUI implements Listener {
                 .toList();
     }
 
-    private ItemStack buildTitleItem(Title title, boolean acquired, boolean equipped) {
+    private ItemStack buildTitleItem(Title title, boolean acquired, boolean equipped, boolean worldScalerEnabled) {
         Material material = acquired ? Material.NAME_TAG : Material.BARRIER;
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
 
         String titleColor = acquired ? ChatColor.AQUA.toString() : ChatColor.GRAY.toString();
         String displayName = titleColor + title.displayName();
-        if (equipped) {
+        if (TitleManager.isBackgroundOnlyTitle(title) && acquired) {
+            displayName = (worldScalerEnabled ? ChatColor.GREEN : ChatColor.YELLOW) + title.displayName()
+                    + ChatColor.GRAY + " (Background " + (worldScalerEnabled ? "Enabled" : "Disabled") + ")";
+        } else if (equipped) {
             displayName = ChatColor.GREEN + title.displayName() + ChatColor.GRAY + " (Equipped)";
         }
         meta.setDisplayName(displayName);
@@ -213,6 +228,9 @@ public class TitlesGUI implements Listener {
         if (!acquired) {
             lore.add(ChatColor.RED + "You have not unlocked this title yet.");
             lore.add(ChatColor.YELLOW + "Click for requirement reminder.");
+        } else if (TitleManager.isBackgroundOnlyTitle(title)) {
+            lore.add(ChatColor.GRAY + "Background status: " + (worldScalerEnabled ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled"));
+            lore.add(ChatColor.GOLD + "Click to toggle background effect.");
         } else if (equipped) {
             lore.add(ChatColor.YELLOW + "Currently equipped.");
         } else {

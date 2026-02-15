@@ -30,7 +30,8 @@ public enum Title {
     GRAVEWARDEN_BANE("Gravewarden Bane", "Grave", "Defeat the Gravewarden world boss.", TitleCategory.BOSSES),
     STORM_HERALD("Storm Herald", "Storm", "Defeat the Storm Herald world boss.", TitleCategory.BOSSES),
     HOLLOW_COLOSSUS("Hollow Colossus", "Hollow", "Defeat the Hollow Colossus world boss.", TitleCategory.BOSSES),
-    ASHEN_ORACLE("Ashen Oracle", "Ashen", "Defeat the Ashen Oracle world boss.", TitleCategory.BOSSES);
+    ASHEN_ORACLE("Ashen Oracle", "Ashen", "Defeat the Ashen Oracle world boss.", TitleCategory.BOSSES),
+    WORLD_SCALER("World Scaler", "Scale", "Defeat all 4 world bosses. Background title that can be toggled on/off.", TitleCategory.BOSSES);
 
     private final String displayName;
     private final String tabTag;

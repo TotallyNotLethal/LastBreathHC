@@ -37,6 +37,12 @@ public enum CustomEnchant {
             Material.NETHERITE_LEGGINGS,
             Material.NETHERITE_BOOTS
     )),
+    SONIC_GUARD("lb:sonic_guard", false, EnumSet.of(
+            Material.NETHERITE_HELMET,
+            Material.NETHERITE_CHESTPLATE,
+            Material.NETHERITE_LEGGINGS,
+            Material.NETHERITE_BOOTS
+    )),
     TELEGRAPH_NULL("lb:telegraph_null", false, EnumSet.of(Material.ELYTRA));
 
     private final String id;

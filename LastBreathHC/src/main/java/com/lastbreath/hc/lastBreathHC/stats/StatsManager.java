@@ -166,6 +166,7 @@ public class StatsManager {
             if (equippedName != null && !equippedName.isBlank()) {
                 playerStats.equippedTitle = Title.fromInput(equippedName);
             }
+            playerStats.worldScalerEnabled = config.getBoolean(base + ".worldScalerEnabled", false);
 
             List<String> unlockedPrefixes = config.getStringList(base + ".unlockedPrefixes");
             Set<BossPrefix> prefixSet = new HashSet<>();
@@ -252,6 +253,7 @@ public class StatsManager {
                 .sorted()
                 .collect(Collectors.toList()));
         config.set(base + ".equippedTitle", playerStats.equippedTitle != null ? playerStats.equippedTitle.name() : null);
+        config.set(base + ".worldScalerEnabled", playerStats.worldScalerEnabled);
         config.set(base + ".unlockedPrefixes", playerStats.unlockedPrefixes.stream()
                 .map(BossPrefix::name)
                 .sorted()
