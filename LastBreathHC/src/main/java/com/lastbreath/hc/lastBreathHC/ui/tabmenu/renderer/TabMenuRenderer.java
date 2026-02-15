@@ -172,11 +172,10 @@ public final class TabMenuRenderer {
                 ? legacySerializer.deserialize(displayName)
                 : Component.text(displayName).color(nameColor);
 
-        Component pingBars = renderPingBars(row.pingBars());
-        String pingText = formatPingMillis(row.pingMillis());
-        Component pingTextComponent = Component.text(pingText).color(DEFAULT_STATS_COLOR);
         int nameLength = calculateTextLength(iconText, prefixText, displayName, suffixText);
         int namePadding = Math.max(0, nameColumnWidth - nameLength);
+
+        Component pingBars = renderPingBars(row.pingBars());
 
         Component combined = Component.empty()
                 .append(iconComponent)
@@ -184,13 +183,9 @@ public final class TabMenuRenderer {
                 .append(nameComponent)
                 .append(suffixComponent)
                 .append(Component.text(" ".repeat(1 + namePadding)))
-                .append(pingBars)
-                .append(pingTextComponent);
+                .append(pingBars);
 
-        int textLength = nameColumnWidth
-                + 1
-                + PING_BAR_COUNT
-                + pingText.length();
+        int textLength = nameColumnWidth + 1 + PING_BAR_COUNT;
 
         return new RenderedRow(combined, textLength);
     }
@@ -210,10 +205,6 @@ public final class TabMenuRenderer {
             result = result.append(Component.text("▮").color(color));
         }
         return result;
-    }
-
-    private String formatPingMillis(int pingMillis) {
-        return " " + String.format("%,d", pingMillis) + "ms";
     }
 
     private Component joinLines(List<Component> lines) {

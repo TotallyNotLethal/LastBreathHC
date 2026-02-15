@@ -51,7 +51,7 @@ public record TabMenuConfig(Header header,
         if (lines.isEmpty()) {
             lines = List.of(
                     new TemplateLine("{serverName}", "gold"),
-                    new TemplateLine("Online players: {onlineCountFormatted} | Ping: {pingMillisFormatted}", "gray"),
+                    new TemplateLine("Online players: {onlineCountFormatted}", "gray"),
                     new TemplateLine("Unique Joins: {uniqueJoinsFormatted} | Total Deaths: {totalDeathsFormatted}", "gray")
             );
         }
@@ -66,11 +66,10 @@ public record TabMenuConfig(Header header,
 
     private static Sections readSections(ConfigurationSection section) {
         if (section == null) {
-            return new Sections(true, true, true, true);
+            return new Sections(true, true, true);
         }
         return new Sections(
                 section.getBoolean("showOnline", true),
-                section.getBoolean("showPing", true),
                 section.getBoolean("showJoins", true),
                 section.getBoolean("showDeaths", true)
         );
@@ -81,10 +80,9 @@ public record TabMenuConfig(Header header,
             return Segments.defaultSegments();
         }
         String online = section.getString("online", Segments.defaultSegments().online());
-        String ping = section.getString("ping", Segments.defaultSegments().ping());
         String joins = section.getString("joins", Segments.defaultSegments().joins());
         String deaths = section.getString("deaths", Segments.defaultSegments().deaths());
-        return new Segments(online, ping, joins, deaths);
+        return new Segments(online, joins, deaths);
     }
 
     private static DateTimeSettings readDateTime(ConfigurationSection section) {
@@ -146,19 +144,16 @@ public record TabMenuConfig(Header header,
     }
 
     public record Sections(boolean showOnline,
-                           boolean showPing,
                            boolean showJoins,
                            boolean showDeaths) {
     }
 
     public record Segments(String online,
-                           String ping,
                            String joins,
                            String deaths) {
         public static Segments defaultSegments() {
             return new Segments(
                     "Online: {onlineCountFormatted}  ",
-                    "Ping: {pingMillisFormatted}  ",
                     "Unique Joins: {uniqueJoinsFormatted}  ",
                     "Total Deaths: {totalDeathsFormatted}"
             );

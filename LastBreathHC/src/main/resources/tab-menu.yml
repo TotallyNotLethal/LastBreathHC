@@ -2,7 +2,7 @@ header:
   lines:
     - text: "{serverName}"
       color: "gold"
-    - text: "Online players: {onlineCountFormatted} | Ping: {pingMillisFormatted}"
+    - text: "Online players: {onlineCountFormatted}"
       color: "gray"
     - text: "Unique Joins: {uniqueJoinsFormatted} | Total Deaths: {totalDeathsFormatted}"
       color: "gray"
@@ -20,13 +20,13 @@ footer:
 
 sections:
   showOnline: true
-  showPing: true
+  showPing: false
   showJoins: true
   showDeaths: true
 
 segments:
   online: "Online: {onlineCountFormatted}  "
-  ping: "Ping: {pingMillisFormatted}  "
+  ping: ""
   joins: "Unique Joins: {uniqueJoinsFormatted}  "
   deaths: "Total Deaths: {totalDeathsFormatted}"
 
