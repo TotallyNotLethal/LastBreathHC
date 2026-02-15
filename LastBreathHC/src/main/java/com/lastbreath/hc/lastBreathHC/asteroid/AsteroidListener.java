@@ -25,11 +25,17 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 public class AsteroidListener implements Listener {
+    private static final long RETALIATION_TARGET_WINDOW_MILLIS = 15_000L;
+
+    private final Map<UUID, Long> retaliatoryTargets = new HashMap<>();
+
     @EventHandler
     public void onClick(PlayerInteractEvent e) {
         if (e.getClickedBlock() == null) return;
@@ -132,6 +138,8 @@ public class AsteroidListener implements Listener {
     @EventHandler
     public void onEntityDeath(EntityDeathEvent e) {
         LivingEntity entity = e.getEntity();
+        retaliatoryTargets.remove(entity.getUniqueId());
+
         if (!entity.getScoreboardTags().contains(AsteroidManager.ASTEROID_MOB_TAG)) {
             return;
         }
@@ -174,13 +182,13 @@ public class AsteroidListener implements Listener {
             return;
         }
 
-        if (!(target instanceof Player)) {
-            event.setCancelled(true);
-            attacker.removeScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+        if (target instanceof Player || canRetaliateAgainst(target)) {
+            attacker.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
             return;
         }
 
-        attacker.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+        event.setCancelled(true);
+        attacker.removeScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
     }
 
     @EventHandler
@@ -211,6 +219,13 @@ public class AsteroidListener implements Listener {
             return;
         }
 
+        if (!(attacker instanceof Player)) {
+            markRetaliatoryTarget(attacker);
+            if (target instanceof Mob mobTarget) {
+                mobTarget.setTarget(attacker);
+            }
+        }
+
         String asteroidKeyTag = getAsteroidKeyTag(target);
         if (asteroidKeyTag == null || asteroidKeyTag.isBlank()) {
             return;
@@ -238,6 +253,22 @@ public class AsteroidListener implements Listener {
                 && (entity instanceof PiglinBrute || entity.getType() == EntityType.PIGLIN_BRUTE)) {
             event.setCancelled(true);
         }
+    }
+
+    private void markRetaliatoryTarget(LivingEntity attacker) {
+        retaliatoryTargets.put(attacker.getUniqueId(), System.currentTimeMillis() + RETALIATION_TARGET_WINDOW_MILLIS);
+    }
+
+    private boolean canRetaliateAgainst(LivingEntity target) {
+        Long expiry = retaliatoryTargets.get(target.getUniqueId());
+        if (expiry == null) {
+            return false;
+        }
+        if (expiry < System.currentTimeMillis()) {
+            retaliatoryTargets.remove(target.getUniqueId());
+            return false;
+        }
+        return true;
     }
 
     private void alertAsteroidPack(LivingEntity target, String asteroidKeyTag, Player attacker) {
