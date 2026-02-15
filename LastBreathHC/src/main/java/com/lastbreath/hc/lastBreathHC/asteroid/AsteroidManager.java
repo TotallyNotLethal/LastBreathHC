@@ -63,6 +63,7 @@ public class AsteroidManager {
         private final Inventory inventory;
         private final int tier;
         private final Set<UUID> mobs;
+        private UUID markerId;
 
         private AsteroidEntry(Inventory inventory, int tier) {
             this.inventory = inventory;
@@ -80,6 +81,14 @@ public class AsteroidManager {
 
         public Set<UUID> mobs() {
             return mobs;
+        }
+
+        public UUID markerId() {
+            return markerId;
+        }
+
+        public void markerId(UUID markerId) {
+            this.markerId = markerId;
         }
     }
 
@@ -122,7 +131,7 @@ public class AsteroidManager {
         }
         saveAsteroids();
         removeAsteroidMobs(blockLoc, entry);
-        removeAsteroidMarker(blockLoc);
+        removeAsteroidMarker(blockLoc, entry);
         blockLoc.getBlock().setType(Material.AIR);
     }
 
@@ -144,7 +153,7 @@ public class AsteroidManager {
     public static void clearAllAsteroids() {
         for (Location location : ASTEROIDS.keySet().toArray(new Location[0])) {
             location.getBlock().setType(Material.AIR);
-            removeAsteroidMarker(location);
+            removeAsteroidMarker(location, ASTEROIDS.get(location));
         }
         ASTEROIDS.clear();
         PERSISTED_ASTEROIDS.clear();
@@ -271,7 +280,13 @@ public class AsteroidManager {
         if (world == null) {
             return;
         }
-        if (findAsteroidMarker(blockLoc) != null) {
+        AsteroidEntry entry = ASTEROIDS.get(blockLoc);
+        if (entry == null) {
+            return;
+        }
+        ArmorStand existingMarker = findAsteroidMarker(blockLoc, entry);
+        if (existingMarker != null) {
+            entry.markerId(existingMarker.getUniqueId());
             return;
         }
         Location markerLoc = blockLoc.clone().add(0.5, -1.0, 0.5);
@@ -290,46 +305,53 @@ public class AsteroidManager {
         if (equipment != null) {
             equipment.setHelmet(new ItemStack(Material.ANCIENT_DEBRIS));
         }
+        entry.markerId(marker.getUniqueId());
     }
 
-    private static void removeAsteroidMarker(Location blockLoc) {
+    private static void removeAsteroidMarker(Location blockLoc, AsteroidEntry entry) {
         World world = blockLoc.getWorld();
         if (world == null) {
             return;
         }
-        String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey(blockLoc);
-        for (ArmorStand marker : world.getEntitiesByClass(ArmorStand.class)) {
-            Set<String> tags = marker.getScoreboardTags();
-            if (!tags.contains(ASTEROID_MARKER_TAG) || !tags.contains(keyTag)) {
-                continue;
+        ArmorStand marker = findAsteroidMarker(blockLoc, entry);
+        if (marker == null) {
+            if (entry != null) {
+                entry.markerId(null);
             }
-            EntityEquipment equipment = marker.getEquipment();
-            if (equipment != null) {
-                equipment.setHelmet(null);
-            }
-            marker.setGlowing(false);
-            marker.remove();
+            return;
+        }
+        EntityEquipment equipment = marker.getEquipment();
+        if (equipment != null) {
+            equipment.setHelmet(null);
+        }
+        marker.setGlowing(false);
+        marker.remove();
+        if (entry != null) {
+            entry.markerId(null);
         }
     }
 
-    private static ArmorStand findAsteroidMarker(Location blockLoc) {
+    private static ArmorStand findAsteroidMarker(Location blockLoc, AsteroidEntry entry) {
         World world = blockLoc.getWorld();
         if (world == null) {
             return null;
         }
         String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey(blockLoc);
+        if (entry != null && entry.markerId() != null) {
+            Entity entity = world.getEntity(entry.markerId());
+            if (entity instanceof ArmorStand stand) {
+                Set<String> tags = stand.getScoreboardTags();
+                if (tags.contains(ASTEROID_MARKER_TAG) && tags.contains(keyTag)) {
+                    return stand;
+                }
+            }
+            entry.markerId(null);
+        }
         Location markerLoc = blockLoc.clone().add(0.5, -1.0, 0.5);
         for (Entity entity : world.getNearbyEntities(markerLoc, 0.6, 0.8, 0.6)) {
             if (entity instanceof ArmorStand stand
                     && stand.getScoreboardTags().contains(ASTEROID_MARKER_TAG)
                     && stand.getScoreboardTags().contains(keyTag)) {
-                return stand;
-            }
-        }
-
-        for (ArmorStand stand : world.getEntitiesByClass(ArmorStand.class)) {
-            Set<String> tags = stand.getScoreboardTags();
-            if (tags.contains(ASTEROID_MARKER_TAG) && tags.contains(keyTag)) {
                 return stand;
             }
         }
@@ -344,7 +366,7 @@ public class AsteroidManager {
         Location center = blockLoc.clone().add(0.5, 0.5, 0.5);
         boolean playerNearby = !world.getNearbyPlayers(center, 3.0).isEmpty();
         if (playerNearby) {
-            removeAsteroidMarker(blockLoc);
+            removeAsteroidMarker(blockLoc, ASTEROIDS.get(blockLoc));
             return;
         }
         ensureAsteroidMarker(blockLoc);

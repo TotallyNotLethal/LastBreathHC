@@ -217,20 +217,42 @@ public class AsteroidListener implements Listener {
     }
 
     private void alertAsteroidPack(LivingEntity target, String asteroidKeyTag, LivingEntity attacker) {
-        if (target.getWorld() == null) {
+        String asteroidKey = asteroidKeyTag.substring(AsteroidManager.ASTEROID_KEY_TAG_PREFIX.length());
+        AsteroidManager.AsteroidEntry entry = AsteroidManager.getEntryByKey(asteroidKey);
+        if (entry == null || target.getWorld() == null) {
             return;
         }
-        for (LivingEntity entity : target.getWorld().getEntitiesByClass(LivingEntity.class)) {
+
+        Set<UUID> tracked = entry.mobs();
+        Set<UUID> stale = new HashSet<>();
+        for (UUID uuid : tracked) {
+            Entity entity = target.getWorld().getEntity(uuid);
+            if (!(entity instanceof Mob mob) || mob.isDead()) {
+                stale.add(uuid);
+                continue;
+            }
+            mob.setTarget(attacker);
+            mob.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+        }
+        if (!stale.isEmpty()) {
+            tracked.removeAll(stale);
+        }
+
+        if (!tracked.isEmpty()) {
+            return;
+        }
+
+        int radius = AsteroidManager.getMobLeashRadius();
+        for (Entity entity : target.getWorld().getNearbyEntities(target.getLocation(), radius, 12, radius)) {
             if (!(entity instanceof Mob mob)) {
                 continue;
             }
-            if (!isAsteroidMob(entity)) {
+            if (!isAsteroidMob(mob) || !mob.getScoreboardTags().contains(asteroidKeyTag)) {
                 continue;
             }
-            if (entity.getScoreboardTags().contains(asteroidKeyTag)) {
-                mob.setTarget(attacker);
-                mob.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
-            }
+            tracked.add(mob.getUniqueId());
+            mob.setTarget(attacker);
+            mob.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
         }
     }
 
