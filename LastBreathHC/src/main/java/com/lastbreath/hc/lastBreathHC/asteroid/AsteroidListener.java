@@ -158,17 +158,29 @@ public class AsteroidListener implements Listener {
         if (!(event.getEntity() instanceof LivingEntity attacker)) {
             return;
         }
+        if (!isAsteroidMob(attacker)) {
+            return;
+        }
+
         LivingEntity target = event.getTarget();
-        if (isAsteroidMob(attacker)) {
-            if (target instanceof Player) {
-                attacker.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
-            } else {
-                attacker.removeScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
-            }
+        if (target == null) {
+            attacker.removeScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+            return;
         }
-        if (target != null && isAsteroidMob(attacker) && isAsteroidMob(target)) {
+
+        if (isAsteroidMob(target)) {
             event.setCancelled(true);
+            attacker.removeScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+            return;
         }
+
+        if (!(target instanceof Player)) {
+            event.setCancelled(true);
+            attacker.removeScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
+            return;
+        }
+
+        attacker.addScoreboardTag(AsteroidManager.ASTEROID_AGGRESSIVE_TAG);
     }
 
     @EventHandler
@@ -204,7 +216,19 @@ public class AsteroidListener implements Listener {
             return;
         }
 
-        alertAsteroidPack(target, asteroidKeyTag, attacker);
+        Player playerAttacker = null;
+        if (damagerEntity instanceof Player playerDamager) {
+            playerAttacker = playerDamager;
+        } else if (damagerEntity instanceof org.bukkit.entity.Projectile projectile
+                && projectile.getShooter() instanceof Player playerShooter) {
+            playerAttacker = playerShooter;
+        }
+
+        if (playerAttacker == null) {
+            return;
+        }
+
+        alertAsteroidPack(target, asteroidKeyTag, playerAttacker);
     }
 
     @EventHandler
@@ -216,7 +240,7 @@ public class AsteroidListener implements Listener {
         }
     }
 
-    private void alertAsteroidPack(LivingEntity target, String asteroidKeyTag, LivingEntity attacker) {
+    private void alertAsteroidPack(LivingEntity target, String asteroidKeyTag, Player attacker) {
         String asteroidKey = asteroidKeyTag.substring(AsteroidManager.ASTEROID_KEY_TAG_PREFIX.length());
         AsteroidManager.AsteroidEntry entry = AsteroidManager.getEntryByKey(asteroidKey);
         if (entry == null || target.getWorld() == null) {
