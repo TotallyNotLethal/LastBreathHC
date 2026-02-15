@@ -191,6 +191,7 @@ asteroid:
         - "lb:wither_guard"
         - "lb:storm_guard"
         - "lb:lifesteal_ward"
+        - "lb:sonic_guard"
         - "lb:telegraph_null"
   worlds:
     - world
