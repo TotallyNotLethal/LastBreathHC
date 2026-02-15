@@ -14,6 +14,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,12 @@ public class TitleManager {
     private static final long SKYBOUND_DISTANCE_CM = 2_500_000L;
     private static final int STARFORGED_ASTEROIDS = 500;
     private static final long AGELESS_SECONDS = 250 * 60 * 60;
+    private static final Set<Title> WORLD_SCALER_REQUIRED_BOSS_TITLES = EnumSet.of(
+            Title.GRAVEWARDEN_BANE,
+            Title.STORM_HERALD,
+            Title.HOLLOW_COLOSSUS,
+            Title.ASHEN_ORACLE
+    );
     private static final Map<Title, List<String>> TITLE_EFFECTS = Map.ofEntries(
             Map.entry(Title.WANDERER, List.of("Custom: No bonus")),
             Map.entry(Title.THE_FALLEN, List.of("Custom: Armor +1", "Custom: Knockback resistance +3%")),
@@ -67,7 +74,8 @@ public class TitleManager {
             Map.entry(Title.GRAVEWARDEN_BANE, List.of("Custom: Max health +3", "Custom: Armor +2", "Custom: Boss landing aura")),
             Map.entry(Title.STORM_HERALD, List.of("Custom: Movement speed +5%", "Custom: Attack speed +5%", "Custom: Boss landing aura")),
             Map.entry(Title.HOLLOW_COLOSSUS, List.of("Custom: Armor +3", "Custom: Knockback resistance +10%", "Custom: Boss landing aura")),
-            Map.entry(Title.ASHEN_ORACLE, List.of("Custom: Attack damage +1.25", "Custom: Armor toughness +1", "Custom: Boss landing aura"))
+            Map.entry(Title.ASHEN_ORACLE, List.of("Custom: Attack damage +1.25", "Custom: Armor toughness +1", "Custom: Boss landing aura")),
+            Map.entry(Title.WORLD_SCALER, List.of("Custom: Background toggle", "Custom: Deal world scaling multiplier damage to scaled mobs"))
     );
     private static final Map<Title, List<AttributeModifierSpec>> TITLE_ATTRIBUTE_MODIFIERS = Map.ofEntries(
             Map.entry(Title.THE_FALLEN, List.of(
@@ -224,8 +232,12 @@ public class TitleManager {
         if (stats.unlockedTitles.isEmpty()) {
             stats.unlockedTitles.add(DEFAULT_TITLE);
         }
-        if (stats.equippedTitle == null) {
+        if (stats.equippedTitle == null || isBackgroundOnlyTitle(stats.equippedTitle)) {
             stats.equippedTitle = DEFAULT_TITLE;
+        }
+        ensureWorldScalerUnlocked(stats);
+        if (!stats.unlockedTitles.contains(Title.WORLD_SCALER)) {
+            stats.worldScalerEnabled = false;
         }
     }
 
@@ -241,17 +253,42 @@ public class TitleManager {
             player.sendMessage("§6New title unlocked: §e" + title.displayName()
                     + "§6. " + reason);
         }
+        if (ensureWorldScalerUnlocked(stats)) {
+            player.sendMessage("§6New background title unlocked: §e" + Title.WORLD_SCALER.displayName()
+                    + "§6. " + Title.WORLD_SCALER.requirementDescription());
+        }
     }
 
     public static boolean equipTitle(Player player, Title title) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         initialize(stats);
-        if (!stats.unlockedTitles.contains(title)) {
+        if (!stats.unlockedTitles.contains(title) || isBackgroundOnlyTitle(title)) {
             return false;
         }
         stats.equippedTitle = title;
         applyEquippedTitleEffects(player, title);
         refreshPlayerTabTitle(player);
+        return true;
+    }
+
+    public static boolean isBackgroundOnlyTitle(Title title) {
+        return title == Title.WORLD_SCALER;
+    }
+
+    public static boolean isWorldScalerEnabled(Player player) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        initialize(stats);
+        return stats.worldScalerEnabled && stats.unlockedTitles.contains(Title.WORLD_SCALER);
+    }
+
+    public static boolean setWorldScalerEnabled(Player player, boolean enabled) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        initialize(stats);
+        if (!stats.unlockedTitles.contains(Title.WORLD_SCALER)) {
+            return false;
+        }
+        stats.worldScalerEnabled = enabled;
+        StatsManager.markDirty(player.getUniqueId());
         return true;
     }
 
@@ -379,6 +416,18 @@ public class TitleManager {
         if (stats.asteroidLoots >= STARFORGED_ASTEROIDS) {
             unlockTitle(player, Title.STARFORGED, Title.STARFORGED.requirementDescription());
         }
+    }
+
+    private static boolean ensureWorldScalerUnlocked(PlayerStats stats) {
+        if (stats == null || stats.unlockedTitles.contains(Title.WORLD_SCALER)) {
+            return false;
+        }
+        if (!stats.unlockedTitles.containsAll(WORLD_SCALER_REQUIRED_BOSS_TITLES)) {
+            return false;
+        }
+        stats.unlockedTitles.add(Title.WORLD_SCALER);
+        StatsManager.markDirty(stats.uuid);
+        return true;
     }
 
     public static void applyEquippedTitleEffects(Player player, Title title) {

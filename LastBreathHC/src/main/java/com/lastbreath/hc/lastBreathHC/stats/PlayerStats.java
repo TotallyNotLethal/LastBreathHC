@@ -25,6 +25,7 @@ public class PlayerStats {
     public String nickname;
     public Set<Title> unlockedTitles = new HashSet<>();
     public Title equippedTitle;
+    public boolean worldScalerEnabled;
     public Set<BossPrefix> unlockedPrefixes = new HashSet<>();
     public BossPrefix equippedPrefix;
     public Set<BossAura> unlockedAuras = new HashSet<>();

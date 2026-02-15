@@ -68,10 +68,11 @@ public class MobScalingListener implements Listener {
 
         AttributeInstance maxHealth = entity.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealth != null) {
-            double baseHealth = maxHealth.getBaseValue();
+            double baseHealth = Math.max(1.0, maxHealth.getBaseValue());
             double newMaxHealth = Math.max(1.0, Math.min(MAX_SCALED_HEALTH, baseHealth * healthMultiplier));
             maxHealth.setBaseValue(newMaxHealth);
             entity.setHealth(newMaxHealth);
+            MobScalingData.setScalingMultiplier(entity, newMaxHealth / baseHealth);
         }
     }
 
