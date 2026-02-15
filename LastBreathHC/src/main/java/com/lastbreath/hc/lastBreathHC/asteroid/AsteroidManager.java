@@ -63,7 +63,8 @@ public class AsteroidManager {
 
     private static final int ASTEROID_CLEANUP_MIN_BLOCK = -50000;
     private static final int ASTEROID_CLEANUP_MAX_BLOCK = 50000;
-    private static final int ASTEROID_CLEANUP_BATCH_SIZE = 16;
+    private static final int ASTEROID_CLEANUP_CHUNKS_PER_TICK = 2;
+    private static final long ASTEROID_CLEANUP_TICK_INTERVAL = 2L;
 
     public static class AsteroidEntry {
         private final Inventory inventory;
@@ -222,95 +223,83 @@ public class AsteroidManager {
         final int minChunk = Math.floorDiv(ASTEROID_CLEANUP_MIN_BLOCK, 16);
         final int maxChunk = Math.floorDiv(ASTEROID_CLEANUP_MAX_BLOCK, 16);
         final int chunkSpan = maxChunk - minChunk + 1;
-        final int batchesPerAxis = (int) Math.ceil(chunkSpan / (double) ASTEROID_CLEANUP_BATCH_SIZE);
-        final int totalBatches = batchesPerAxis * batchesPerAxis;
+        final int totalChunks = chunkSpan * chunkSpan;
+        final int chunksPerTick = ASTEROID_CLEANUP_CHUNKS_PER_TICK;
 
         sender.sendMessage("§eStarting asteroid cleanup in world §f" + world.getName()
-                + "§e. " + totalBatches + " batches queued.");
+                + "§e. Scanning §f" + totalChunks + "§e chunks at §f"
+                + chunksPerTick + "§e chunk(s) every §f" + ASTEROID_CLEANUP_TICK_INTERVAL + "§e ticks.");
 
         asteroidCleanupTask = new BukkitRunnable() {
-            private int nextBatchX = minChunk;
-            private int nextBatchZ = minChunk;
-            private int processedBatches = 0;
+            private int nextChunkX = minChunk;
+            private int nextChunkZ = minChunk;
+            private int processedChunks = 0;
             private int removedGlowingStands = 0;
             private int removedAsteroidTaggedMobs = 0;
 
             @Override
             public void run() {
-                int batchMaxChunkX = Math.min(nextBatchX + ASTEROID_CLEANUP_BATCH_SIZE - 1, maxChunk);
-                int batchMaxChunkZ = Math.min(nextBatchZ + ASTEROID_CLEANUP_BATCH_SIZE - 1, maxChunk);
+                for (int i = 0; i < chunksPerTick; i++) {
+                    if (nextChunkX > maxChunk) {
+                        finishCleanup();
+                        return;
+                    }
 
-                Set<Long> forcedChunks = new HashSet<>();
-                Set<Long> loadedChunks = new HashSet<>();
-                for (int chunkX = nextBatchX; chunkX <= batchMaxChunkX; chunkX++) {
-                    for (int chunkZ = nextBatchZ; chunkZ <= batchMaxChunkZ; chunkZ++) {
-                        long chunkKey = Chunk.getChunkKey(chunkX, chunkZ);
-                        if (world.isChunkForceLoaded(chunkX, chunkZ)) {
-                            // no-op; this chunk was force-loaded before cleanup started
-                        } else {
-                            world.setChunkForceLoaded(chunkX, chunkZ, true);
-                            forcedChunks.add(chunkKey);
+                    int chunkX = nextChunkX;
+                    int chunkZ = nextChunkZ;
+                    boolean wasForceLoaded = world.isChunkForceLoaded(chunkX, chunkZ);
+                    boolean wasLoaded = world.isChunkLoaded(chunkX, chunkZ);
+
+                    if (!wasForceLoaded) {
+                        world.setChunkForceLoaded(chunkX, chunkZ, true);
+                    }
+
+                    Chunk chunk = world.getChunkAt(chunkX, chunkZ);
+                    if (!chunk.isLoaded()) {
+                        chunk.load();
+                    }
+                    for (Entity entity : chunk.getEntities()) {
+                        if (entity instanceof ArmorStand stand && stand.isGlowing()) {
+                            stand.remove();
+                            removedGlowingStands++;
+                            continue;
                         }
-                        if (!world.isChunkLoaded(chunkX, chunkZ)) {
-                            loadedChunks.add(chunkKey);
+                        if (entity instanceof LivingEntity living
+                                && living.getScoreboardTags().contains(ASTEROID_MOB_TAG)) {
+                            living.remove();
+                            removedAsteroidTaggedMobs++;
                         }
                     }
-                }
 
-                for (int chunkX = nextBatchX; chunkX <= batchMaxChunkX; chunkX++) {
-                    for (int chunkZ = nextBatchZ; chunkZ <= batchMaxChunkZ; chunkZ++) {
-                        Chunk chunk = world.getChunkAt(chunkX, chunkZ);
-                        if (!chunk.isLoaded()) {
-                            chunk.load();
-                        }
-                        for (Entity entity : chunk.getEntities()) {
-                            if (entity instanceof ArmorStand stand && stand.isGlowing()) {
-                                stand.remove();
-                                removedGlowingStands++;
-                                continue;
-                            }
-                            if (entity instanceof LivingEntity living
-                                    && living.getScoreboardTags().contains(ASTEROID_MOB_TAG)) {
-                                living.remove();
-                                removedAsteroidTaggedMobs++;
-                            }
-                        }
+                    if (!wasForceLoaded) {
+                        world.setChunkForceLoaded(chunkX, chunkZ, false);
                     }
-                }
+                    if (!wasLoaded) {
+                        world.unloadChunkRequest(chunkX, chunkZ);
+                    }
 
-                for (long key : forcedChunks) {
-                    int chunkX = (int) (key >> 32);
-                    int chunkZ = (int) key;
-                    world.setChunkForceLoaded(chunkX, chunkZ, false);
-                }
+                    processedChunks++;
+                    if (processedChunks % 2000 == 0 || processedChunks == totalChunks) {
+                        sender.sendMessage("§7Asteroid cleanup progress: §f" + processedChunks + "§7/" + totalChunks
+                                + " chunks. Removed glowing stands: §f" + removedGlowingStands
+                                + "§7, removed asteroid-tagged mobs: §f" + removedAsteroidTaggedMobs + "§7.");
+                    }
 
-                for (long key : loadedChunks) {
-                    int chunkX = (int) (key >> 32);
-                    int chunkZ = (int) key;
-                    world.unloadChunkRequest(chunkX, chunkZ);
-                }
-
-                processedBatches++;
-                if (processedBatches % 200 == 0 || processedBatches == totalBatches) {
-                    sender.sendMessage("§7Asteroid cleanup progress: §f" + processedBatches + "§7/" + totalBatches
-                            + " batches. Removed glowing stands: §f" + removedGlowingStands
-                            + "§7, removed asteroid-tagged mobs: §f" + removedAsteroidTaggedMobs + "§7.");
-                }
-
-                nextBatchZ += ASTEROID_CLEANUP_BATCH_SIZE;
-                if (nextBatchZ > maxChunk) {
-                    nextBatchZ = minChunk;
-                    nextBatchX += ASTEROID_CLEANUP_BATCH_SIZE;
-                }
-
-                if (nextBatchX > maxChunk) {
-                    sender.sendMessage("§aAsteroid cleanup complete. Removed §f" + removedGlowingStands
-                            + "§a glowing armor stands and §f" + removedAsteroidTaggedMobs + "§a asteroid-tagged mobs.");
-                    cancel();
-                    asteroidCleanupTask = null;
+                    nextChunkZ++;
+                    if (nextChunkZ > maxChunk) {
+                        nextChunkZ = minChunk;
+                        nextChunkX++;
+                    }
                 }
             }
-        }.runTaskTimer(plugin, 1L, 1L);
+
+            private void finishCleanup() {
+                sender.sendMessage("§aAsteroid cleanup complete. Removed §f" + removedGlowingStands
+                        + "§a glowing armor stands and §f" + removedAsteroidTaggedMobs + "§a asteroid-tagged mobs.");
+                cancel();
+                asteroidCleanupTask = null;
+            }
+        }.runTaskTimer(plugin, 1L, ASTEROID_CLEANUP_TICK_INTERVAL);
 
         return true;
     }
