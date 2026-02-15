@@ -1023,7 +1023,7 @@ public class AsteroidManager {
                         Location mobLoc = mob.getLocation();
                         if (Math.abs(mobLoc.getBlockX() - center.getBlockX()) > leashRadius
                                 || Math.abs(mobLoc.getBlockZ() - center.getBlockZ()) > leashRadius) {
-                            if (!mob.getScoreboardTags().contains(ASTEROID_AGGRESSIVE_TAG)) {
+                            if (!isAggressiveOnPlayer(mob)) {
                                 mob.teleport(center);
                                 applyReturnRegeneration(mob);
                             }
@@ -1071,6 +1071,21 @@ public class AsteroidManager {
         }
         double configured = plugin.getConfig().getDouble("asteroid.mobReactionRadius", leashRadius);
         return Math.max(leashRadius, configured);
+    }
+
+    private static boolean isAggressiveOnPlayer(LivingEntity mob) {
+        if (!mob.getScoreboardTags().contains(ASTEROID_AGGRESSIVE_TAG)) {
+            return false;
+        }
+        if (!(mob instanceof Mob hostileMob)) {
+            return false;
+        }
+        LivingEntity target = hostileMob.getTarget();
+        boolean aggressiveOnPlayer = target instanceof Player player && player.isValid() && !player.isDead();
+        if (!aggressiveOnPlayer) {
+            mob.removeScoreboardTag(ASTEROID_AGGRESSIVE_TAG);
+        }
+        return aggressiveOnPlayer;
     }
 
     private static void applyReturnRegeneration(LivingEntity mob) {
