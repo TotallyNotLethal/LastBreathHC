@@ -34,7 +34,8 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
                     displayName,
                     null,
                     prefix != null && !prefix.isBlank() ? prefix : null,
-                    null
+                    null,
+                    pingBarsFor(player.getPing())
             ));
         }
         if (fakePlayerService != null) {
@@ -49,12 +50,30 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
                         record.getName(),
                         null,
                         prefix,
-                        null
+                        null,
+                        pingBarsFor(record.getTabPingMillis())
                 ));
             }
         }
         entries.sort(Comparator.comparing(PlayerEntry::username, String.CASE_INSENSITIVE_ORDER));
         return entries;
+    }
+
+
+    private int pingBarsFor(int pingMillis) {
+        if (pingMillis <= 75) {
+            return 5;
+        }
+        if (pingMillis <= 150) {
+            return 4;
+        }
+        if (pingMillis <= 250) {
+            return 3;
+        }
+        if (pingMillis <= 350) {
+            return 2;
+        }
+        return 1;
     }
 
     private Title resolveTitle(String tabTitleKey) {

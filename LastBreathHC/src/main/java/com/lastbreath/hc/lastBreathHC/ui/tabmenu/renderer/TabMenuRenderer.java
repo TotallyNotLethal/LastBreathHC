@@ -20,10 +20,16 @@ public final class TabMenuRenderer {
     private static final int COLUMN_GAP = 4;
     private static final ColumnLayout LEFT_COLUMN_LAYOUT = new ColumnLayout(32, ColumnAlignment.LEFT);
     private static final ColumnLayout RIGHT_COLUMN_LAYOUT = new ColumnLayout(32, ColumnAlignment.LEFT);
+    private static final int PING_BAR_COUNT = 5;
     private static final int SECTION_SPACING_LINES = 1;
     private static final NamedTextColor DEFAULT_RANK_COLOR = NamedTextColor.WHITE;
     private static final NamedTextColor DEFAULT_STATS_COLOR = NamedTextColor.GRAY;
     private static final NamedTextColor FOOTER_URL_COLOR = NamedTextColor.AQUA;
+    private static final NamedTextColor PING_EXCELLENT_COLOR = NamedTextColor.GREEN;
+    private static final NamedTextColor PING_GOOD_COLOR = NamedTextColor.YELLOW;
+    private static final NamedTextColor PING_WARN_COLOR = NamedTextColor.GOLD;
+    private static final NamedTextColor PING_POOR_COLOR = NamedTextColor.RED;
+    private static final NamedTextColor PING_INACTIVE_COLOR = NamedTextColor.DARK_GRAY;
     private static final Style HEADER_STYLE = Style.style(TextDecoration.BOLD);
     private static final Style FOOTER_STYLE = Style.style(TextDecoration.ITALIC);
     private static final Pattern LEGACY_COLOR_PATTERN = Pattern.compile("[§&][0-9A-FK-ORa-fk-or]");
@@ -169,16 +175,36 @@ public final class TabMenuRenderer {
         int nameLength = calculateTextLength(iconText, prefixText, displayName, suffixText);
         int namePadding = Math.max(0, nameColumnWidth - nameLength);
 
+        Component pingBars = renderPingBars(row.pingBars());
+
         Component combined = Component.empty()
                 .append(iconComponent)
                 .append(prefixComponent)
                 .append(nameComponent)
                 .append(suffixComponent)
-                .append(Component.text(" ".repeat(1 + namePadding)));
+                .append(Component.text(" ".repeat(1 + namePadding)))
+                .append(pingBars);
 
-        int textLength = nameColumnWidth + 1;
+        int textLength = nameColumnWidth + 1 + PING_BAR_COUNT;
 
         return new RenderedRow(combined, textLength);
+    }
+
+    private Component renderPingBars(int bars) {
+        int clampedBars = Math.max(0, Math.min(PING_BAR_COUNT, bars));
+        NamedTextColor activeColor = switch (clampedBars) {
+            case 5, 4 -> PING_EXCELLENT_COLOR;
+            case 3 -> PING_GOOD_COLOR;
+            case 2 -> PING_WARN_COLOR;
+            default -> PING_POOR_COLOR;
+        };
+
+        Component result = Component.empty();
+        for (int i = 0; i < PING_BAR_COUNT; i++) {
+            NamedTextColor color = i < clampedBars ? activeColor : PING_INACTIVE_COLOR;
+            result = result.append(Component.text("▮").color(color));
+        }
+        return result;
     }
 
     private Component joinLines(List<Component> lines) {
