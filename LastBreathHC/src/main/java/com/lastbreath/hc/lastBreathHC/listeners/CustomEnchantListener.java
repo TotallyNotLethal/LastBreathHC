@@ -425,11 +425,11 @@ public class CustomEnchantListener implements Listener {
         // Vanilla XP ranges (inclusive) for common ores
         return switch (type) {
             case COAL_ORE, DEEPSLATE_COAL_ORE -> random.nextInt(3);          // 0–2
-            case DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE -> 3 + random.nextInt(5); // 3–7
-            case EMERALD_ORE, DEEPSLATE_EMERALD_ORE -> 3 + random.nextInt(5); // 3–7
-            case LAPIS_ORE, DEEPSLATE_LAPIS_ORE -> 2 + random.nextInt(4);     // 2–5
-            case REDSTONE_ORE, DEEPSLATE_REDSTONE_ORE -> 1 + random.nextInt(5); // 1–5
-            case NETHER_QUARTZ_ORE -> 2 + random.nextInt(4);                 // 2–5
+            case DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE -> 3 + random.nextInt(8); // 3–7
+            case EMERALD_ORE, DEEPSLATE_EMERALD_ORE -> 3 + random.nextInt(8); // 3–7
+            case LAPIS_ORE, DEEPSLATE_LAPIS_ORE -> 2 + random.nextInt(6);     // 2–5
+            case REDSTONE_ORE, DEEPSLATE_REDSTONE_ORE -> 1 + random.nextInt(6); // 1–5
+            case NETHER_QUARTZ_ORE -> 2 + random.nextInt(6);                 // 2–5
             case NETHER_GOLD_ORE -> random.nextInt(2);                       // 0–1
 
             // These ores give small XP when mined (raw ore era)
