@@ -393,23 +393,55 @@ public class CustomEnchantListener implements Listener {
     }
 
     private int resolveExpToDrop(Player player, ItemStack tool, Block block) {
-    // Create synthetic break event
-    BlockBreakEvent synthetic = new BlockBreakEvent(block, player);
+        // Compute what vanilla would do for XP for this block + tool
+        int vanillaExp = computeVanillaExpToDrop(block.getType(), tool);
 
-    // We are manually handling drops
-    synthetic.setDropItems(false);
+        // Fire a synthetic break event so protections/other plugins can cancel or modify XP
+        BlockBreakEvent synthetic = new BlockBreakEvent(block, player);
 
-    // Let the server determine XP naturally
-    // DO NOT try to manually compute via block.getExpDrop (removed in 1.21+)
-    Bukkit.getPluginManager().callEvent(synthetic);
+        // We handle item drops ourselves in many cases, but XP is separate
+        synthetic.setDropItems(false);
 
-    // If another plugin cancels the break, respect it
-    if (synthetic.isCancelled()) {
-        return -1;
+        // Seed XP so event consumers see a realistic value and you can drop it per block
+        synthetic.setExpToDrop(vanillaExp);
+
+        Bukkit.getPluginManager().callEvent(synthetic);
+
+        if (synthetic.isCancelled()) {
+            return -1;
+        }
+
+        return Math.max(0, synthetic.getExpToDrop());
     }
 
-    // XP is already computed internally by the server pipeline
-    return Math.max(0, synthetic.getExpToDrop());
+    private int computeVanillaExpToDrop(Material type, ItemStack tool) {
+        if (tool != null && tool.containsEnchantment(Enchantment.SILK_TOUCH)) {
+            // Silk Touch prevents ore XP in vanilla
+            return 0;
+        }
+
+        // Fortune does NOT change XP in vanilla (only drops), so we ignore it intentionally.
+
+        // Vanilla XP ranges (inclusive) for common ores
+        return switch (type) {
+            case COAL_ORE, DEEPSLATE_COAL_ORE -> random.nextInt(3);          // 0–2
+            case DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE -> 3 + random.nextInt(5); // 3–7
+            case EMERALD_ORE, DEEPSLATE_EMERALD_ORE -> 3 + random.nextInt(5); // 3–7
+            case LAPIS_ORE, DEEPSLATE_LAPIS_ORE -> 2 + random.nextInt(4);     // 2–5
+            case REDSTONE_ORE, DEEPSLATE_REDSTONE_ORE -> 1 + random.nextInt(5); // 1–5
+            case NETHER_QUARTZ_ORE -> 2 + random.nextInt(4);                 // 2–5
+            case NETHER_GOLD_ORE -> random.nextInt(2);                       // 0–1
+
+            // These ores give small XP when mined (raw ore era)
+            case COPPER_ORE, DEEPSLATE_COPPER_ORE -> random.nextInt(3);      // 0–2
+            case IRON_ORE, DEEPSLATE_IRON_ORE -> random.nextInt(3);          // 0–2
+            case GOLD_ORE, DEEPSLATE_GOLD_ORE -> random.nextInt(3);          // 0–2
+
+            // No XP in vanilla
+            case ANCIENT_DEBRIS -> 0;
+
+            default -> 0;
+        };
     }
 
 
