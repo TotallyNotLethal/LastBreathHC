@@ -371,7 +371,7 @@ public class CustomEnchantListener implements Listener {
                 continue;
             }
             try {
-                int expToDrop = resolveExpToDrop(player, target);
+                int expToDrop = resolveExpToDrop(player, tool, target);
                 if (expToDrop < 0) {
                     continue;
                 }
@@ -392,9 +392,10 @@ public class CustomEnchantListener implements Listener {
         }
     }
 
-    private int resolveExpToDrop(Player player, Block block) {
+    private int resolveExpToDrop(Player player, ItemStack tool, Block block) {
         BlockBreakEvent synthetic = new BlockBreakEvent(block, player);
         synthetic.setDropItems(false);
+        synthetic.setExpToDrop(Math.max(0, block.getExpDrop(tool, player)));
         Bukkit.getPluginManager().callEvent(synthetic);
         if (synthetic.isCancelled()) {
             return -1;
