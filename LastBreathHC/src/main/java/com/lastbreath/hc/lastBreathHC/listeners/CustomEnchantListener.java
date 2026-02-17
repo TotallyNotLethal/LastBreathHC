@@ -393,15 +393,25 @@ public class CustomEnchantListener implements Listener {
     }
 
     private int resolveExpToDrop(Player player, ItemStack tool, Block block) {
-        BlockBreakEvent synthetic = new BlockBreakEvent(block, player);
-        synthetic.setDropItems(false);
-        synthetic.setExpToDrop(Math.max(0, block.getExpDrop(tool, player)));
-        Bukkit.getPluginManager().callEvent(synthetic);
-        if (synthetic.isCancelled()) {
-            return -1;
-        }
-        return Math.max(0, synthetic.getExpToDrop());
+    // Create synthetic break event
+    BlockBreakEvent synthetic = new BlockBreakEvent(block, player);
+
+    // We are manually handling drops
+    synthetic.setDropItems(false);
+
+    // Let the server determine XP naturally
+    // DO NOT try to manually compute via block.getExpDrop (removed in 1.21+)
+    Bukkit.getPluginManager().callEvent(synthetic);
+
+    // If another plugin cancels the break, respect it
+    if (synthetic.isCancelled()) {
+        return -1;
     }
+
+    // XP is already computed internally by the server pipeline
+    return Math.max(0, synthetic.getExpToDrop());
+    }
+
 
     private void dropExperience(Location location, int amount) {
         if (amount <= 0) {
