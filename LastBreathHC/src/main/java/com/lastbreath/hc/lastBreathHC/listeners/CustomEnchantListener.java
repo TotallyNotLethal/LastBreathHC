@@ -51,6 +51,7 @@ public class CustomEnchantListener implements Listener {
 
     private static final Map<Material, Material> CROP_SEEDS = new EnumMap<>(Material.class);
     private static final Map<Material, Material> CROP_DROPS = new EnumMap<>(Material.class);
+    private static final Map<Material, Material> ORE_FALLBACK_DROPS = new EnumMap<>(Material.class);
 
     static {
         CROP_SEEDS.put(Material.WHEAT, Material.WHEAT_SEEDS);
@@ -64,6 +65,26 @@ public class CustomEnchantListener implements Listener {
         CROP_DROPS.put(Material.POTATOES, Material.POTATO);
         CROP_DROPS.put(Material.BEETROOTS, Material.BEETROOT);
         CROP_DROPS.put(Material.NETHER_WART, Material.NETHER_WART);
+
+        ORE_FALLBACK_DROPS.put(Material.COAL_ORE, Material.COAL);
+        ORE_FALLBACK_DROPS.put(Material.DEEPSLATE_COAL_ORE, Material.COAL);
+        ORE_FALLBACK_DROPS.put(Material.COPPER_ORE, Material.RAW_COPPER);
+        ORE_FALLBACK_DROPS.put(Material.DEEPSLATE_COPPER_ORE, Material.RAW_COPPER);
+        ORE_FALLBACK_DROPS.put(Material.IRON_ORE, Material.RAW_IRON);
+        ORE_FALLBACK_DROPS.put(Material.DEEPSLATE_IRON_ORE, Material.RAW_IRON);
+        ORE_FALLBACK_DROPS.put(Material.GOLD_ORE, Material.RAW_GOLD);
+        ORE_FALLBACK_DROPS.put(Material.DEEPSLATE_GOLD_ORE, Material.RAW_GOLD);
+        ORE_FALLBACK_DROPS.put(Material.REDSTONE_ORE, Material.REDSTONE);
+        ORE_FALLBACK_DROPS.put(Material.DEEPSLATE_REDSTONE_ORE, Material.REDSTONE);
+        ORE_FALLBACK_DROPS.put(Material.LAPIS_ORE, Material.LAPIS_LAZULI);
+        ORE_FALLBACK_DROPS.put(Material.DEEPSLATE_LAPIS_ORE, Material.LAPIS_LAZULI);
+        ORE_FALLBACK_DROPS.put(Material.DIAMOND_ORE, Material.DIAMOND);
+        ORE_FALLBACK_DROPS.put(Material.DEEPSLATE_DIAMOND_ORE, Material.DIAMOND);
+        ORE_FALLBACK_DROPS.put(Material.EMERALD_ORE, Material.EMERALD);
+        ORE_FALLBACK_DROPS.put(Material.DEEPSLATE_EMERALD_ORE, Material.EMERALD);
+        ORE_FALLBACK_DROPS.put(Material.NETHER_GOLD_ORE, Material.GOLD_NUGGET);
+        ORE_FALLBACK_DROPS.put(Material.NETHER_QUARTZ_ORE, Material.QUARTZ);
+        ORE_FALLBACK_DROPS.put(Material.ANCIENT_DEBRIS, Material.ANCIENT_DEBRIS);
     }
 
     private final LastBreathHC plugin;
@@ -102,7 +123,8 @@ public class CustomEnchantListener implements Listener {
         boolean excavator = normalized.contains(CustomEnchant.EXCAVATOR.getId());
         boolean quarry = normalized.contains(CustomEnchant.QUARRY.getId());
 
-        if (handleCustomDrops(player, tool, block, normalized, block.getLocation())) {
+        boolean forceOreDrops = veinMiner && isOre(block.getType());
+        if (handleCustomDrops(player, tool, block, normalized, block.getLocation(), forceOreDrops)) {
             event.setDropItems(false);
         }
 
@@ -306,12 +328,33 @@ public class CustomEnchantListener implements Listener {
         for (ItemStack drop : drops) {
             if (drop.getType() != Material.AIR) {
                 ItemStack bonus = drop.clone();
-                bonus.setAmount(1);
+                bonus.setAmount(1 + random.nextInt(2));
                 updated.add(bonus);
                 break;
             }
         }
         return updated;
+    }
+
+    private List<ItemStack> ensureOreMinimumDrop(List<ItemStack> drops, Material blockType, boolean smelter) {
+        int total = drops.stream()
+            .filter(drop -> drop.getType() != Material.AIR)
+            .mapToInt(ItemStack::getAmount)
+            .sum();
+        if (total > 0) {
+            return drops;
+        }
+
+        Material fallback = ORE_FALLBACK_DROPS.getOrDefault(blockType, blockType);
+        ItemStack fallbackDrop = new ItemStack(fallback, 1);
+        if (smelter && !isCoalOre(blockType)) {
+            ItemStack smelted = getSmeltedResult(fallbackDrop);
+            if (smelted != null) {
+                smelted.setAmount(1);
+                return List.of(smelted);
+            }
+        }
+        return List.of(fallbackDrop);
     }
 
     private void breakExtraBlocks(Player player, ItemStack tool, Collection<Block> blocks, Set<String> normalizedEnchantIds, Location dropLocation) {
@@ -332,7 +375,8 @@ public class CustomEnchantListener implements Listener {
                 if (expToDrop < 0) {
                     continue;
                 }
-                if (handleCustomDrops(player, tool, target, normalizedEnchantIds, dropLocation)) {
+                boolean forceOreDrops = isOre(target.getType()) && isPickaxe(tool.getType());
+                if (handleCustomDrops(player, tool, target, normalizedEnchantIds, dropLocation, forceOreDrops)) {
                     breakBlockWithPhysics(target);
                     dropExperience(target.getLocation(), expToDrop);
                     if (applyDurabilityDamage(player, tool)) {
@@ -385,14 +429,14 @@ public class CustomEnchantListener implements Listener {
         return false;
     }
 
-    private boolean handleCustomDrops(Player player, ItemStack tool, Block block, Set<String> normalizedEnchantIds, Location dropLocation) {
+    private boolean handleCustomDrops(Player player, ItemStack tool, Block block, Set<String> normalizedEnchantIds, Location dropLocation, boolean forceOreDrops) {
         boolean autoPickup = normalizedEnchantIds.contains(CustomEnchant.AUTO_PICKUP.getId());
         boolean smelter = normalizedEnchantIds.contains(CustomEnchant.SMELTER_TOUCH.getId());
         boolean autoReplant = normalizedEnchantIds.contains(CustomEnchant.AUTO_REPLANT.getId());
         boolean fertileHarvest = normalizedEnchantIds.contains(CustomEnchant.FERTILE_HARVEST.getId());
         boolean prospector = normalizedEnchantIds.contains(CustomEnchant.PROSPECTOR.getId());
         boolean prospectorOre = prospector && isOre(block.getType());
-        boolean shouldHandleDrops = autoPickup || smelter || autoReplant || fertileHarvest || prospectorOre;
+        boolean shouldHandleDrops = autoPickup || smelter || autoReplant || fertileHarvest || prospectorOre || forceOreDrops;
         if (!shouldHandleDrops) {
             return false;
         }
@@ -400,7 +444,10 @@ public class CustomEnchantListener implements Listener {
         if (smelter && isOre(block.getType()) && !isCoalOre(block.getType())) {
             drops = smeltDrops(drops);
         }
-        if (prospectorOre && Math.random() < PROSPECTOR_CHANCE) {
+        if (isOre(block.getType())) {
+            drops = ensureOreMinimumDrop(drops, block.getType(), smelter);
+        }
+        if (prospectorOre && random.nextDouble() < PROSPECTOR_CHANCE) {
             drops = addProspectorBonus(drops);
         }
         if (fertileHarvest && isMatureCrop(block)) {
