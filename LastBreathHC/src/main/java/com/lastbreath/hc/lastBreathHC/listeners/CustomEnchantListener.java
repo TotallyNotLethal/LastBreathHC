@@ -13,6 +13,7 @@ import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Leaves;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.ExperienceOrb;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -101,23 +102,23 @@ public class CustomEnchantListener implements Listener {
         boolean excavator = normalized.contains(CustomEnchant.EXCAVATOR.getId());
         boolean quarry = normalized.contains(CustomEnchant.QUARRY.getId());
 
-        if (handleCustomDrops(player, tool, block, normalized)) {
+        if (handleCustomDrops(player, tool, block, normalized, block.getLocation())) {
             event.setDropItems(false);
         }
 
         if (veinMiner && isPickaxe(tool.getType()) && isOre(block.getType())) {
-            breakExtraBlocks(player, tool, getVeinBlocks(block), normalized);
+            breakExtraBlocks(player, tool, getVeinBlocks(block), normalized, block.getLocation());
         }
         if (treeFeller && isAxe(tool.getType()) && isLog(block.getType())) {
             Collection<Block> treeBlocks = getTreeBlocks(block);
-            breakExtraBlocks(player, tool, treeBlocks, normalized);
+            breakExtraBlocks(player, tool, treeBlocks, normalized, block.getLocation());
             accelerateLeafDecay(block, treeBlocks);
         }
         if (excavator && isShovel(tool.getType()) && isShovelMineable(block.getType())) {
-            breakExtraBlocks(player, tool, getExcavatorBlocks(block, player), normalized);
+            breakExtraBlocks(player, tool, getExcavatorBlocks(block, player), normalized, block.getLocation());
         }
         if (quarry && isPickaxe(tool.getType()) && isPickaxeMineable(block.getType())) {
-            breakExtraBlocks(player, tool, getQuarryBlocks(block, player), normalized);
+            breakExtraBlocks(player, tool, getQuarryBlocks(block, player), normalized, block.getLocation());
         }
     }
 
@@ -244,12 +245,12 @@ public class CustomEnchantListener implements Listener {
                 return;
             }
             for (ItemStack leftover : remaining.values()) {
-                player.getWorld().dropItemNaturally(location, leftover);
+                player.getWorld().dropItem(location, leftover);
             }
             return;
         }
         for (ItemStack drop : drops) {
-            player.getWorld().dropItemNaturally(location, drop);
+            player.getWorld().dropItem(location, drop);
         }
     }
 
@@ -300,7 +301,7 @@ public class CustomEnchantListener implements Listener {
         return result.clone();
     }
 
-    private List<ItemStack> addProspectorBonus(List<ItemStack> drops, Material type) {
+    private List<ItemStack> addProspectorBonus(List<ItemStack> drops) {
         List<ItemStack> updated = new ArrayList<>(drops);
         for (ItemStack drop : drops) {
             if (drop.getType() != Material.AIR) {
@@ -313,7 +314,7 @@ public class CustomEnchantListener implements Listener {
         return updated;
     }
 
-    private void breakExtraBlocks(Player player, ItemStack tool, Collection<Block> blocks, Set<String> normalizedEnchantIds) {
+    private void breakExtraBlocks(Player player, ItemStack tool, Collection<Block> blocks, Set<String> normalizedEnchantIds, Location dropLocation) {
         var worldBossManager = plugin.getWorldBossManager();
         for (Block target : blocks) {
             if (target.getType() == Material.AIR) {
@@ -327,18 +328,42 @@ public class CustomEnchantListener implements Listener {
                 continue;
             }
             try {
-                if (handleCustomDrops(player, tool, target, normalizedEnchantIds)) {
+                int expToDrop = resolveExpToDrop(player, target);
+                if (expToDrop < 0) {
+                    continue;
+                }
+                if (handleCustomDrops(player, tool, target, normalizedEnchantIds, dropLocation)) {
                     breakBlockWithPhysics(target);
+                    dropExperience(target.getLocation(), expToDrop);
                     if (applyDurabilityDamage(player, tool)) {
                         return;
                     }
                 } else {
                     target.breakNaturally(tool);
+                    dropExperience(target.getLocation(), expToDrop);
                 }
             } finally {
                 processing.remove(location);
             }
         }
+    }
+
+    private int resolveExpToDrop(Player player, Block block) {
+        BlockBreakEvent synthetic = new BlockBreakEvent(block, player);
+        synthetic.setDropItems(false);
+        Bukkit.getPluginManager().callEvent(synthetic);
+        if (synthetic.isCancelled()) {
+            return -1;
+        }
+        return Math.max(0, synthetic.getExpToDrop());
+    }
+
+    private void dropExperience(Location location, int amount) {
+        if (amount <= 0) {
+            return;
+        }
+        ExperienceOrb orb = location.getWorld().spawn(location.clone().add(0.5, 0.5, 0.5), ExperienceOrb.class);
+        orb.setExperience(amount);
     }
 
     private boolean applyDurabilityDamage(Player player, ItemStack tool) {
@@ -360,13 +385,14 @@ public class CustomEnchantListener implements Listener {
         return false;
     }
 
-    private boolean handleCustomDrops(Player player, ItemStack tool, Block block, Set<String> normalizedEnchantIds) {
+    private boolean handleCustomDrops(Player player, ItemStack tool, Block block, Set<String> normalizedEnchantIds, Location dropLocation) {
         boolean autoPickup = normalizedEnchantIds.contains(CustomEnchant.AUTO_PICKUP.getId());
         boolean smelter = normalizedEnchantIds.contains(CustomEnchant.SMELTER_TOUCH.getId());
         boolean autoReplant = normalizedEnchantIds.contains(CustomEnchant.AUTO_REPLANT.getId());
         boolean fertileHarvest = normalizedEnchantIds.contains(CustomEnchant.FERTILE_HARVEST.getId());
         boolean prospector = normalizedEnchantIds.contains(CustomEnchant.PROSPECTOR.getId());
-        boolean shouldHandleDrops = autoPickup || smelter || autoReplant || fertileHarvest || prospector;
+        boolean prospectorOre = prospector && isOre(block.getType());
+        boolean shouldHandleDrops = autoPickup || smelter || autoReplant || fertileHarvest || prospectorOre;
         if (!shouldHandleDrops) {
             return false;
         }
@@ -374,8 +400,8 @@ public class CustomEnchantListener implements Listener {
         if (smelter && isOre(block.getType()) && !isCoalOre(block.getType())) {
             drops = smeltDrops(drops);
         }
-        if (prospector && isOre(block.getType()) && Math.random() < PROSPECTOR_CHANCE) {
-            drops = addProspectorBonus(drops, block.getType());
+        if (prospectorOre && Math.random() < PROSPECTOR_CHANCE) {
+            drops = addProspectorBonus(drops);
         }
         if (fertileHarvest && isMatureCrop(block)) {
             Material extraCrop = CROP_DROPS.get(block.getType());
@@ -387,7 +413,7 @@ public class CustomEnchantListener implements Listener {
             drops = consumeSeedForReplant(drops, block.getType());
             scheduleReplant(block, block.getBlockData());
         }
-        giveDrops(player, block.getLocation(), drops, autoPickup);
+        giveDrops(player, dropLocation, drops, autoPickup);
         return true;
     }
 
