@@ -27,8 +27,11 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.command.CommandSender;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -38,6 +41,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.InflaterInputStream;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -59,12 +64,16 @@ public class AsteroidManager {
     private static BukkitTask mobLeashTask;
     private static BukkitTask asteroidSpawnTask;
     private static BukkitTask asteroidCleanupTask;
+    private static BukkitTask asteroidCleanupScanTask;
+    private static volatile boolean asteroidCleanupStopRequested;
     private static final Deque<AsteroidSpawnSequence> ASTEROID_SPAWN_QUEUE = new ArrayDeque<>();
 
     private static final int ASTEROID_CLEANUP_MIN_BLOCK = -50000;
     private static final int ASTEROID_CLEANUP_MAX_BLOCK = 50000;
     private static final int ASTEROID_CLEANUP_CHUNKS_PER_TICK = 2;
     private static final long ASTEROID_CLEANUP_TICK_INTERVAL = 2L;
+    private static final int ASTEROID_CLEANUP_ARMOR_STAND_THRESHOLD = 50;
+    private static final int ASTEROID_CLEANUP_SCAN_REPORT_INTERVAL = 400;
 
     public static class AsteroidEntry {
         private final Inventory inventory;
@@ -215,38 +224,71 @@ public class AsteroidManager {
         if (plugin == null || sender == null || world == null) {
             return false;
         }
-        if (asteroidCleanupTask != null && !asteroidCleanupTask.isCancelled()) {
+        if ((asteroidCleanupTask != null && !asteroidCleanupTask.isCancelled())
+                || (asteroidCleanupScanTask != null && !asteroidCleanupScanTask.isCancelled())) {
             sender.sendMessage("§cAsteroid cleanup is already running.");
             return false;
         }
 
         final int minChunk = Math.floorDiv(ASTEROID_CLEANUP_MIN_BLOCK, 16);
         final int maxChunk = Math.floorDiv(ASTEROID_CLEANUP_MAX_BLOCK, 16);
-        final int chunkSpan = maxChunk - minChunk + 1;
-        final int totalChunks = chunkSpan * chunkSpan;
-        final int chunksPerTick = ASTEROID_CLEANUP_CHUNKS_PER_TICK;
+        final File worldFolder = world.getWorldFolder();
 
-        sender.sendMessage("§eStarting asteroid cleanup in world §f" + world.getName()
-                + "§e. Scanning §f" + totalChunks + "§e chunks at §f"
-                + chunksPerTick + "§e chunk(s) every §f" + ASTEROID_CLEANUP_TICK_INTERVAL + "§e ticks.");
+        asteroidCleanupStopRequested = false;
+        sender.sendMessage("§eAsteroid cleanup phase 1/2: scanning region files for chunks with more than §f"
+                + ASTEROID_CLEANUP_ARMOR_STAND_THRESHOLD + "§e armor stands (no chunk loading).");
+
+        asteroidCleanupScanTask = Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            List<long[]> flaggedChunks = findOverloadedArmorStandChunks(worldFolder, minChunk, maxChunk,
+                    ASTEROID_CLEANUP_ARMOR_STAND_THRESHOLD);
+
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                asteroidCleanupScanTask = null;
+                if (asteroidCleanupStopRequested) {
+                    sender.sendMessage("§eStopped asteroid cleanup.");
+                    return;
+                }
+                if (flaggedChunks.isEmpty()) {
+                    sender.sendMessage("§aAsteroid cleanup complete. No overloaded chunks found in region files.");
+                    Bukkit.getLogger().info("[AsteroidCleanup] No overloaded chunks found in region scan for world " + world.getName() + ".");
+                    return;
+                }
+                Bukkit.getLogger().info("[AsteroidCleanup] Region scan found " + flaggedChunks.size()
+                        + " overloaded chunks in world " + world.getName() + ".");
+                sender.sendMessage("§eAsteroid cleanup phase 2/2: loading §f" + flaggedChunks.size()
+                        + "§e flagged chunk(s) at §f" + ASTEROID_CLEANUP_CHUNKS_PER_TICK
+                        + "§e chunk(s) every §f" + ASTEROID_CLEANUP_TICK_INTERVAL + "§e ticks.");
+                runTargetedChunkCleanup(sender, world, flaggedChunks);
+            });
+        });
+
+        return true;
+    }
+
+    private static void runTargetedChunkCleanup(CommandSender sender, World world, List<long[]> flaggedChunks) {
+        final int chunksPerTick = ASTEROID_CLEANUP_CHUNKS_PER_TICK;
+        final int totalChunks = flaggedChunks.size();
 
         asteroidCleanupTask = new BukkitRunnable() {
-            private int nextChunkX = minChunk;
-            private int nextChunkZ = minChunk;
-            private int processedChunks = 0;
-            private int removedGlowingStands = 0;
+            private int index = 0;
+            private int removedArmorStands = 0;
             private int removedAsteroidTaggedMobs = 0;
 
             @Override
             public void run() {
                 for (int i = 0; i < chunksPerTick; i++) {
-                    if (nextChunkX > maxChunk) {
+                    if (asteroidCleanupStopRequested) {
                         finishCleanup();
                         return;
                     }
 
-                    int chunkX = nextChunkX;
-                    int chunkZ = nextChunkZ;
+                    if (index >= totalChunks) {
+                        finishCleanup();
+                        return;
+                    }
+
+                    int chunkX = (int) flaggedChunks.get(index)[0];
+                    int chunkZ = (int) flaggedChunks.get(index)[1];
                     boolean wasForceLoaded = world.isChunkForceLoaded(chunkX, chunkZ);
                     boolean wasLoaded = world.isChunkLoaded(chunkX, chunkZ);
 
@@ -258,10 +300,11 @@ public class AsteroidManager {
                     if (!chunk.isLoaded()) {
                         chunk.load();
                     }
+
                     for (Entity entity : chunk.getEntities()) {
-                        if (entity instanceof ArmorStand stand && stand.isGlowing()) {
+                        if (entity instanceof ArmorStand stand) {
                             stand.remove();
-                            removedGlowingStands++;
+                            removedArmorStands++;
                             continue;
                         }
                         if (entity instanceof LivingEntity living
@@ -278,48 +321,226 @@ public class AsteroidManager {
                         world.unloadChunkRequest(chunkX, chunkZ);
                     }
 
-                    processedChunks++;
-                    if (processedChunks % 2000 == 0 || processedChunks == totalChunks) {
-                        sender.sendMessage("§7Asteroid cleanup progress: §f" + processedChunks + "§7/" + totalChunks
-                                + " chunks. Removed glowing stands: §f" + removedGlowingStands
+                    index++;
+                    if (index % ASTEROID_CLEANUP_SCAN_REPORT_INTERVAL == 0 || index == totalChunks) {
+                        sender.sendMessage("§7Asteroid cleanup progress: §f" + index + "§7/" + totalChunks
+                                + " flagged chunks. Removed armor stands: §f" + removedArmorStands
                                 + "§7, removed asteroid-tagged mobs: §f" + removedAsteroidTaggedMobs + "§7.");
-                    }
-
-                    nextChunkZ++;
-                    if (nextChunkZ > maxChunk) {
-                        nextChunkZ = minChunk;
-                        nextChunkX++;
                     }
                 }
             }
 
             private void finishCleanup() {
-                sender.sendMessage("§aAsteroid cleanup complete. Removed §f" + removedGlowingStands
-                        + "§a glowing armor stands and §f" + removedAsteroidTaggedMobs + "§a asteroid-tagged mobs.");
+                if (asteroidCleanupStopRequested) {
+                    sender.sendMessage("§eStopped asteroid cleanup.");
+                    cancel();
+                    asteroidCleanupTask = null;
+                    return;
+                }
+                sender.sendMessage("§aAsteroid cleanup complete. Removed §f" + removedArmorStands
+                        + "§a armor stands from §f" + totalChunks + "§a flagged chunks and removed §f"
+                        + removedAsteroidTaggedMobs + "§a asteroid-tagged mobs.");
                 cancel();
                 asteroidCleanupTask = null;
             }
         }.runTaskTimer(plugin, 1L, ASTEROID_CLEANUP_TICK_INTERVAL);
-
-        return true;
     }
 
     public static boolean stopChunkCleanup(CommandSender sender) {
         if (sender == null) {
             return false;
         }
-        if (asteroidCleanupTask == null || asteroidCleanupTask.isCancelled()) {
+
+        asteroidCleanupStopRequested = true;
+        boolean stopped = false;
+
+        if (asteroidCleanupScanTask != null && !asteroidCleanupScanTask.isCancelled()) {
+            asteroidCleanupScanTask.cancel();
+            asteroidCleanupScanTask = null;
+            stopped = true;
+        }
+
+        if (asteroidCleanupTask != null && !asteroidCleanupTask.isCancelled()) {
+            asteroidCleanupTask.cancel();
+            asteroidCleanupTask = null;
+            stopped = true;
+        }
+
+        if (!stopped) {
             sender.sendMessage("§cAsteroid cleanup is not currently running.");
             return false;
         }
 
-        asteroidCleanupTask.cancel();
-        asteroidCleanupTask = null;
         sender.sendMessage("§eStopped asteroid cleanup.");
         return true;
     }
 
+    private static List<long[]> findOverloadedArmorStandChunks(File worldFolder, int minChunk, int maxChunk, int threshold) {
+        List<long[]> overloadedChunks = new ArrayList<>();
+        if (worldFolder == null || !worldFolder.isDirectory()) {
+            return overloadedChunks;
+        }
+
+        Set<Long> dedupe = new HashSet<>();
+        scanRegionDirectory(new File(worldFolder, "entities"), minChunk, maxChunk, threshold, dedupe, overloadedChunks);
+        scanRegionDirectory(new File(worldFolder, "region"), minChunk, maxChunk, threshold, dedupe, overloadedChunks);
+        return overloadedChunks;
+    }
+
+    private static void scanRegionDirectory(File directory, int minChunk, int maxChunk, int threshold,
+                                            Set<Long> dedupe, List<long[]> overloadedChunks) {
+        if (directory == null || !directory.isDirectory()) {
+            return;
+        }
+
+        File[] files = directory.listFiles((dir, name) -> name.startsWith("r.") && name.endsWith(".mca"));
+        if (files == null) {
+            return;
+        }
+
+        for (File file : files) {
+            String[] parts = file.getName().substring(2, file.getName().length() - 4).split("\\.");
+            if (parts.length != 2) {
+                continue;
+            }
+
+            int regionX;
+            int regionZ;
+            try {
+                regionX = Integer.parseInt(parts[0]);
+                regionZ = Integer.parseInt(parts[1]);
+            } catch (NumberFormatException ex) {
+                continue;
+            }
+
+            scanRegionFile(file, regionX, regionZ, minChunk, maxChunk, threshold, dedupe, overloadedChunks);
+        }
+    }
+
+    private static void scanRegionFile(File file, int regionX, int regionZ, int minChunk, int maxChunk, int threshold,
+                                       Set<Long> dedupe, List<long[]> overloadedChunks) {
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            if (raf.length() < 4096L) {
+                return;
+            }
+
+            byte[] locationTable = new byte[4096];
+            raf.readFully(locationTable);
+
+            for (int chunkIndex = 0; chunkIndex < 1024; chunkIndex++) {
+                int localX = chunkIndex & 31;
+                int localZ = chunkIndex >> 5;
+                int chunkX = (regionX << 5) + localX;
+                int chunkZ = (regionZ << 5) + localZ;
+
+                if (chunkX < minChunk || chunkX > maxChunk || chunkZ < minChunk || chunkZ > maxChunk) {
+                    continue;
+                }
+
+                int tableIndex = chunkIndex * 4;
+                int sectorOffset = ((locationTable[tableIndex] & 0xFF) << 16)
+                        | ((locationTable[tableIndex + 1] & 0xFF) << 8)
+                        | (locationTable[tableIndex + 2] & 0xFF);
+                int sectorCount = locationTable[tableIndex + 3] & 0xFF;
+
+                if (sectorOffset == 0 || sectorCount == 0) {
+                    continue;
+                }
+
+                long chunkDataOffset = sectorOffset * 4096L;
+                if (chunkDataOffset + 5 > raf.length()) {
+                    continue;
+                }
+
+                raf.seek(chunkDataOffset);
+                int length = raf.readInt();
+                if (length <= 1 || length > (sectorCount * 4096) - 1) {
+                    continue;
+                }
+
+                int compressionType = raf.readUnsignedByte();
+                byte[] compressed = new byte[length - 1];
+                raf.readFully(compressed);
+
+                byte[] data = decompressChunkData(compressionType, compressed);
+                if (data == null || data.length == 0) {
+                    continue;
+                }
+
+                int armorStandCount = countOccurrences(data, "minecraft:armor_stand");
+                if (armorStandCount > threshold) {
+                    long key = (((long) chunkX) << 32) | (chunkZ & 0xFFFFFFFFL);
+                    if (dedupe.add(key)) {
+                        overloadedChunks.add(new long[]{chunkX, chunkZ});
+                        Bukkit.getLogger().info("[AsteroidCleanup] Overloaded chunk detected in "
+                                + file.getParentFile().getName() + ": worldChunk=(" + chunkX + ", " + chunkZ + ")"
+                                + ", blockCenter=(" + ((chunkX << 4) + 8) + ", " + ((chunkZ << 4) + 8) + ")"
+                                + ", armorStandEntries=" + armorStandCount);
+                    }
+                }
+            }
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static byte[] decompressChunkData(int compressionType, byte[] compressed) {
+        if (compressed == null || compressed.length == 0) {
+            return null;
+        }
+
+        try {
+            return switch (compressionType) {
+                case 1 -> readAllBytes(new GZIPInputStream(new ByteArrayInputStream(compressed)));
+                case 2 -> readAllBytes(new InflaterInputStream(new ByteArrayInputStream(compressed)));
+                case 3 -> compressed;
+                default -> null;
+            };
+        } catch (IOException ex) {
+            return null;
+        }
+    }
+
+    private static byte[] readAllBytes(java.io.InputStream input) throws IOException {
+        try (input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = input.read(buffer)) != -1) {
+                output.write(buffer, 0, read);
+            }
+            return output.toByteArray();
+        }
+    }
+
+    private static int countOccurrences(byte[] data, String needle) {
+        if (data == null || data.length == 0 || needle == null || needle.isEmpty()) {
+            return 0;
+        }
+
+        byte[] target = needle.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        int count = 0;
+        int index = 0;
+
+        while (index <= data.length - target.length) {
+            boolean match = true;
+            for (int i = 0; i < target.length; i++) {
+                if (data[index + i] != target[i]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                count++;
+                index += target.length;
+            } else {
+                index++;
+            }
+        }
+
+        return count;
+    }
+
     private static void cleanupAsteroidMarkers() {
+
         int removed = 0;
         for (World world : Bukkit.getWorlds()) {
             for (ArmorStand stand : world.getEntitiesByClass(ArmorStand.class)) {
