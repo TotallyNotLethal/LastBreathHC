@@ -250,8 +250,11 @@ public class AsteroidManager {
                 }
                 if (flaggedChunks.isEmpty()) {
                     sender.sendMessage("§aAsteroid cleanup complete. No overloaded chunks found in region files.");
+                    Bukkit.getLogger().info("[AsteroidCleanup] No overloaded chunks found in region scan for world " + world.getName() + ".");
                     return;
                 }
+                Bukkit.getLogger().info("[AsteroidCleanup] Region scan found " + flaggedChunks.size()
+                        + " overloaded chunks in world " + world.getName() + ".");
                 sender.sendMessage("§eAsteroid cleanup phase 2/2: loading §f" + flaggedChunks.size()
                         + "§e flagged chunk(s) at §f" + ASTEROID_CLEANUP_CHUNKS_PER_TICK
                         + "§e chunk(s) every §f" + ASTEROID_CLEANUP_TICK_INTERVAL + "§e ticks.");
@@ -469,6 +472,10 @@ public class AsteroidManager {
                     long key = (((long) chunkX) << 32) | (chunkZ & 0xFFFFFFFFL);
                     if (dedupe.add(key)) {
                         overloadedChunks.add(new long[]{chunkX, chunkZ});
+                        Bukkit.getLogger().info("[AsteroidCleanup] Overloaded chunk detected in "
+                                + file.getParentFile().getName() + ": worldChunk=(" + chunkX + ", " + chunkZ + ")"
+                                + ", blockCenter=(" + ((chunkX << 4) + 8) + ", " + ((chunkZ << 4) + 8) + ")"
+                                + ", armorStandEntries=" + armorStandCount);
                     }
                 }
             }
