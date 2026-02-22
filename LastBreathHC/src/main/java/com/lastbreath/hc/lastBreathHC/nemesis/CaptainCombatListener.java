@@ -47,6 +47,9 @@ public class CaptainCombatListener implements Listener {
     private final KillerResolver.AttributionTimeouts attributionTimeouts;
     private final long xpPerKill;
     private final double rivalryPerKill;
+    private final double dedupeRadius;
+    private final int creationThrottleMaxCaptains;
+    private final long creationThrottleWindowMs;
 
     public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, NemesisUI nemesisUI, NemesisProgressionService progressionService) {
         this.plugin = plugin;
@@ -67,6 +70,10 @@ public class CaptainCombatListener implements Listener {
         );
         this.xpPerKill = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerVictim", 25L));
         this.rivalryPerKill = Math.max(0.0, plugin.getConfig().getDouble("nemesis.scores.rivalryPerVictim", 5.0));
+        this.dedupeRadius = Math.max(0.0, plugin.getConfig().getDouble("nemesis.creation.dedupeRadius", 48.0));
+        this.creationThrottleMaxCaptains = Math.max(0, plugin.getConfig().getInt("nemesis.creation.throttle.maxCaptainsPerWorld", 0));
+        long throttleWindowMinutes = Math.max(0L, plugin.getConfig().getLong("nemesis.creation.throttle.windowMinutes", 0L));
+        this.creationThrottleWindowMs = Duration.ofMinutes(throttleWindowMinutes).toMillis();
         indexExistingCaptains();
     }
 
@@ -87,15 +94,22 @@ public class CaptainCombatListener implements Listener {
         if (captainUuid != null) {
             CaptainRecord existing = captainRegistry.getByCaptainUuid(captainUuid);
             if (existing != null) {
-                CaptainRecord updated = progressionService.onPlayerKill(existing, victim.getUniqueId());
-                captainRegistry.upsert(updated);
-                captainEntityBinder.tryUpgradeInPlace(updated);
-                Player nemesis = victim.getServer().getPlayer(updated.identity().nemesisOf());
-                if (nemesis != null) {
-                    nemesisUI.taunt(nemesis, updated, "You cannot escape me.");
-                }
+                updateExistingCaptain(existing, victim.getUniqueId(), victim);
                 return;
             }
+        }
+
+        CaptainRecord nearbyMatch = findNearbyDedupeMatch(killer, victim.getUniqueId());
+        if (nearbyMatch != null) {
+            entityToCaptainId.put(killer.getUniqueId(), nearbyMatch.identity().captainId());
+            stampCaptainPdc(killer, nearbyMatch.identity().captainId());
+            captainEntityBinder.bind(killer, nearbyMatch);
+            updateExistingCaptain(nearbyMatch, victim.getUniqueId(), victim);
+            return;
+        }
+
+        if (isCreationThrottled(killer)) {
+            return;
         }
 
         CaptainRecord created = createCaptainRecord(killer, victim.getUniqueId());
@@ -104,6 +118,68 @@ public class CaptainCombatListener implements Listener {
         captainEntityBinder.bind(killer, created);
         captainRegistry.upsert(created);
         nemesisUI.announceCaptainBirth(created, victim);
+    }
+
+    private void updateExistingCaptain(CaptainRecord existing, UUID victimUuid, Player victimPlayer) {
+        CaptainRecord updated = progressionService.onPlayerKill(existing, victimUuid);
+        captainRegistry.upsert(updated);
+        captainEntityBinder.tryUpgradeInPlace(updated);
+        Player nemesis = victimPlayer.getServer().getPlayer(updated.identity().nemesisOf());
+        if (nemesis != null) {
+            nemesisUI.taunt(nemesis, updated, "You cannot escape me.");
+        }
+    }
+
+    private CaptainRecord findNearbyDedupeMatch(LivingEntity killer, UUID victimUuid) {
+        if (dedupeRadius <= 0.0 || killer.getWorld() == null) {
+            return null;
+        }
+        Location location = killer.getLocation();
+        List<CaptainRecord> matches = captainRegistry.getActiveByRadius(
+                killer.getWorld().getName(),
+                location.getX(),
+                location.getZ(),
+                dedupeRadius,
+                killer.getType(),
+                victimUuid
+        );
+        if (matches.isEmpty()) {
+            return null;
+        }
+
+        CaptainRecord best = null;
+        double bestDistanceSquared = Double.MAX_VALUE;
+        for (CaptainRecord match : matches) {
+            CaptainRecord.Origin origin = match.origin();
+            if (origin == null) {
+                continue;
+            }
+            double dx = origin.spawnX() - location.getX();
+            double dz = origin.spawnZ() - location.getZ();
+            double distanceSquared = (dx * dx) + (dz * dz);
+            if (distanceSquared < bestDistanceSquared) {
+                best = match;
+                bestDistanceSquared = distanceSquared;
+            }
+        }
+        return best;
+    }
+
+    private boolean isCreationThrottled(LivingEntity killer) {
+        if (creationThrottleMaxCaptains <= 0 || creationThrottleWindowMs <= 0 || killer.getWorld() == null) {
+            return false;
+        }
+
+        long now = System.currentTimeMillis();
+        long cutoff = now - creationThrottleWindowMs;
+        int recentActiveCaptains = 0;
+        for (CaptainRecord record : captainRegistry.getActiveByWorld(killer.getWorld().getName())) {
+            if (record.identity() != null && record.identity().createdAtEpochMillis() >= cutoff) {
+                recentActiveCaptains++;
+            }
+        }
+
+        return recentActiveCaptains >= creationThrottleMaxCaptains;
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

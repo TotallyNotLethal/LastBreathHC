@@ -587,6 +587,10 @@ dailyRewards:
 
 nemesis:
   creation:
+    dedupeRadius: 48.0
+    throttle:
+      maxCaptainsPerWorld: 3
+      windowMinutes: 10
     timeoutMs:
       projectile: 20000
       knockback: 8000
