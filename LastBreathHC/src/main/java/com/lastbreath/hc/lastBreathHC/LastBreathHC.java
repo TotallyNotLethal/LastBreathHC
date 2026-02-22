@@ -591,7 +591,11 @@ public final class LastBreathHC extends JavaPlugin {
         }
         nemesisRewardService = null;
         antiCheeseMonitor = null;
+        int removedAsteroidMobs = AsteroidManager.clearAsteroidMobsForShutdown();
         AsteroidManager.clearAllAsteroids();
+        if (removedAsteroidMobs > 0) {
+            getLogger().info("Removed " + removedAsteroidMobs + " asteroid mobs during shutdown cleanup.");
+        }
         BountyManager.save();
         ReviveStateManager.save();
         StatsManager.saveAll();

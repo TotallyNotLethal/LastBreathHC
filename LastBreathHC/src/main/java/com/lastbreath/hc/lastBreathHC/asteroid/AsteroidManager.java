@@ -220,6 +220,68 @@ public class AsteroidManager {
         return removed;
     }
 
+    public static int clearAsteroidMobsForShutdown() {
+        int removed = 0;
+        int leashRadius = getMobLeashRadius();
+        int chunkRadius = Math.max(1, (int) Math.ceil(leashRadius / 16.0));
+        Set<String> processedChunks = new HashSet<>();
+
+        for (Map.Entry<Location, AsteroidEntry> asteroid : ASTEROIDS.entrySet()) {
+            Location asteroidLoc = asteroid.getKey();
+            AsteroidEntry entry = asteroid.getValue();
+            if (entry != null) {
+                entry.mobs().clear();
+            }
+            World world = asteroidLoc.getWorld();
+            if (world == null) {
+                continue;
+            }
+
+            String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey(asteroidLoc);
+            int baseChunkX = asteroidLoc.getBlockX() >> 4;
+            int baseChunkZ = asteroidLoc.getBlockZ() >> 4;
+            for (int x = baseChunkX - chunkRadius; x <= baseChunkX + chunkRadius; x++) {
+                for (int z = baseChunkZ - chunkRadius; z <= baseChunkZ + chunkRadius; z++) {
+                    String chunkKey = world.getUID() + ":" + x + ":" + z;
+                    if (!processedChunks.add(chunkKey)) {
+                        continue;
+                    }
+
+                    boolean wasForceLoaded = world.isChunkForceLoaded(x, z);
+                    boolean wasLoaded = world.isChunkLoaded(x, z);
+                    if (!wasForceLoaded) {
+                        world.setChunkForceLoaded(x, z, true);
+                    }
+
+                    Chunk chunk = world.getChunkAt(x, z);
+                    if (!chunk.isLoaded()) {
+                        chunk.load();
+                    }
+
+                    for (Entity entity : chunk.getEntities()) {
+                        if (!(entity instanceof LivingEntity living)) {
+                            continue;
+                        }
+                        Set<String> tags = living.getScoreboardTags();
+                        if (tags.contains(ASTEROID_MOB_TAG) && tags.contains(keyTag)) {
+                            living.remove();
+                            removed++;
+                        }
+                    }
+
+                    if (!wasForceLoaded) {
+                        world.setChunkForceLoaded(x, z, false);
+                    }
+                    if (!wasLoaded) {
+                        world.unloadChunkRequest(x, z);
+                    }
+                }
+            }
+        }
+
+        return removed;
+    }
+
     public static boolean startChunkCleanup(CommandSender sender, World world) {
         if (plugin == null || sender == null || world == null) {
             return false;
