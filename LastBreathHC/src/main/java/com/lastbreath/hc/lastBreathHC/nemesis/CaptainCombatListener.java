@@ -44,7 +44,7 @@ public class CaptainCombatListener implements Listener {
 
     private final Map<UUID, UUID> entityToCaptainId = new ConcurrentHashMap<>();
     private final Set<EntityType> eligibleMobTypes;
-    private final Duration attributionTimeout;
+    private final KillerResolver.AttributionTimeouts attributionTimeouts;
     private final long xpPerKill;
     private final double rivalryPerKill;
 
@@ -60,7 +60,11 @@ public class CaptainCombatListener implements Listener {
         this.captainUuidKey = new NamespacedKey(plugin, "nemesis_captain_uuid");
         this.captainFlagKey = new NamespacedKey(plugin, "nemesis_captain");
         this.eligibleMobTypes = loadEligibleMobTypes(plugin.getConfig().getConfigurationSection("nemesis.eligibleMobTypes"));
-        this.attributionTimeout = Duration.ofSeconds(Math.max(1L, plugin.getConfig().getLong("nemesis.recentHostileTimeoutSeconds", 20L)));
+        this.attributionTimeouts = new KillerResolver.AttributionTimeouts(
+                Duration.ofMillis(Math.max(500L, plugin.getConfig().getLong("nemesis.creation.timeoutMs.projectile", 20_000L))),
+                Duration.ofMillis(Math.max(500L, plugin.getConfig().getLong("nemesis.creation.timeoutMs.knockback", 8_000L))),
+                Duration.ofMillis(Math.max(500L, plugin.getConfig().getLong("nemesis.creation.timeoutMs.ambient", 15_000L)))
+        );
         this.xpPerKill = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerVictim", 25L));
         this.rivalryPerKill = Math.max(0.0, plugin.getConfig().getDouble("nemesis.scores.rivalryPerVictim", 5.0));
         indexExistingCaptains();
@@ -69,7 +73,7 @@ public class CaptainCombatListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player victim = event.getEntity();
-        KillerResolver.ResolvedKiller resolvedKiller = killerResolver.resolve(victim, attributionTimeout);
+        KillerResolver.ResolvedKiller resolvedKiller = killerResolver.resolve(victim, attributionTimeouts);
         if (resolvedKiller == null || resolvedKiller.entity() == null) {
             return;
         }

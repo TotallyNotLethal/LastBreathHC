@@ -586,7 +586,11 @@ dailyRewards:
       - type: DAILY_RANDOM_COSMETIC
 
 nemesis:
-  recentHostileTimeoutSeconds: 20
+  creation:
+    timeoutMs:
+      projectile: 20000
+      knockback: 8000
+      ambient: 15000
   progression:
     xpPerVictim: 25
     xpPerCombatTick: 2
