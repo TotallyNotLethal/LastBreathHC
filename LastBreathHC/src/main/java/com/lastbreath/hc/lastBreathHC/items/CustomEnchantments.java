@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -111,22 +112,53 @@ public class CustomEnchantments {
         if (meta == null) {
             return List.of();
         }
+        Set<String> ids = new LinkedHashSet<>();
         PersistentDataContainer container = meta.getPersistentDataContainer();
         String raw = container.get(ENCHANTS_KEY, PersistentDataType.STRING);
-        if (raw == null || raw.isBlank()) {
-            return List.of();
-        }
-        String[] parts = raw.split(",");
-        Set<String> ids = new LinkedHashSet<>();
-        for (String part : parts) {
-            String trimmed = part.trim();
-            if (!trimmed.isEmpty()) {
-                ids.add(trimmed);
+        if (raw != null && !raw.isBlank()) {
+            String[] parts = raw.split(",");
+            for (String part : parts) {
+                String trimmed = part.trim();
+                if (!trimmed.isEmpty()) {
+                    ids.add(trimmed);
+                }
             }
+        }
+
+        if (ids.isEmpty()) {
+            ids.addAll(parseLegacyEnchantIdsFromLore(meta));
         }
         return List.copyOf(ids);
     }
 
+
+    private static Set<String> parseLegacyEnchantIdsFromLore(ItemMeta meta) {
+        List<Component> lore = meta.lore();
+        if (lore == null || lore.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> ids = new LinkedHashSet<>();
+        for (Component line : lore) {
+            String text = PlainTextComponentSerializer.plainText().serialize(line).trim();
+            if (!text.startsWith("• ")) {
+                continue;
+            }
+            String label = text.substring(2).trim();
+            if (label.equalsIgnoreCase("disabled (shift + right click)")
+                    || label.equalsIgnoreCase("disabled (shift + right click air)")
+                    || label.isBlank()) {
+                continue;
+            }
+            for (CustomEnchant enchant : CustomEnchant.values()) {
+                String expected = CustomEnchantPage.formatEnchantId(enchant.getId());
+                if (expected.equalsIgnoreCase(label)) {
+                    ids.add(enchant.getId());
+                    break;
+                }
+            }
+        }
+        return ids;
+    }
 
     public static boolean areEnchantsEnabled(ItemMeta meta) {
         if (meta == null) {
@@ -154,6 +186,7 @@ public class CustomEnchantments {
             return true;
         }
         boolean enabled = !areEnchantsEnabled(meta);
+        updateEnchantData(meta, ids);
         setEnabled(meta, enabled);
         updateLore(meta, ids, enabled);
         item.setItemMeta(meta);
@@ -214,7 +247,7 @@ public class CustomEnchantments {
             updated.add(LORE_HEADER);
             if (!enabled) {
                 updated.add(
-                        Component.text("• Disabled (Shift + Right Click Air)")
+                        Component.text("• Disabled (Shift + Right Click)")
                                 .color(NamedTextColor.RED)
                                 .decoration(TextDecoration.ITALIC, false)
                 );

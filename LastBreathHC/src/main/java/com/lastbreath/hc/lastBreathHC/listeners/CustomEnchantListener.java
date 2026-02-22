@@ -24,6 +24,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.Recipe;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -162,7 +163,12 @@ public class CustomEnchantListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onToggleEnchants(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_AIR || !event.getPlayer().isSneaking()) {
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+        Action action = event.getAction();
+        if ((action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK)
+                || !event.getPlayer().isSneaking()) {
             return;
         }
         Player player = event.getPlayer();
