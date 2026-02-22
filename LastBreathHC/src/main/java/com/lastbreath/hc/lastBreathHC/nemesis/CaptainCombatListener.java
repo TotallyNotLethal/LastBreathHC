@@ -41,6 +41,7 @@ public class CaptainCombatListener implements Listener {
     private final NemesisProgressionService progressionService;
     private final DeathOutcomeResolver deathOutcomeResolver;
     private final CaptainStateMachine stateMachine;
+    private final CaptainNameGenerator nameGenerator;
 
     private final NamespacedKey captainUuidKey;
     private final NamespacedKey captainFlagKey;
@@ -60,7 +61,7 @@ public class CaptainCombatListener implements Listener {
     private final double playerEventRadiusCap;
     private final double playerEventRadiusBlocks;
 
-    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver) {
+    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver, CaptainNameGenerator nameGenerator) {
         this.plugin = plugin;
         this.captainRegistry = captainRegistry;
         this.killerResolver = killerResolver;
@@ -70,6 +71,7 @@ public class CaptainCombatListener implements Listener {
         this.progressionService = progressionService;
         this.deathOutcomeResolver = deathOutcomeResolver;
         this.stateMachine = new CaptainStateMachine();
+        this.nameGenerator = nameGenerator;
         this.captainUuidKey = new NamespacedKey(plugin, "nemesis_captain_uuid");
         this.captainFlagKey = new NamespacedKey(plugin, "nemesis_captain");
         this.worldBossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
@@ -371,8 +373,8 @@ public class CaptainCombatListener implements Listener {
         CaptainRecord.Victims victims = new CaptainRecord.Victims(List.of(victimUuid), 1, now);
         CaptainRecord.NemesisScores scores = new CaptainRecord.NemesisScores(1.0, rivalryPerKill, 0.5, 0.5);
         CaptainRecord.Progression progression = new CaptainRecord.Progression(1, xpPerKill, "COMMON");
-        CaptainRecord.Naming naming = new CaptainRecord.Naming(killer.getType().name() + " Captain", "the Relentless", "Captain", killer.getType().name());
         CaptainRecord.Traits traits = traitService.selectInitialTraits(identity, killer, scores);
+        CaptainRecord.Naming naming = nameGenerator.generate(captainId, killer, traits);
         int minionCount = Math.max(0, plugin.getConfig().getInt("nemesis.minions.defaultCount", 2));
         List<String> minionArchetypes = plugin.getConfig().getStringList("nemesis.minions.defaultArchetypes");
         CaptainRecord.MinionPack minionPack = new CaptainRecord.MinionPack("default", minionCount, minionArchetypes, plugin.getConfig().getDouble("nemesis.minions.reinforcementChance", 0.0));

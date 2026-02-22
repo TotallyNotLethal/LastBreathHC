@@ -38,12 +38,15 @@ public class CaptainTraitRegistry {
             if (row == null) {
                 continue;
             }
-            traits.put(id.toLowerCase(Locale.ROOT), new TraitConfig(
-                    id.toLowerCase(Locale.ROOT),
+            String normalizedId = id.toLowerCase(Locale.ROOT);
+            traits.put(normalizedId, new TraitConfig(
+                    normalizedId,
                     Math.max(1, row.getInt("weight", 1)),
-                    new HashSet<>(row.getStringList("requirements")),
-                    new HashSet<>(row.getStringList("incompatibilities")),
-                    row.getBoolean("weakness", false)
+                    new HashSet<>(normalize(row.getStringList("requirements"))),
+                    new HashSet<>(normalize(row.getStringList("incompatibilities"))),
+                    row.getBoolean("weakness", false),
+                    row.getBoolean("immunity", false),
+                    row.getString("displayName", prettyName(id))
             ));
         }
     }
@@ -54,6 +57,7 @@ public class CaptainTraitRegistry {
 
         List<String> selectedTraits = new ArrayList<>();
         List<String> weaknesses = new ArrayList<>();
+        List<String> immunities = new ArrayList<>();
 
         selectedTraits.add("mob_" + killer.getType().name().toLowerCase(Locale.ROOT));
 
@@ -67,21 +71,26 @@ public class CaptainTraitRegistry {
             selectedTraits.add(personality);
         }
 
-        List<String> weaknessPool = filterWeaknesses(killer, selectedTraits);
-        String weakness = pickOne(weaknessPool, random);
-        if (weakness != null) {
-            weaknesses.add(weakness);
-        } else {
-            weaknesses.add("weakness_fragile");
+        String strength = pickOne(filterByPrefixAndValidity("strength_", killer, selectedTraits), random);
+        if (strength != null) {
+            selectedTraits.add(strength);
         }
 
-        return new CaptainRecord.Traits(selectedTraits, weaknesses, List.of());
+        String weakness = pickOne(filterWeaknesses(killer, selectedTraits), random);
+        weaknesses.add(weakness == null ? "weakness_fragile" : weakness);
+
+        String immunity = pickOne(filterImmunities(killer, selectedTraits), random);
+        if (immunity != null) {
+            immunities.add(immunity);
+        }
+
+        return new CaptainRecord.Traits(selectedTraits, weaknesses, immunities);
     }
 
     private List<String> filterByPrefixAndValidity(String prefix, LivingEntity killer, List<String> selected) {
         List<String> candidates = new ArrayList<>();
         for (TraitConfig config : traits.values()) {
-            if (!config.id().startsWith(prefix)) {
+            if (!config.id().startsWith(prefix) || config.weakness() || config.immunity()) {
                 continue;
             }
             if (!isValid(config, killer, selected)) {
@@ -97,10 +106,20 @@ public class CaptainTraitRegistry {
     private List<String> filterWeaknesses(LivingEntity killer, List<String> selected) {
         List<String> candidates = new ArrayList<>();
         for (TraitConfig config : traits.values()) {
-            if (!config.weakness()) {
+            if (!config.weakness() || !isValid(config, killer, selected)) {
                 continue;
             }
-            if (!isValid(config, killer, selected)) {
+            for (int i = 0; i < config.weight(); i++) {
+                candidates.add(config.id());
+            }
+        }
+        return candidates;
+    }
+
+    private List<String> filterImmunities(LivingEntity killer, List<String> selected) {
+        List<String> candidates = new ArrayList<>();
+        for (TraitConfig config : traits.values()) {
+            if (!config.immunity() || !isValid(config, killer, selected)) {
                 continue;
             }
             for (int i = 0; i < config.weight(); i++) {
@@ -111,12 +130,14 @@ public class CaptainTraitRegistry {
     }
 
     private boolean isValid(TraitConfig config, LivingEntity killer, List<String> selected) {
-        for (String requirement : config.requirements()) {
-            String req = requirement.toLowerCase(Locale.ROOT);
+        for (String req : config.requirements()) {
             if (req.startsWith("mob:") && !killer.getType().name().equalsIgnoreCase(req.substring(4))) {
                 return false;
             }
             if (req.equals("overworld") && killer.getWorld().getEnvironment() != org.bukkit.World.Environment.NORMAL) {
+                return false;
+            }
+            if (req.equals("night") && killer.getWorld().getTime() < 12000L) {
                 return false;
             }
         }
@@ -144,14 +165,44 @@ public class CaptainTraitRegistry {
         return definitions.get(id.toLowerCase(Locale.ROOT));
     }
 
-    private void registerDefaults() {
-        definitions.put("context_night_stalker", new NightStalkerTrait());
-        definitions.put("personality_berserker", new BerserkerTrait());
-        definitions.put("personality_predator", new PredatorTrait());
-        definitions.put("weakness_fragile", new FragileWeaknessTrait());
-        definitions.put("weakness_sunbound", new SunboundWeaknessTrait());
+    public String displayName(String id) {
+        if (id == null) {
+            return "Unknown";
+        }
+        TraitConfig cfg = traits.get(id.toLowerCase(Locale.ROOT));
+        return cfg == null ? prettyName(id) : cfg.displayName();
     }
 
-    private record TraitConfig(String id, int weight, Set<String> requirements, Set<String> incompatibilities, boolean weakness) {
+    private void registerDefaults() {
+        definitions.put("context_night_stalker", new NightStalkerTrait());
+        definitions.put("context_frostbound", new FrostboundTrait());
+        definitions.put("personality_berserker", new BerserkerTrait());
+        definitions.put("personality_predator", new PredatorTrait());
+        definitions.put("strength_brutal_strikes", new BrutalStrikesTrait());
+        definitions.put("weakness_fragile", new FragileWeaknessTrait());
+        definitions.put("weakness_sunbound", new SunboundWeaknessTrait());
+        definitions.put("weakness_slow_recovery", new SlowRecoveryWeaknessTrait());
+        definitions.put("immunity_knockback", new KnockbackImmunityTrait());
+    }
+
+    private List<String> normalize(List<String> values) {
+        return values.stream().map(v -> v.toLowerCase(Locale.ROOT)).toList();
+    }
+
+    private String prettyName(String id) {
+        String[] words = id.replace('_', ' ').split("\\s+");
+        StringBuilder out = new StringBuilder();
+        for (String w : words) {
+            if (w.equals("context") || w.equals("personality") || w.equals("strength") || w.equals("weakness") || w.equals("immunity")) {
+                continue;
+            }
+            if (!out.isEmpty()) out.append(' ');
+            out.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1).toLowerCase(Locale.ROOT));
+        }
+        return out.isEmpty() ? id : out.toString();
+    }
+
+    private record TraitConfig(String id, int weight, Set<String> requirements, Set<String> incompatibilities,
+                               boolean weakness, boolean immunity, String displayName) {
     }
 }

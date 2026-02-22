@@ -103,6 +103,12 @@ public class CaptainTraitService {
                     defs.add(definition);
                 }
             }
+            for (String id : record.traits().immunities()) {
+                TraitDefinition definition = traitRegistry.definition(id);
+                if (definition != null) {
+                    defs.add(definition);
+                }
+            }
         }
         return defs;
     }
