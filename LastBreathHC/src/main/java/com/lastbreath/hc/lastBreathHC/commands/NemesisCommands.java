@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.commands;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRecord;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainTraitRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.KillerResolver;
 import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
@@ -25,13 +26,15 @@ public class NemesisCommands implements BasicCommand {
     private final NemesisCaptainListGUI captainListGUI;
     private final KillerResolver killerResolver;
     private final MinionController minionController;
+    private final CaptainTraitRegistry traitRegistry;
 
-    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController) {
+    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry) {
         this.registry = registry;
         this.spawner = spawner;
         this.captainListGUI = captainListGUI;
         this.killerResolver = killerResolver;
         this.minionController = minionController;
+        this.traitRegistry = traitRegistry;
     }
 
     @Override
@@ -108,8 +111,9 @@ public class NemesisCommands implements BasicCommand {
         sender.sendMessage("§7ID: §f" + record.identity().captainId());
         sender.sendMessage("§7Name: §f" + (record.naming() == null ? "Unknown" : record.naming().displayName()));
         sender.sendMessage("§7Level: §f" + record.progression().level() + " §7XP: §f" + record.progression().experience());
-        sender.sendMessage("§7Traits: §f" + String.join(", ", record.traits().traits()));
-        sender.sendMessage("§7Weaknesses: §f" + String.join(", ", record.traits().weaknesses()));
+        sender.sendMessage("§7Strengths: §f" + localize(record.traits().traits()));
+        sender.sendMessage("§7Weaknesses: §f" + localize(record.traits().weaknesses()));
+        sender.sendMessage("§7Immunities: §f" + localize(record.traits().immunities()));
     }
 
     private void handleHunt(CommandSender sender) {
@@ -254,6 +258,13 @@ public class NemesisCommands implements BasicCommand {
         sender.sendMessage("§aOrphan cleanup completed. Removed entities: §e" + removed);
     }
 
+
+    private String localize(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return "None";
+        }
+        return ids.stream().map(traitRegistry::displayName).collect(java.util.stream.Collectors.joining(", "));
+    }
     private CaptainRecord findRecord(String token) {
         try {
             UUID id = UUID.fromString(token);

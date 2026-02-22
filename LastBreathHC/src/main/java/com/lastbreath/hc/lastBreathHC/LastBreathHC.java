@@ -33,6 +33,7 @@ import com.lastbreath.hc.lastBreathHC.mobs.MobStackSignListener;
 import com.lastbreath.hc.lastBreathHC.mobs.AggressiveLogoutMobManager;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainCombatListener;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainEntityBinder;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainNameGenerator;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSerializer;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
@@ -173,6 +174,7 @@ public final class LastBreathHC extends JavaPlugin {
     private MinionController minionController;
     private NemesisUI nemesisUI;
     private NemesisCaptainListGUI nemesisCaptainListGUI;
+    private CaptainNameGenerator captainNameGenerator;
     private NemesisProgressionService nemesisProgressionService;
     private NemesisRewardService nemesisRewardService;
     private NemesisRivalryDirector nemesisRivalryDirector;
@@ -210,24 +212,25 @@ public final class LastBreathHC extends JavaPlugin {
         captainFlushTask = getServer().getScheduler().runTaskTimer(this, this::flushDirtyCaptains, captainFlushIntervalTicks, captainFlushIntervalTicks);
         killerResolver = new KillerResolver();
         captainTraitRegistry = new CaptainTraitRegistry(this);
+        captainNameGenerator = new CaptainNameGenerator(this);
         captainEntityBinder = new CaptainEntityBinder(this, captainRegistry);
         captainTraitService = new CaptainTraitService(captainEntityBinder, captainTraitRegistry);
         captainEntityBinder.setTraitService(captainTraitService);
         nemesisProgressionService = new NemesisProgressionService(this, captainRegistry, captainEntityBinder);
         nemesisProgressionService.start();
-        captainSpawner = new CaptainSpawner(this, captainRegistry, captainEntityBinder, new CaptainSpawner.NoOpProtectedRegionChecker());
+        captainSpawner = new CaptainSpawner(this, captainRegistry, captainEntityBinder, new CaptainSpawner.NoOpProtectedRegionChecker(), captainNameGenerator);
         captainSpawner.start();
         minionController = new MinionController(this, captainRegistry, captainEntityBinder, nemesisProgressionService);
         minionController.start();
         nemesisUI = new NemesisUI(this, captainRegistry, captainEntityBinder);
         nemesisUI.start();
-        nemesisCaptainListGUI = new NemesisCaptainListGUI(captainRegistry, captainEntityBinder);
+        nemesisCaptainListGUI = new NemesisCaptainListGUI(captainRegistry, captainEntityBinder, captainTraitRegistry);
         nemesisRewardService = new NemesisRewardService(this, captainEntityBinder, captainRegistry);
         nemesisRivalryDirector = new NemesisRivalryDirector(this, captainRegistry, captainEntityBinder);
         nemesisRivalryDirector.start();
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
-        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver()), this);
+        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator), this);
         getServer().getPluginManager().registerEvents(captainSpawner, this);
         getServer().getPluginManager().registerEvents(minionController, this);
         getServer().getPluginManager().registerEvents(nemesisCaptainListGUI, this);
@@ -498,7 +501,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
-                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController));
+                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry));
                 }
         );
     }

@@ -36,6 +36,7 @@ public class CaptainSpawner implements Listener {
     private final CaptainEntityBinder binder;
     private final ProtectedRegionChecker protectedRegionChecker;
     private final CaptainStateMachine stateMachine;
+    private final CaptainNameGenerator nameGenerator;
 
     private final long movementCheckCooldownMs;
     private final double movementInterestChance;
@@ -63,12 +64,14 @@ public class CaptainSpawner implements Listener {
     public CaptainSpawner(LastBreathHC plugin,
                           CaptainRegistry registry,
                           CaptainEntityBinder binder,
-                          ProtectedRegionChecker protectedRegionChecker) {
+                          ProtectedRegionChecker protectedRegionChecker,
+                          CaptainNameGenerator nameGenerator) {
         this.plugin = plugin;
         this.registry = registry;
         this.binder = binder;
         this.protectedRegionChecker = protectedRegionChecker;
         this.stateMachine = new CaptainStateMachine();
+        this.nameGenerator = nameGenerator;
 
         this.movementCheckCooldownMs = Math.max(250L, plugin.getConfig().getLong("nemesis.spawn.interest.movementCheckCooldownMs", 2000L));
         this.movementInterestChance = clampChance(plugin.getConfig().getDouble("nemesis.spawn.interest.movementChance", 0.2));
@@ -296,8 +299,8 @@ public class CaptainSpawner implements Listener {
         CaptainRecord.Victims victims = new CaptainRecord.Victims(List.of(), 0, 0L);
         CaptainRecord.NemesisScores scores = new CaptainRecord.NemesisScores(1.5, 0.0, 0.8, 0.7);
         CaptainRecord.Progression progression = new CaptainRecord.Progression(1, 0L, "COMMON");
-        CaptainRecord.Naming naming = new CaptainRecord.Naming(mob.getType().name() + " Captain", "the Wanderer", "Captain", mob.getType().name());
         CaptainRecord.Traits traits = new CaptainRecord.Traits(List.of("raider"), List.of(), List.of());
+        CaptainRecord.Naming naming = nameGenerator.generate(captainId, mob, traits);
         int minionCount = Math.max(0, plugin.getConfig().getInt("nemesis.minions.defaultCount", 2));
         List<String> minionArchetypes = plugin.getConfig().getStringList("nemesis.minions.defaultArchetypes");
         CaptainRecord.MinionPack minionPack = new CaptainRecord.MinionPack("default", minionCount, minionArchetypes, plugin.getConfig().getDouble("nemesis.minions.reinforcementChance", 0.0));

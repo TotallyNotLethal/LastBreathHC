@@ -28,10 +28,12 @@ public class NemesisCaptainListGUI implements Listener {
 
     private final CaptainRegistry registry;
     private final CaptainEntityBinder captainEntityBinder;
+    private final CaptainTraitRegistry traitRegistry;
 
-    public NemesisCaptainListGUI(CaptainRegistry registry, CaptainEntityBinder captainEntityBinder) {
+    public NemesisCaptainListGUI(CaptainRegistry registry, CaptainEntityBinder captainEntityBinder, CaptainTraitRegistry traitRegistry) {
         this.registry = registry;
         this.captainEntityBinder = captainEntityBinder;
+        this.traitRegistry = traitRegistry;
     }
 
     public void open(Player player) {
@@ -149,13 +151,14 @@ public class NemesisCaptainListGUI implements Listener {
         CaptainRecord record = nearbyCaptain.record();
         String name = record.naming() == null ? "Nemesis Captain" : record.naming().displayName();
         int level = record.progression() == null ? 1 : record.progression().level();
-        List<String> traits = record.traits() == null ? List.of() : record.traits().traits();
-        String primaryTrait = traits.isEmpty() ? "Unknown" : capitalize(traits.get(0));
+        List<String> strengths = record.traits() == null ? List.of() : record.traits().traits();
+        List<String> weaknesses = record.traits() == null ? List.of() : record.traits().weaknesses();
 
         meta.setDisplayName(ChatColor.GOLD + name + ChatColor.GRAY + " (" + toRoman(level) + ")");
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + "Distance: " + ChatColor.WHITE + (int) Math.sqrt(nearbyCaptain.distanceSquared()));
-        lore.add(ChatColor.GRAY + "Trait: " + ChatColor.WHITE + primaryTrait + ChatColor.GRAY + " (" + toRoman(level) + ")");
+        lore.add(ChatColor.GRAY + "Strengths: " + ChatColor.WHITE + localize(strengths));
+        lore.add(ChatColor.GRAY + "Weaknesses: " + ChatColor.RED + localize(weaknesses));
         lore.add(ChatColor.GRAY + "Status: " + (nearbyCaptain.active() ? ChatColor.GREEN + "Active" : ChatColor.YELLOW + "Dormant"));
         lore.add(ChatColor.DARK_GRAY + "Mob: " + prettyEntityName(nearbyCaptain.entityType()));
         meta.setLore(lore);
@@ -231,6 +234,14 @@ public class NemesisCaptainListGUI implements Listener {
             output.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1).toLowerCase(Locale.ROOT));
         }
         return output.toString();
+    }
+
+
+    private String localize(List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return "None";
+        }
+        return ids.stream().map(traitRegistry::displayName).limit(2).collect(java.util.stream.Collectors.joining(", "));
     }
 
     private String toRoman(int number) {

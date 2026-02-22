@@ -676,34 +676,147 @@ nemesis:
         - DEEP_DARK
     recordCooldownMs: 30000
 
+  naming:
+    orcish:
+      firstNames:
+        ghor:
+          value: "Ghor"
+          weight: 5
+        krag:
+          value: "Krag"
+          weight: 4
+        zul:
+          value: "Zul"
+          weight: 3
+        mor:
+          value: "Mor"
+          weight: 2
+      suffixes:
+        fang:
+          value: "Fang"
+          weight: 4
+        maw:
+          value: "Maw"
+          weight: 3
+        skull:
+          value: "Skull"
+          weight: 2
+        crusher:
+          value: "Crusher"
+          weight: 2
+    modifiers:
+      undead:
+        weight: 3
+        prefix: "Dread "
+        suffix: ""
+        epithet: "the Gravebound"
+        title: "Death Captain"
+        mobTypes: [ZOMBIE, SKELETON, WITHER_SKELETON, PHANTOM]
+      brute:
+        weight: 2
+        prefix: ""
+        suffix: " the Huge"
+        epithet: "the Pulverizer"
+        title: "Warlord"
+        requiredTraits: [strength_brutal_strikes]
+
   traits:
     definitions:
       context_night_stalker:
+        displayName: "Night Stalker"
         weight: 3
-        requirements:
-          - OVERWORLD
+        requirements: [OVERWORLD, NIGHT]
+        incompatibilities: []
+        weakness: false
+      context_swamp_hunter:
+        displayName: "Swamp Hunter"
+        weight: 2
+        requirements: []
+        incompatibilities: []
+        weakness: false
+      context_frostbound:
+        displayName: "Frostbound"
+        weight: 2
+        requirements: []
+        incompatibilities: []
+        weakness: false
+      context_storm_marked:
+        displayName: "Storm Marked"
+        weight: 1
+        requirements: [OVERWORLD]
         incompatibilities: []
         weakness: false
       personality_berserker:
+        displayName: "Berserker"
         weight: 3
         requirements: []
-        incompatibilities:
-          - personality_predator
+        incompatibilities: [personality_predator]
         weakness: false
       personality_predator:
+        displayName: "Predator"
         weight: 2
         requirements: []
-        incompatibilities:
-          - personality_berserker
+        incompatibilities: [personality_berserker]
+        weakness: false
+      personality_cunning:
+        displayName: "Cunning"
+        weight: 2
+        requirements: []
+        incompatibilities: []
+        weakness: false
+      strength_brutal_strikes:
+        displayName: "Brutal Strikes"
+        weight: 3
+        requirements: []
+        incompatibilities: []
+        weakness: false
+      strength_iron_hide:
+        displayName: "Iron Hide"
+        weight: 2
+        requirements: []
+        incompatibilities: []
+        weakness: false
+      strength_relentless:
+        displayName: "Relentless"
+        weight: 2
+        requirements: []
+        incompatibilities: []
         weakness: false
       weakness_fragile:
+        displayName: "Fragile"
         weight: 4
         requirements: []
         incompatibilities: []
         weakness: true
       weakness_sunbound:
+        displayName: "Sunbound"
         weight: 2
-        requirements:
-          - OVERWORLD
+        requirements: [OVERWORLD]
         incompatibilities: []
         weakness: true
+      weakness_slow_recovery:
+        displayName: "Slow Recovery"
+        weight: 2
+        requirements: []
+        incompatibilities: []
+        weakness: true
+      weakness_arcane_sensitive:
+        displayName: "Arcane Sensitive"
+        weight: 2
+        requirements: []
+        incompatibilities: []
+        weakness: true
+      immunity_knockback:
+        displayName: "Knockback Immunity"
+        weight: 2
+        requirements: []
+        incompatibilities: []
+        weakness: false
+        immunity: true
+      immunity_fireproof:
+        displayName: "Fireproof"
+        weight: 1
+        requirements: []
+        incompatibilities: []
+        weakness: false
+        immunity: true
