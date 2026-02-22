@@ -5,6 +5,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.World;
+import com.lastbreath.hc.lastBreathHC.worldboss.WorldBossConstants;
+import org.bukkit.NamespacedKey;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -45,6 +48,11 @@ public class CaptainSpawner implements Listener {
     private final int nearbyRangeBlocks;
     private final int activeCaptainCap;
     private final int perWorldPerMinuteLimit;
+    private final double randomOverworldCaptainChance;
+    private final int randomOverworldProbeRadius;
+    private final int randomOverworldMobPoolLimit;
+    private final int randomOverworldActiveCap;
+    private final NamespacedKey worldBossTypeKey;
 
     private final Map<UUID, Long> playerSpawnInterest = new HashMap<>();
     private final Map<UUID, Long> playerMovementProbeCooldown = new HashMap<>();
@@ -73,6 +81,11 @@ public class CaptainSpawner implements Listener {
         this.nearbyRangeBlocks = Math.max(16, plugin.getConfig().getInt("nemesis.spawn.location.nearbyRangeBlocks", 96));
         this.activeCaptainCap = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.world.activeCaptainCap", 20));
         this.perWorldPerMinuteLimit = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.world.perMinuteAttemptCap", 3));
+        this.randomOverworldCaptainChance = clampChance(plugin.getConfig().getDouble("nemesis.spawn.overworldRandomCaptain.chancePerDirectorTick", 0.02));
+        this.randomOverworldProbeRadius = Math.max(24, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.probeRadius", 80));
+        this.randomOverworldMobPoolLimit = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.mobPoolLimit", 64));
+        this.randomOverworldActiveCap = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.activeCap", 20));
+        this.worldBossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
     }
 
     public void start() {
@@ -132,6 +145,9 @@ public class CaptainSpawner implements Listener {
     }
 
     private void runDirectorTick() {
+        if (!Bukkit.getOnlinePlayers().isEmpty()) {
+            attemptRandomOverworldCaptainSpawn();
+        }
         if (playerSpawnInterest.isEmpty() || Bukkit.getOnlinePlayers().isEmpty()) {
             return;
         }
@@ -209,6 +225,92 @@ public class CaptainSpawner implements Listener {
         markSpawnInWorld(target.getWorld());
         announceSpawn(persisted, nearPlayer, reason);
         return true;
+    }
+
+    private void attemptRandomOverworldCaptainSpawn() {
+        if (Math.random() > randomOverworldCaptainChance) {
+            return;
+        }
+        World overworld = Bukkit.getWorlds().stream()
+                .filter(world -> world.getEnvironment() == World.Environment.NORMAL)
+                .findFirst()
+                .orElse(null);
+        if (overworld == null) {
+            return;
+        }
+        if (registry.getActiveByWorld(overworld.getName()).size() >= randomOverworldActiveCap) {
+            return;
+        }
+
+        List<Player> onlineOverworldPlayers = overworld.getPlayers().stream()
+                .filter(Player::isOnline)
+                .toList();
+        if (onlineOverworldPlayers.isEmpty()) {
+            return;
+        }
+
+        Player pivot = onlineOverworldPlayers.get(ThreadLocalRandom.current().nextInt(onlineOverworldPlayers.size()));
+        List<LivingEntity> candidates = overworld.getLivingEntities().stream()
+                .filter(living -> !(living instanceof Player))
+                .filter(living -> living.isValid())
+                .filter(living -> living.getLocation().distanceSquared(pivot.getLocation()) <= (double) randomOverworldProbeRadius * randomOverworldProbeRadius)
+                .filter(this::isEligibleRandomPromotionTarget)
+                .limit(randomOverworldMobPoolLimit)
+                .toList();
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        LivingEntity promoted = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
+        if (registry.getActiveByRadius(overworld.getName(), promoted.getLocation().getX(), promoted.getLocation().getZ(), 5000.0, null, null).size() >= randomOverworldActiveCap) {
+            return;
+        }
+        createCaptainFromWildPromotion(promoted);
+    }
+
+    private boolean isEligibleRandomPromotionTarget(LivingEntity entity) {
+        if (entity == null || entity.getType() == org.bukkit.entity.EntityType.ARMOR_STAND) {
+            return false;
+        }
+        return !NemesisMobRules.isExcludedFromCaptainPromotion(entity, worldBossTypeKey);
+    }
+
+    private void createCaptainFromWildPromotion(LivingEntity mob) {
+        long now = System.currentTimeMillis();
+        UUID captainId = UUID.randomUUID();
+        Location location = mob.getLocation();
+
+        CaptainRecord.Identity identity = new CaptainRecord.Identity(captainId, null, now);
+        CaptainRecord.Origin origin = new CaptainRecord.Origin(
+                location.getWorld() == null ? "unknown" : location.getWorld().getName(),
+                location.getChunk().getX(),
+                location.getChunk().getZ(),
+                location.getX(),
+                location.getY(),
+                location.getZ(),
+                location.getBlock().getBiome().name()
+        );
+        CaptainRecord.Victims victims = new CaptainRecord.Victims(List.of(), 0, 0L);
+        CaptainRecord.NemesisScores scores = new CaptainRecord.NemesisScores(1.5, 0.0, 0.8, 0.7);
+        CaptainRecord.Progression progression = new CaptainRecord.Progression(1, 0L, "COMMON");
+        CaptainRecord.Naming naming = new CaptainRecord.Naming(mob.getType().name() + " Captain", "the Wanderer", "Captain", mob.getType().name());
+        CaptainRecord.Traits traits = new CaptainRecord.Traits(List.of("raider"), List.of(), List.of());
+        int minionCount = Math.max(0, plugin.getConfig().getInt("nemesis.minions.defaultCount", 2));
+        List<String> minionArchetypes = plugin.getConfig().getStringList("nemesis.minions.defaultArchetypes");
+        CaptainRecord.MinionPack minionPack = new CaptainRecord.MinionPack("default", minionCount, minionArchetypes, plugin.getConfig().getDouble("nemesis.minions.reinforcementChance", 0.0));
+        CaptainRecord.State createdState = stateMachine.onCreate(now);
+        CaptainRecord.State spawnedState = stateMachine.onSpawn(now);
+        CaptainRecord.State state = new CaptainRecord.State(spawnedState.state(), createdState.cooldownUntilEpochMs(), now, mob.getUniqueId());
+        Map<String, Long> counters = new HashMap<>();
+        counters.put("spawns", 1L);
+        counters.put("wildPromotions", 1L);
+        CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(now, now, 1, counters);
+        CaptainRecord created = new CaptainRecord(identity, origin, victims, scores, progression, naming, traits, minionPack, state, telemetry);
+
+        mob.getPersistentDataContainer().set(binder.getCaptainIdKey(), org.bukkit.persistence.PersistentDataType.STRING, captainId.toString());
+        binder.bind(mob, created);
+        registry.upsert(created);
+        markSpawnInWorld(location.getWorld());
     }
 
     private void queueInterest(Player player, double chance) {

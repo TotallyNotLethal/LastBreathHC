@@ -1,12 +1,11 @@
 package com.lastbreath.hc.lastBreathHC.commands;
 
-import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRecord;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
 import com.lastbreath.hc.lastBreathHC.nemesis.KillerResolver;
 import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
-import com.lastbreath.hc.lastBreathHC.nemesis.NemesisUI;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
@@ -20,18 +19,16 @@ import java.util.Map;
 import java.util.UUID;
 
 public class NemesisCommands implements BasicCommand {
-    private final LastBreathHC plugin;
     private final CaptainRegistry registry;
     private final CaptainSpawner spawner;
-    private final NemesisUI ui;
+    private final NemesisCaptainListGUI captainListGUI;
     private final KillerResolver killerResolver;
     private final MinionController minionController;
 
-    public NemesisCommands(LastBreathHC plugin, CaptainRegistry registry, CaptainSpawner spawner, NemesisUI ui, KillerResolver killerResolver, MinionController minionController) {
-        this.plugin = plugin;
+    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController) {
         this.registry = registry;
         this.spawner = spawner;
-        this.ui = ui;
+        this.captainListGUI = captainListGUI;
         this.killerResolver = killerResolver;
         this.minionController = minionController;
     }
@@ -39,7 +36,7 @@ public class NemesisCommands implements BasicCommand {
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("list", "info", "hunt", "spawn", "retire", "debug");
+            return List.of("list", "nearby", "info", "hunt", "spawn", "retire", "debug");
         }
         if (args.length == 2 && "debug".equalsIgnoreCase(args[0])) {
             return List.of("resolvekiller", "dump", "active", "cleanupOrphans");
@@ -51,20 +48,33 @@ public class NemesisCommands implements BasicCommand {
     public void execute(CommandSourceStack source, String[] args) {
         CommandSender sender = source.getSender();
         if (args.length == 0) {
-            sender.sendMessage("§cUsage: /nemesis <list|info|hunt|spawn|retire|debug>");
+            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|spawn|retire|debug>");
             return;
         }
 
         String sub = args[0].toLowerCase(Locale.ROOT);
         switch (sub) {
             case "list" -> handleList(sender);
+            case "nearby" -> handleNearby(sender);
             case "info" -> handleInfo(sender, args);
             case "hunt" -> handleHunt(sender);
             case "spawn" -> handleSpawn(sender, args);
             case "retire" -> handleRetire(sender, args);
             case "debug" -> handleDebug(sender, args);
-            default -> sender.sendMessage("§cUsage: /nemesis <list|info|hunt|spawn|retire|debug>");
+            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|spawn|retire|debug>");
         }
+    }
+
+    private void handleNearby(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cPlayers only.");
+            return;
+        }
+        if (!sender.hasPermission("lastbreathhc.nemesis")) {
+            sender.sendMessage("§cNo permission.");
+            return;
+        }
+        captainListGUI.open(player);
     }
 
     private void handleList(CommandSender sender) {

@@ -43,6 +43,8 @@ import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
 import com.lastbreath.hc.lastBreathHC.nemesis.TokenAwareDeathOutcomeResolver;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisProgressionService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRewardService;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRivalryDirector;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.AntiCheeseMonitor;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
@@ -170,8 +172,10 @@ public final class LastBreathHC extends JavaPlugin {
     private CaptainTraitService captainTraitService;
     private MinionController minionController;
     private NemesisUI nemesisUI;
+    private NemesisCaptainListGUI nemesisCaptainListGUI;
     private NemesisProgressionService nemesisProgressionService;
     private NemesisRewardService nemesisRewardService;
+    private NemesisRivalryDirector nemesisRivalryDirector;
     private AntiCheeseMonitor antiCheeseMonitor;
 
 
@@ -217,12 +221,16 @@ public final class LastBreathHC extends JavaPlugin {
         minionController.start();
         nemesisUI = new NemesisUI(this, captainRegistry, captainEntityBinder);
         nemesisUI.start();
+        nemesisCaptainListGUI = new NemesisCaptainListGUI(captainRegistry, captainEntityBinder);
         nemesisRewardService = new NemesisRewardService(this, captainEntityBinder, captainRegistry);
+        nemesisRivalryDirector = new NemesisRivalryDirector(this, captainRegistry, captainEntityBinder);
+        nemesisRivalryDirector.start();
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
         getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver()), this);
         getServer().getPluginManager().registerEvents(captainSpawner, this);
         getServer().getPluginManager().registerEvents(minionController, this);
+        getServer().getPluginManager().registerEvents(nemesisCaptainListGUI, this);
         getServer().getPluginManager().registerEvents(nemesisRewardService, this);
         getServer().getPluginManager().registerEvents(antiCheeseMonitor, this);
         dailyRewardManager = new DailyRewardManager(this);
@@ -490,7 +498,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
-                    event.registrar().register("nemesis", new NemesisCommands(this, captainRegistry, captainSpawner, nemesisUI, killerResolver, minionController));
+                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController));
                 }
         );
     }
@@ -591,11 +599,16 @@ public final class LastBreathHC extends JavaPlugin {
             nemesisUI.stop();
             nemesisUI = null;
         }
+        nemesisCaptainListGUI = null;
         if (nemesisProgressionService != null) {
             nemesisProgressionService.stop();
             nemesisProgressionService = null;
         }
         nemesisRewardService = null;
+        if (nemesisRivalryDirector != null) {
+            nemesisRivalryDirector.stop();
+            nemesisRivalryDirector = null;
+        }
         antiCheeseMonitor = null;
         int removedAsteroidMobs = AsteroidManager.clearAsteroidMobsForShutdown();
         AsteroidManager.clearAllAsteroids();
