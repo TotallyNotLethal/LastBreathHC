@@ -600,6 +600,12 @@ nemesis:
     playerEvent:
       maxRadiusBlocks: 5000
       activeCapWithinRadius: 20
+    defyDeath:
+      enabled: true
+      startingLevel: 4
+      tier: ELITE
+      bonusXP: 300
+      bonusRivalry: 20.0
   progression:
     xpPerVictim: 25
     xpPerCombatTick: 2
