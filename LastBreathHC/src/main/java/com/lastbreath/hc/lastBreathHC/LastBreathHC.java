@@ -44,6 +44,7 @@ import com.lastbreath.hc.lastBreathHC.nemesis.TokenAwareDeathOutcomeResolver;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisProgressionService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRewardService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRivalryDirector;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.AntiCheeseMonitor;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
@@ -174,6 +175,7 @@ public final class LastBreathHC extends JavaPlugin {
     private NemesisCaptainListGUI nemesisCaptainListGUI;
     private NemesisProgressionService nemesisProgressionService;
     private NemesisRewardService nemesisRewardService;
+    private NemesisRivalryDirector nemesisRivalryDirector;
     private AntiCheeseMonitor antiCheeseMonitor;
 
 
@@ -221,6 +223,8 @@ public final class LastBreathHC extends JavaPlugin {
         nemesisUI.start();
         nemesisCaptainListGUI = new NemesisCaptainListGUI(captainRegistry, captainEntityBinder);
         nemesisRewardService = new NemesisRewardService(this, captainEntityBinder, captainRegistry);
+        nemesisRivalryDirector = new NemesisRivalryDirector(this, captainRegistry, captainEntityBinder);
+        nemesisRivalryDirector.start();
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
         getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver()), this);
@@ -601,6 +605,10 @@ public final class LastBreathHC extends JavaPlugin {
             nemesisProgressionService = null;
         }
         nemesisRewardService = null;
+        if (nemesisRivalryDirector != null) {
+            nemesisRivalryDirector.stop();
+            nemesisRivalryDirector = null;
+        }
         antiCheeseMonitor = null;
         int removedAsteroidMobs = AsteroidManager.clearAsteroidMobsForShutdown();
         AsteroidManager.clearAllAsteroids();

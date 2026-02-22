@@ -1,12 +1,14 @@
 package com.lastbreath.hc.lastBreathHC.nemesis;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.worldboss.WorldBossConstants;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,11 +17,11 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,8 +44,10 @@ public class CaptainCombatListener implements Listener {
 
     private final NamespacedKey captainUuidKey;
     private final NamespacedKey captainFlagKey;
+    private final NamespacedKey worldBossTypeKey;
 
     private final Map<UUID, UUID> entityToCaptainId = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> playerFleeProbeCooldown = new ConcurrentHashMap<>();
     private final Set<EntityType> eligibleMobTypes;
     private final KillerResolver.AttributionTimeouts attributionTimeouts;
     private final long xpPerKill;
@@ -51,6 +55,10 @@ public class CaptainCombatListener implements Listener {
     private final double dedupeRadius;
     private final int creationThrottleMaxCaptains;
     private final long creationThrottleWindowMs;
+    private final double lowHealthFleePromotionChance;
+    private final long lowHealthFleeProbeCooldownMs;
+    private final double playerEventRadiusCap;
+    private final double playerEventRadiusBlocks;
 
     public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver) {
         this.plugin = plugin;
@@ -64,6 +72,7 @@ public class CaptainCombatListener implements Listener {
         this.stateMachine = new CaptainStateMachine();
         this.captainUuidKey = new NamespacedKey(plugin, "nemesis_captain_uuid");
         this.captainFlagKey = new NamespacedKey(plugin, "nemesis_captain");
+        this.worldBossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
         this.eligibleMobTypes = loadEligibleMobTypes(plugin.getConfig().getConfigurationSection("nemesis.eligibleMobTypes"));
         this.attributionTimeouts = new KillerResolver.AttributionTimeouts(
                 Duration.ofMillis(Math.max(500L, plugin.getConfig().getLong("nemesis.creation.timeoutMs.projectile", 20_000L))),
@@ -76,7 +85,49 @@ public class CaptainCombatListener implements Listener {
         this.creationThrottleMaxCaptains = Math.max(0, plugin.getConfig().getInt("nemesis.creation.throttle.maxCaptainsPerWorld", 0));
         long throttleWindowMinutes = Math.max(0L, plugin.getConfig().getLong("nemesis.creation.throttle.windowMinutes", 0L));
         this.creationThrottleWindowMs = Duration.ofMinutes(throttleWindowMinutes).toMillis();
+        this.lowHealthFleePromotionChance = clampChance(plugin.getConfig().getDouble("nemesis.creation.lowHealthFleeChance", 0.25));
+        this.lowHealthFleeProbeCooldownMs = Math.max(250L, plugin.getConfig().getLong("nemesis.creation.lowHealthFleeProbeCooldownMs", 2000L));
+        this.playerEventRadiusBlocks = Math.max(32.0, plugin.getConfig().getDouble("nemesis.creation.playerEvent.maxRadiusBlocks", 5000.0));
+        this.playerEventRadiusCap = Math.max(1.0, plugin.getConfig().getDouble("nemesis.creation.playerEvent.activeCapWithinRadius", 20.0));
         indexExistingCaptains();
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerMove(PlayerMoveEvent event) {
+        if (event.getTo() == null || event.getFrom().getChunk().equals(event.getTo().getChunk())) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        if (!player.isSprinting() || player.getWorld() == null) {
+            return;
+        }
+
+        double maxHealth = Math.max(1.0, player.getMaxHealth());
+        if (player.getHealth() > maxHealth * 0.5) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        long next = playerFleeProbeCooldown.getOrDefault(player.getUniqueId(), 0L);
+        if (now < next) {
+            return;
+        }
+        playerFleeProbeCooldown.put(player.getUniqueId(), now + lowHealthFleeProbeCooldownMs);
+
+        if (Math.random() > lowHealthFleePromotionChance) {
+            return;
+        }
+
+        List<LivingEntity> nearbyAggressive = player.getWorld().getLivingEntities().stream()
+                .filter(living -> living instanceof Mob mob && mob.getTarget() != null && mob.getTarget().getUniqueId().equals(player.getUniqueId()))
+                .filter(living -> living.getLocation().distanceSquared(player.getLocation()) <= 48.0 * 48.0)
+                .toList();
+        for (LivingEntity mob : nearbyAggressive) {
+            if (createCaptainFromEntity(mob, player.getUniqueId(), player, true)) {
+                return;
+            }
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -92,39 +143,62 @@ public class CaptainCombatListener implements Listener {
             return;
         }
 
-        LivingEntity killer = resolvedKiller.entity();
+        createCaptainFromEntity(resolvedKiller.entity(), victim.getUniqueId(), victim, true);
+    }
+
+    private boolean createCaptainFromEntity(LivingEntity killer, UUID victimUuid, Player victimPlayer, boolean enforcePlayerEventRadiusCap) {
         if (!isEligibleKiller(killer)) {
-            return;
+            return false;
+        }
+
+        if (enforcePlayerEventRadiusCap && isPlayerEventAreaOverCap(killer.getLocation())) {
+            return false;
         }
 
         UUID captainUuid = resolveCaptainUuid(killer);
         if (captainUuid != null) {
             CaptainRecord existing = captainRegistry.getByCaptainUuid(captainUuid);
             if (existing != null) {
-                updateExistingCaptain(existing, victim.getUniqueId(), victim);
-                return;
+                updateExistingCaptain(existing, victimUuid, victimPlayer);
+                return true;
             }
         }
 
-        CaptainRecord nearbyMatch = findNearbyDedupeMatch(killer, victim.getUniqueId());
+        CaptainRecord nearbyMatch = findNearbyDedupeMatch(killer, victimUuid);
         if (nearbyMatch != null) {
             entityToCaptainId.put(killer.getUniqueId(), nearbyMatch.identity().captainId());
             stampCaptainPdc(killer, nearbyMatch.identity().captainId());
             captainEntityBinder.bind(killer, nearbyMatch);
-            updateExistingCaptain(nearbyMatch, victim.getUniqueId(), victim);
-            return;
+            updateExistingCaptain(nearbyMatch, victimUuid, victimPlayer);
+            return true;
         }
 
         if (isCreationThrottled(killer)) {
-            return;
+            return false;
         }
 
-        CaptainRecord created = createCaptainRecord(killer, victim.getUniqueId());
+        CaptainRecord created = createCaptainRecord(killer, victimUuid);
         entityToCaptainId.put(killer.getUniqueId(), created.identity().captainId());
         stampCaptainPdc(killer, created.identity().captainId());
         captainEntityBinder.bind(killer, created);
         captainRegistry.upsert(created);
-        nemesisUI.announceCaptainBirth(created, victim);
+        nemesisUI.announceCaptainBirth(created, victimPlayer);
+        return true;
+    }
+
+    private boolean isPlayerEventAreaOverCap(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return true;
+        }
+        int nearbyCount = captainRegistry.getActiveByRadius(
+                location.getWorld().getName(),
+                location.getX(),
+                location.getZ(),
+                playerEventRadiusBlocks,
+                null,
+                null
+        ).size();
+        return nearbyCount > playerEventRadiusCap;
     }
 
     private void updateExistingCaptain(CaptainRecord existing, UUID victimUuid, Player victimPlayer) {
@@ -236,6 +310,10 @@ public class CaptainCombatListener implements Listener {
             return false;
         }
 
+        if (NemesisMobRules.isExcludedFromCaptainPromotion(killer, worldBossTypeKey)) {
+            return false;
+        }
+
         UUID existing = resolveCaptainUuid(killer);
         if (existing == null) {
             return true;
@@ -330,5 +408,12 @@ public class CaptainCombatListener implements Listener {
             }
         }
         return types;
+    }
+
+    private double clampChance(double raw) {
+        if (raw < 0.0) {
+            return 0.0;
+        }
+        return Math.min(raw, 1.0);
     }
 }

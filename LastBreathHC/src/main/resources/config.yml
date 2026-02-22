@@ -595,6 +595,11 @@ nemesis:
       projectile: 20000
       knockback: 8000
       ambient: 15000
+    lowHealthFleeChance: 0.25
+    lowHealthFleeProbeCooldownMs: 2000
+    playerEvent:
+      maxRadiusBlocks: 5000
+      activeCapWithinRadius: 20
   progression:
     xpPerVictim: 25
     xpPerCombatTick: 2
@@ -638,6 +643,10 @@ nemesis:
     angerPerMinionDeath: 1.5
   antiCheese:
     losThreshold: 8
+  rivalries:
+    tickPeriodTicks: 200
+    triggerChancePerTick: 0.08
+    maxDistance: 96.0
   spawn:
     director:
       minTickDelay: 20
@@ -652,6 +661,11 @@ nemesis:
     world:
       activeCaptainCap: 20
       perMinuteAttemptCap: 3
+    overworldRandomCaptain:
+      chancePerDirectorTick: 0.02
+      probeRadius: 80
+      mobPoolLimit: 64
+      activeCap: 20
     location:
       nearbyRangeBlocks: 96
       minLight: 0
