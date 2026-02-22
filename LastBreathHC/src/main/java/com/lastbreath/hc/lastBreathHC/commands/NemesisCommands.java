@@ -62,8 +62,8 @@ public class NemesisCommands implements BasicCommand {
         }
         sender.sendMessage("§6Nemesis Captains: §e" + registry.getAll().size());
         registry.getAll().stream().limit(10).forEach(record -> {
-            String name = record.naming() == null ? record.identity().captainUuid().toString() : record.naming().displayName();
-            sender.sendMessage("§7- §c" + name + " §8(" + record.identity().captainUuid() + ")");
+            String name = record.naming() == null ? record.identity().captainId().toString() : record.naming().displayName();
+            sender.sendMessage("§7- §c" + name + " §8(" + record.identity().captainId() + ")");
         });
     }
 
@@ -82,7 +82,7 @@ public class NemesisCommands implements BasicCommand {
             return;
         }
         sender.sendMessage("§6Nemesis Info");
-        sender.sendMessage("§7ID: §f" + record.identity().captainUuid());
+        sender.sendMessage("§7ID: §f" + record.identity().captainId());
         sender.sendMessage("§7Name: §f" + (record.naming() == null ? "Unknown" : record.naming().displayName()));
         sender.sendMessage("§7Level: §f" + record.progression().level() + " §7XP: §f" + record.progression().experience());
         sender.sendMessage("§7Traits: §f" + String.join(", ", record.traits().traits()));
@@ -116,7 +116,7 @@ public class NemesisCommands implements BasicCommand {
             sender.sendMessage("§cCaptain not found.");
             return;
         }
-        boolean ok = spawner.forceSpawn(record.identity().captainUuid());
+        boolean ok = spawner.forceSpawn(record.identity().captainId());
         sender.sendMessage(ok ? "§aNemesis spawned." : "§cUnable to spawn that captain now.");
     }
 
@@ -134,7 +134,7 @@ public class NemesisCommands implements BasicCommand {
             sender.sendMessage("§cCaptain not found.");
             return;
         }
-        boolean ok = spawner.retireCaptain(record.identity().captainUuid());
+        boolean ok = spawner.retireCaptain(record.identity().captainId());
         sender.sendMessage(ok ? "§aCaptain retired." : "§eCaptain already retired or unavailable.");
     }
 

@@ -21,7 +21,7 @@ public class CaptainTraitService {
     public CaptainRecord.Traits selectInitialTraits(CaptainRecord.Identity identity,
                                                     LivingEntity killer,
                                                     CaptainRecord.NemesisScores scores) {
-        return traitRegistry.selectTraits(identity.captainUuid(), killer, identity.nemesisOf(), scores);
+        return traitRegistry.selectTraits(identity.captainId(), killer, identity.nemesisOf(), scores);
     }
 
     public void applyOnBind(LivingEntity captain, CaptainRecord record) {
@@ -77,7 +77,7 @@ public class CaptainTraitService {
             if (record == null) {
                 return;
             }
-            org.bukkit.entity.Entity entity = killer.getServer().getEntity(record.identity().spawnEntityUuid());
+            org.bukkit.entity.Entity entity = killer.getServer().getEntity(record.state() == null ? null : record.state().runtimeEntityUuid());
             if (!(entity instanceof LivingEntity livingCaptain)) {
                 return;
             }

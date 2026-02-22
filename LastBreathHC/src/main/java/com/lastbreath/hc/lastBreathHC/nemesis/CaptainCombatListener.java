@@ -95,8 +95,8 @@ public class CaptainCombatListener implements Listener {
         }
 
         CaptainRecord created = createCaptainRecord(killer, victim.getUniqueId());
-        entityToCaptainId.put(killer.getUniqueId(), created.identity().captainUuid());
-        stampCaptainPdc(killer, created.identity().captainUuid());
+        entityToCaptainId.put(killer.getUniqueId(), created.identity().captainId());
+        stampCaptainPdc(killer, created.identity().captainId());
         captainEntityBinder.bind(killer, created);
         captainRegistry.upsert(created);
         nemesisUI.announceCaptainBirth(created, victim);
@@ -130,12 +130,12 @@ public class CaptainCombatListener implements Listener {
 
     private void indexExistingCaptains() {
         for (CaptainRecord record : captainRegistry.getAll()) {
-            if (record.identity() == null || record.identity().captainUuid() == null) {
+            if (record.identity() == null || record.identity().captainId() == null) {
                 continue;
             }
-            UUID entityUuid = record.identity().spawnEntityUuid();
+            UUID entityUuid = record.state() == null ? null : record.state().runtimeEntityUuid();
             if (entityUuid != null) {
-                entityToCaptainId.put(entityUuid, record.identity().captainUuid());
+                entityToCaptainId.put(entityUuid, record.identity().captainId());
             }
         }
     }
@@ -180,13 +180,12 @@ public class CaptainCombatListener implements Listener {
 
     private CaptainRecord createCaptainRecord(LivingEntity killer, UUID victimUuid) {
         long now = System.currentTimeMillis();
-        UUID captainUuid = UUID.randomUUID();
+        UUID captainId = UUID.randomUUID();
         Location location = killer.getLocation();
 
         CaptainRecord.Identity identity = new CaptainRecord.Identity(
-                captainUuid,
+                captainId,
                 victimUuid,
-                killer.getUniqueId(),
                 now
         );
 
@@ -209,7 +208,8 @@ public class CaptainCombatListener implements Listener {
         List<String> minionArchetypes = plugin.getConfig().getStringList("nemesis.minions.defaultArchetypes");
         CaptainRecord.MinionPack minionPack = new CaptainRecord.MinionPack("default", minionCount, minionArchetypes, plugin.getConfig().getDouble("nemesis.minions.reinforcementChance", 0.0));
         CaptainRecord.State createdState = stateMachine.onCreate(now);
-        CaptainRecord.State state = stateMachine.onSpawn(createdState.lastSeenEpochMs());
+        CaptainRecord.State spawnedState = stateMachine.onSpawn(createdState.lastSeenEpochMs());
+        CaptainRecord.State state = new CaptainRecord.State(spawnedState.state(), spawnedState.cooldownUntilEpochMs(), spawnedState.lastSeenEpochMs(), killer.getUniqueId());
 
         Map<String, Long> counters = new HashMap<>();
         counters.put("kills", 1L);

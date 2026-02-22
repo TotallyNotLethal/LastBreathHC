@@ -29,6 +29,7 @@ public class CaptainEntityBinder {
     private final CaptainRegistry captainRegistry;
     private final NamespacedKey captainIdKey;
     private CaptainTraitService traitService;
+    private final CaptainStateMachine stateMachine = new CaptainStateMachine();
 
     private final double baseHealth;
     private final double healthPerLevel;
@@ -49,7 +50,7 @@ public class CaptainEntityBinder {
             return Optional.empty();
         }
 
-        LivingEntity upgradeCandidate = resolveLiveKillerEntity(record.identity().spawnEntityUuid());
+        LivingEntity upgradeCandidate = resolveLiveKillerEntity(record);
         if (upgradeCandidate != null) {
             bind(upgradeCandidate, record);
             return Optional.of(upgradeCandidate);
@@ -75,7 +76,7 @@ public class CaptainEntityBinder {
     }
 
     public boolean tryUpgradeInPlace(CaptainRecord record) {
-        LivingEntity live = resolveLiveKillerEntity(record.identity().spawnEntityUuid());
+        LivingEntity live = resolveLiveKillerEntity(record);
         if (live == null) {
             return false;
         }
@@ -103,12 +104,12 @@ public class CaptainEntityBinder {
     }
 
     public void bind(LivingEntity entity, CaptainRecord record) {
-        if (entity == null || record == null || record.identity() == null) {
+        if (entity == null || record == null || record.identity() == null || record.identity().captainId() == null) {
             return;
         }
 
         entity.addScoreboardTag(CAPTAIN_SCOREBOARD_TAG);
-        entity.getPersistentDataContainer().set(captainIdKey, PersistentDataType.STRING, record.identity().captainUuid().toString());
+        entity.getPersistentDataContainer().set(captainIdKey, PersistentDataType.STRING, record.identity().captainId().toString());
 
         String customName = formatCaptainName(record);
         entity.customName(net.kyori.adventure.text.Component.text(customName));
@@ -201,15 +202,87 @@ public class CaptainEntityBinder {
         return new Location(world, origin.spawnX(), origin.spawnY(), origin.spawnZ());
     }
 
-    private LivingEntity resolveLiveKillerEntity(UUID entityUuid) {
+    public LivingEntity resolveLiveKillerEntity(CaptainRecord record) {
+        if (record == null || record.identity() == null || record.identity().captainId() == null) {
+            return null;
+        }
+
+        UUID captainId = record.identity().captainId();
+        LivingEntity cached = resolveCachedRuntimeEntity(record.state() == null ? null : record.state().runtimeEntityUuid(), captainId);
+        if (cached != null) {
+            return cached;
+        }
+
+        LivingEntity fromPdc = resolveByCaptainId(captainId);
+        if (fromPdc != null) {
+            return fromPdc;
+        }
+
+        handleMissingRuntimeBinding(record);
+        return null;
+    }
+
+    private LivingEntity resolveCachedRuntimeEntity(UUID entityUuid, UUID captainId) {
         if (entityUuid == null) {
             return null;
         }
         Entity entity = plugin.getServer().getEntity(entityUuid);
-        if (!(entity instanceof LivingEntity livingEntity)) {
+        if (!(entity instanceof LivingEntity livingEntity) || !livingEntity.isValid()) {
             return null;
         }
-        return livingEntity.isValid() ? livingEntity : null;
+        String storedCaptain = livingEntity.getPersistentDataContainer().get(captainIdKey, PersistentDataType.STRING);
+        if (storedCaptain == null || !storedCaptain.equals(captainId.toString())) {
+            return null;
+        }
+        return livingEntity;
+    }
+
+    private LivingEntity resolveByCaptainId(UUID captainId) {
+        String expected = captainId.toString();
+        for (World world : plugin.getServer().getWorlds()) {
+            for (LivingEntity livingEntity : world.getLivingEntities()) {
+                if (!livingEntity.isValid()) {
+                    continue;
+                }
+                String storedCaptain = livingEntity.getPersistentDataContainer().get(captainIdKey, PersistentDataType.STRING);
+                if (expected.equals(storedCaptain)) {
+                    return livingEntity;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void handleMissingRuntimeBinding(CaptainRecord record) {
+        if (record.state() == null || record.state().state() != CaptainState.ACTIVE) {
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        long cooldownMs = Math.max(0L, plugin.getConfig().getLong("nemesis.lifecycle.missingEntityCooldownMs", 60000L));
+        CaptainRecord.State nextState = cooldownMs > 0
+                ? stateMachine.onEscapeOrDespawn(now, now + cooldownMs)
+                : stateMachine.onCooldownElapsed(now);
+
+        CaptainRecord.State clearedState = new CaptainRecord.State(
+                nextState.state(),
+                nextState.cooldownUntilEpochMs(),
+                nextState.lastSeenEpochMs(),
+                null
+        );
+
+        captainRegistry.upsert(new CaptainRecord(
+                record.identity(),
+                record.origin(),
+                record.victims(),
+                record.nemesisScores(),
+                record.progression(),
+                record.naming(),
+                record.traits(),
+                record.minionPack(),
+                clearedState,
+                record.telemetry()
+        ));
     }
 
 

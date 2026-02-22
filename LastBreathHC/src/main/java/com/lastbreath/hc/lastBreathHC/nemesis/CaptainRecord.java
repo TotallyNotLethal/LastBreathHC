@@ -16,7 +16,7 @@ public record CaptainRecord(
         State state,
         Telemetry telemetry
 ) {
-    public record Identity(UUID captainUuid, UUID nemesisOf, UUID spawnEntityUuid, long createdAtEpochMillis) {
+    public record Identity(UUID captainId, UUID nemesisOf, long createdAtEpochMillis) {
     }
 
     public record Origin(String world, int chunkX, int chunkZ, double spawnX, double spawnY, double spawnZ, String biome) {
@@ -40,7 +40,7 @@ public record CaptainRecord(
     public record MinionPack(String packType, int minionCount, List<String> minionArchetypes, double reinforcementChance) {
     }
 
-    public record State(CaptainState state, long cooldownUntilEpochMs, long lastSeenEpochMs) {
+    public record State(CaptainState state, long cooldownUntilEpochMs, long lastSeenEpochMs, UUID runtimeEntityUuid) {
     }
 
     public record Telemetry(long lastSeenAtEpochMillis, long lastUpdatedAtEpochMillis, int encounters, Map<String, Long> counters) {

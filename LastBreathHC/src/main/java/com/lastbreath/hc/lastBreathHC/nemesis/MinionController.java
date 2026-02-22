@@ -116,7 +116,7 @@ public class MinionController implements Listener {
                 continue;
             }
 
-            UUID captainId = record.identity().captainUuid();
+            UUID captainId = record.identity().captainId();
             Set<UUID> minionIds = captainToMinions.computeIfAbsent(captainId, ignored -> ConcurrentHashMap.newKeySet());
             minionIds.removeIf(id -> {
                 Entity entity = plugin.getServer().getEntity(id);
@@ -141,7 +141,7 @@ public class MinionController implements Listener {
         }
 
         long now = System.currentTimeMillis();
-        long allowedAt = nextRespawnAt.getOrDefault(record.identity().captainUuid(), 0L);
+        long allowedAt = nextRespawnAt.getOrDefault(record.identity().captainId(), 0L);
         if (now < allowedAt) {
             return;
         }
@@ -150,12 +150,12 @@ public class MinionController implements Listener {
         int missing = desired - minionIds.size();
         for (int i = 0; i < missing; i++) {
             String archetype = archetypes.isEmpty() ? minionPack.packType() : archetypes.get(i % archetypes.size());
-            LivingEntity minion = spawnMinion(captain, record.identity().captainUuid(), archetype);
+            LivingEntity minion = spawnMinion(captain, record.identity().captainId(), archetype);
             if (minion != null) {
                 minionIds.add(minion.getUniqueId());
             }
         }
-        nextRespawnAt.put(record.identity().captainUuid(), now + respawnCooldownMs);
+        nextRespawnAt.put(record.identity().captainId(), now + respawnCooldownMs);
     }
 
     private LivingEntity spawnMinion(LivingEntity captain, UUID captainId, String archetype) {
@@ -300,11 +300,8 @@ public class MinionController implements Listener {
     }
 
     private LivingEntity resolveCaptainEntity(CaptainRecord record) {
-        if (record.identity() == null || record.identity().spawnEntityUuid() == null) {
-            return null;
-        }
-        Entity entity = plugin.getServer().getEntity(record.identity().spawnEntityUuid());
-        if (!(entity instanceof LivingEntity living)) {
+        LivingEntity living = captainEntityBinder.resolveLiveKillerEntity(record);
+        if (living == null) {
             return null;
         }
         if (!living.getScoreboardTags().contains(CaptainEntityBinder.CAPTAIN_SCOREBOARD_TAG)) {
