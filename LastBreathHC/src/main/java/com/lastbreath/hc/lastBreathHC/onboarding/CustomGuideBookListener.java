@@ -3,7 +3,10 @@ package com.lastbreath.hc.lastBreathHC.onboarding;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Statistic;
+import org.bukkit.World;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -15,15 +18,69 @@ import org.bukkit.inventory.meta.BookMeta;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CustomGuideBookListener implements Listener {
+
+    private static final int FIRST_JOIN_SPAWN_RADIUS = 1000;
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        if (player.hasPlayedBefore()) {
+        sendWelcomeMessage(player);
+
+        if (!player.hasPlayedBefore()) {
+            teleportFirstJoinSpawn(player);
+            giveGuideBook(player);
+        }
+    }
+
+    private void sendWelcomeMessage(Player player) {
+        player.sendMessage(ChatColor.DARK_RED + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        player.sendMessage(ChatColor.RED + "Welcome to " + ChatColor.GOLD + "Last Breath");
+        player.sendMessage(ChatColor.GRAY + "Hardcore world: death has consequences.");
+        player.sendMessage(ChatColor.GRAY + "Respawns exist via crafted revive loot from asteroid events.");
+        sendLastDeathCoordinates(player);
+        player.sendMessage(ChatColor.RED + "/discord " + ChatColor.GRAY + "- Join our Discord");
+        player.sendMessage(ChatColor.DARK_RED + "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    }
+
+    private void sendLastDeathCoordinates(Player player) {
+        if (player.getStatistic(Statistic.DEATHS) <= 0) {
             return;
         }
+        Location lastDeathLocation = player.getLastDeathLocation();
+        if (lastDeathLocation == null || lastDeathLocation.getWorld() == null) {
+            return;
+        }
+
+        player.sendMessage(
+                ChatColor.GRAY + "Last death: "
+                        + ChatColor.RED + lastDeathLocation.getBlockX()
+                        + ChatColor.DARK_GRAY + ", "
+                        + ChatColor.RED + lastDeathLocation.getBlockY()
+                        + ChatColor.DARK_GRAY + ", "
+                        + ChatColor.RED + lastDeathLocation.getBlockZ()
+                        + ChatColor.DARK_GRAY + " ("
+                        + ChatColor.GRAY + lastDeathLocation.getWorld().getName()
+                        + ChatColor.DARK_GRAY + ")"
+        );
+    }
+
+    private void teleportFirstJoinSpawn(Player player) {
+        World world = player.getWorld();
+        int x = randomCoordinate();
+        int z = randomCoordinate();
+        int y = world.getHighestBlockYAt(x, z) + 1;
+        Location spawn = new Location(world, x + 0.5, y, z + 0.5);
+        player.teleport(spawn);
+    }
+
+    private int randomCoordinate() {
+        return ThreadLocalRandom.current().nextInt(-FIRST_JOIN_SPAWN_RADIUS, FIRST_JOIN_SPAWN_RADIUS + 1);
+    }
+
+    private void giveGuideBook(Player player) {
 
         ItemStack guideBook = buildGuideBook();
         Map<Integer, ItemStack> leftovers = player.getInventory().addItem(guideBook);
