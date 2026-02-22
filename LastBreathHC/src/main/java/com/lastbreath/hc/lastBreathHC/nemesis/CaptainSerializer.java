@@ -9,11 +9,15 @@ import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class CaptainSerializer {
@@ -21,6 +25,8 @@ public class CaptainSerializer {
 
     private final LastBreathHC plugin;
     private final File file;
+    private final Map<UUID, Map<String, Object>> extrasByCaptainId = new HashMap<>();
+    private boolean upgradedOnNextSave;
 
     public CaptainSerializer(LastBreathHC plugin, File file) {
         this.plugin = plugin;
@@ -29,6 +35,8 @@ public class CaptainSerializer {
 
     public List<CaptainRecord> load() {
         List<CaptainRecord> records = new ArrayList<>();
+        extrasByCaptainId.clear();
+        upgradedOnNextSave = false;
         if (!file.exists()) {
             return records;
         }
@@ -36,8 +44,15 @@ public class CaptainSerializer {
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
         int schemaVersion = config.getInt("schemaVersion", 1);
         if (schemaVersion > CURRENT_SCHEMA_VERSION) {
-            plugin.getLogger().warning("Unsupported nemesis captain schema version " + schemaVersion + ", skipping load to avoid data loss.");
+            backupUnsupportedSchemaFile(schemaVersion);
             return records;
+        }
+
+        if (schemaVersion < CURRENT_SCHEMA_VERSION) {
+            migrate(config, schemaVersion);
+            upgradedOnNextSave = true;
+            plugin.getLogger().warning("Loaded legacy nemesis captain schema version " + schemaVersion
+                    + "; ordered migrations were applied and data will be upgraded on the next save.");
         }
 
         ConfigurationSection captains = config.getConfigurationSection("captains");
@@ -64,10 +79,15 @@ public class CaptainSerializer {
             }
         }
 
-        if (schemaVersion < CURRENT_SCHEMA_VERSION) {
-            plugin.getLogger().info("Loaded legacy nemesis captain schema version " + schemaVersion + "; records were migrated in-memory.");
-        }
         return records;
+    }
+
+    public void saveDirty(Collection<CaptainRecord> records, Set<UUID> dirtyCaptainIds) {
+        if ((dirtyCaptainIds == null || dirtyCaptainIds.isEmpty()) && !upgradedOnNextSave) {
+            return;
+        }
+        save(records);
+        upgradedOnNextSave = false;
     }
 
     public void save(Collection<CaptainRecord> records) {
@@ -165,6 +185,8 @@ public class CaptainSerializer {
                 readCounters(row.getConfigurationSection("telemetry.counters"))
         );
 
+        extrasByCaptainId.put(captainUuid, readExtras(row));
+
         return new CaptainRecord(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state, telemetry);
     }
 
@@ -220,6 +242,14 @@ public class CaptainSerializer {
         config.set(countersPath, null);
         for (Map.Entry<String, Long> entry : record.telemetry().counters().entrySet()) {
             config.set(countersPath + "." + entry.getKey(), entry.getValue());
+        }
+
+        Map<String, Object> extras = extrasByCaptainId.get(record.identity().captainId());
+        if (extras == null || extras.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : extras.entrySet()) {
+            config.set(base + "." + entry.getKey(), entry.getValue());
         }
     }
 
@@ -337,5 +367,104 @@ public class CaptainSerializer {
         } catch (AtomicMoveNotSupportedException ignored) {
             Files.move(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
+    }
+
+    private void backupUnsupportedSchemaFile(int schemaVersion) {
+        String timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now()).replace(':', '-');
+        File backup = new File(file.getParentFile(), file.getName() + ".bak-" + timestamp);
+        plugin.getLogger().severe("=====================================================");
+        plugin.getLogger().severe("Unsupported nemesis captain schema version " + schemaVersion + " detected.");
+        plugin.getLogger().severe("Attempting to move " + file.getName() + " to " + backup.getName() + " and continuing with empty in-memory captain state.");
+        try {
+            moveAtomic(file, backup);
+            plugin.getLogger().severe("Backup completed: " + backup.getName());
+        } catch (IOException moveError) {
+            plugin.getLogger().severe("Failed to backup unsupported nemesis captain data: " + moveError.getMessage());
+        }
+        plugin.getLogger().severe("=====================================================");
+    }
+
+    private void migrate(YamlConfiguration config, int schemaVersion) {
+        int workingVersion = schemaVersion;
+        while (workingVersion < CURRENT_SCHEMA_VERSION) {
+            switch (workingVersion) {
+                case 0 -> migrateV0ToV1(config);
+                default -> plugin.getLogger().warning("No explicit nemesis captain migration for schema version " + workingVersion + ".");
+            }
+            workingVersion++;
+        }
+    }
+
+    private void migrateV0ToV1(YamlConfiguration config) {
+        ConfigurationSection captains = config.getConfigurationSection("captains");
+        if (captains == null) {
+            return;
+        }
+
+        for (String captainId : captains.getKeys(false)) {
+            ConfigurationSection row = captains.getConfigurationSection(captainId);
+            if (row == null || row.contains("state.state")) {
+                continue;
+            }
+            CaptainRecord.State migrated = parseState(row, parseUuid(row.getString("identity.spawnEntityUuid")));
+            row.set("state.state", migrated.state().name());
+            row.set("state.cooldownUntilEpochMs", migrated.cooldownUntilEpochMs());
+            row.set("state.lastSeenEpochMs", migrated.lastSeenEpochMs());
+            row.set("state.runtimeEntityUuid", stringify(migrated.runtimeEntityUuid()));
+        }
+    }
+
+    private Map<String, Object> readExtras(ConfigurationSection row) {
+        Map<String, Object> extras = new HashMap<>();
+        Set<String> knownPaths = knownPaths();
+        for (Map.Entry<String, Object> entry : row.getValues(true).entrySet()) {
+            if (knownPaths.contains(entry.getKey()) || entry.getValue() instanceof ConfigurationSection) {
+                continue;
+            }
+            extras.put(entry.getKey(), entry.getValue());
+        }
+        return extras;
+    }
+
+    private Set<String> knownPaths() {
+        Set<String> known = new HashSet<>();
+        known.add("identity.nemesisOf");
+        known.add("identity.createdAtEpochMillis");
+        known.add("origin.world");
+        known.add("origin.chunkX");
+        known.add("origin.chunkZ");
+        known.add("origin.spawnX");
+        known.add("origin.spawnY");
+        known.add("origin.spawnZ");
+        known.add("origin.biome");
+        known.add("victims.playerVictims");
+        known.add("victims.totalVictimCount");
+        known.add("victims.lastVictimAtEpochMillis");
+        known.add("nemesisScores.threat");
+        known.add("nemesisScores.rivalry");
+        known.add("nemesisScores.brutality");
+        known.add("nemesisScores.cunning");
+        known.add("progression.level");
+        known.add("progression.experience");
+        known.add("progression.tier");
+        known.add("naming.displayName");
+        known.add("naming.epithet");
+        known.add("naming.title");
+        known.add("naming.aliasSeed");
+        known.add("traits.traits");
+        known.add("traits.weaknesses");
+        known.add("traits.immunities");
+        known.add("minionPack.packType");
+        known.add("minionPack.minionCount");
+        known.add("minionPack.minionArchetypes");
+        known.add("minionPack.reinforcementChance");
+        known.add("state.state");
+        known.add("state.cooldownUntilEpochMs");
+        known.add("state.lastSeenEpochMs");
+        known.add("state.runtimeEntityUuid");
+        known.add("telemetry.lastSeenAtEpochMillis");
+        known.add("telemetry.lastUpdatedAtEpochMillis");
+        known.add("telemetry.encounters");
+        return known;
     }
 }

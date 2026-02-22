@@ -136,6 +136,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask titleEffectTask;
     private BukkitTask nicknamePermissionTask;
     private BukkitTask statsAutosaveTask;
+    private BukkitTask captainFlushTask;
     private BloodMoonManager bloodMoonManager;
     private DeathMarkerManager deathMarkerManager;
     private EnvironmentalEffectsManager environmentalEffectsManager;
@@ -200,6 +201,8 @@ public final class LastBreathHC extends JavaPlugin {
         captainRegistry = new CaptainRegistry();
         captainSerializer = new CaptainSerializer(this, new java.io.File(getDataFolder(), "nemesis-captains.yml"));
         captainRegistry.load(captainSerializer.load());
+        long captainFlushIntervalTicks = 20L * 60L * 3L;
+        captainFlushTask = getServer().getScheduler().runTaskTimer(this, this::flushDirtyCaptains, captainFlushIntervalTicks, captainFlushIntervalTicks);
         killerResolver = new KillerResolver();
         captainTraitRegistry = new CaptainTraitRegistry(this);
         captainEntityBinder = new CaptainEntityBinder(this, captainRegistry);
@@ -525,6 +528,10 @@ public final class LastBreathHC extends JavaPlugin {
             statsAutosaveTask.cancel();
             statsAutosaveTask = null;
         }
+        if (captainFlushTask != null) {
+            captainFlushTask.cancel();
+            captainFlushTask = null;
+        }
         if (cosmeticAuraService != null) {
             cosmeticAuraService.stop();
             cosmeticAuraService = null;
@@ -564,10 +571,8 @@ public final class LastBreathHC extends JavaPlugin {
             fakePlayerService.shutdown();
             fakePlayerService = null;
         }
-        if (captainRegistry != null && captainSerializer != null) {
-            captainSerializer.save(captainRegistry.getAll());
-            captainRegistry = null;
-        }
+        flushDirtyCaptains();
+        captainRegistry = null;
         captainSerializer = null;
         killerResolver = null;
         captainEntityBinder = null;
@@ -619,6 +624,13 @@ public final class LastBreathHC extends JavaPlugin {
         titlesGUI = null;
         tabMenuRefreshScheduler = null;
         getLogger().info("LastBreathHC disabled.");
+    }
+
+    private void flushDirtyCaptains() {
+        if (captainRegistry == null || captainSerializer == null) {
+            return;
+        }
+        captainSerializer.saveDirty(captainRegistry.getAll(), captainRegistry.snapshotAndClearDirtyCaptainIds());
     }
 
     public static LastBreathHC getInstance() {
