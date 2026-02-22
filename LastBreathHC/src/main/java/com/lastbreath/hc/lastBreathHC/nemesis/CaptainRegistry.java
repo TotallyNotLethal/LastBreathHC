@@ -68,6 +68,20 @@ public class CaptainRegistry {
         return removed;
     }
 
+    public synchronized int clearAll() {
+        int removedCount = captainsByUuid.size();
+        if (removedCount == 0) {
+            return 0;
+        }
+
+        dirtyCaptainIds.addAll(captainsByUuid.keySet());
+        captainsByUuid.clear();
+        captainsByNemesisPlayer.clear();
+        captainsByOriginChunk.clear();
+        activeCaptainsByWorld.clear();
+        return removedCount;
+    }
+
     public synchronized Set<UUID> snapshotAndClearDirtyCaptainIds() {
         if (dirtyCaptainIds.isEmpty()) {
             return Set.of();

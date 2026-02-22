@@ -40,10 +40,15 @@ public class NemesisCommands implements BasicCommand {
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("list", "nearby", "info", "hunt", "spawn", "retire", "debug");
+            return List.of("list", "nearby", "info", "hunt", "spawn", "retire", "clear", "debug");
         }
-        if (args.length == 2 && "debug".equalsIgnoreCase(args[0])) {
-            return List.of("resolvekiller", "dump", "active", "cleanupOrphans");
+        if (args.length == 2) {
+            if ("debug".equalsIgnoreCase(args[0])) {
+                return List.of("resolvekiller", "dump", "active", "cleanupOrphans");
+            }
+            if ("clear".equalsIgnoreCase(args[0])) {
+                return List.of("confirm");
+            }
         }
         return List.of();
     }
@@ -52,7 +57,7 @@ public class NemesisCommands implements BasicCommand {
     public void execute(CommandSourceStack source, String[] args) {
         CommandSender sender = source.getSender();
         if (args.length == 0) {
-            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|spawn|retire|debug>");
+            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|spawn|retire|clear|debug>");
             return;
         }
 
@@ -64,8 +69,9 @@ public class NemesisCommands implements BasicCommand {
             case "hunt" -> handleHunt(sender);
             case "spawn" -> handleSpawn(sender, args);
             case "retire" -> handleRetire(sender, args);
+            case "clear" -> handleClear(sender, args);
             case "debug" -> handleDebug(sender, args);
-            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|spawn|retire|debug>");
+            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|spawn|retire|clear|debug>");
         }
     }
 
@@ -163,6 +169,23 @@ public class NemesisCommands implements BasicCommand {
         }
         boolean ok = spawner.retireCaptain(record.identity().captainId());
         sender.sendMessage(ok ? "§aCaptain retired." : "§eCaptain already retired or unavailable.");
+    }
+
+
+    private void handleClear(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("lastbreathhc.nemesis.admin")) {
+            sender.sendMessage("§cNo permission.");
+            return;
+        }
+        if (args.length < 2 || !"confirm".equalsIgnoreCase(args[1])) {
+            sender.sendMessage("§cThis will clear all nemesis captains and minions.");
+            sender.sendMessage("§eUsage: /nemesis clear confirm");
+            return;
+        }
+
+        int captainsRemoved = registry.clearAll();
+        int minionsRemoved = minionController.despawnAllMinions();
+        sender.sendMessage("§aNemesis data cleared. Captains removed: §e" + captainsRemoved + "§a, minions removed: §e" + minionsRemoved);
     }
 
     private void handleDebug(CommandSender sender, String[] args) {

@@ -269,6 +269,40 @@ public class MinionController implements Listener {
         return cleanupOrphans();
     }
 
+    public int despawnAllMinions() {
+        Set<UUID> removedEntityIds = new HashSet<>();
+        int removed = 0;
+
+        for (Set<UUID> minionIds : new ArrayList<>(captainToMinions.values())) {
+            for (UUID minionId : new HashSet<>(minionIds)) {
+                Entity entity = plugin.getServer().getEntity(minionId);
+                if (entity != null && entity.isValid()) {
+                    entity.remove();
+                    removed++;
+                }
+                removedEntityIds.add(minionId);
+            }
+        }
+
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (!entity.getScoreboardTags().contains(MINION_SCOREBOARD_TAG)) {
+                    continue;
+                }
+                if (removedEntityIds.add(entity.getUniqueId())) {
+                    if (entity.isValid()) {
+                        entity.remove();
+                        removed++;
+                    }
+                }
+            }
+        }
+
+        captainToMinions.clear();
+        nextRespawnAt.clear();
+        return removed;
+    }
+
     private int cleanupOrphans() {
         int removed = 0;
         for (Map.Entry<UUID, Set<UUID>> entry : new ArrayList<>(captainToMinions.entrySet())) {
