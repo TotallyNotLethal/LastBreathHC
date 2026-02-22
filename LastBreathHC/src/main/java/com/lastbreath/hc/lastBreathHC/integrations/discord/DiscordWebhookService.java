@@ -33,7 +33,8 @@ public class DiscordWebhookService {
                                  String deathReason,
                                  String killerLabel,
                                  Location location,
-                                 boolean hasReviveToken) {
+                                 boolean hasReviveToken,
+                                 String lastMessageBeforeDeath) {
         if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".enabled", false)) {
             plugin.getLogger().info("Discord webhook disabled; skipping death notification. player="
                     + player.getName());
@@ -61,6 +62,7 @@ public class DiscordWebhookService {
         String timePlayed = formatDuration(player.getStatistic(Statistic.PLAY_ONE_MINUTE) / 20);
         String locationLabel = formatLocation(location);
         String reviveLabel = hasReviveToken ? "Token present" : "No token";
+        String lastMessage = safeValue(lastMessageBeforeDeath);
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("username", username);
@@ -82,6 +84,7 @@ public class DiscordWebhookService {
                 //Map.of("name", "Revives", "value", String.valueOf(stats.revives), "inline", true),
                 Map.of("name", "Mobs Slain", "value", String.valueOf(stats.mobsKilled), "inline", true),
                 Map.of("name", "Blocks Mined", "value", String.valueOf(stats.blocksMined), "inline", true),
+                Map.of("name", "Last Message", "value", lastMessage, "inline", false),
                 //Map.of("name", "Crops Harvested", "value", String.valueOf(stats.cropsHarvested), "inline", true),
                 //Map.of("name", "Rare Ores", "value", String.valueOf(stats.rareOresMined), "inline", true),
                 //Map.of("name", "Killer", "value", safeValue(killerLabel), "inline", true),

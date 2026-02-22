@@ -12,6 +12,8 @@ import com.lastbreath.hc.lastBreathHC.team.TeamChatService;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.token.ReviveTokenHelper;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,6 +26,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Map;
 
@@ -34,15 +39,21 @@ public class DeathListener implements Listener {
     private final TeamChatService teamChatService;
     private final DiscordWebhookService discordWebhookService;
     private final FakePlayerDeathReactionHandler fakePlayerDeathReactionHandler;
+    private final PlayerLastMessageTracker playerLastMessageTracker;
+    private final DeathAuditLogger deathAuditLogger;
 
     public DeathListener(DeathMarkerManager deathMarkerManager,
                          TeamChatService teamChatService,
                          DiscordWebhookService discordWebhookService,
-                         FakePlayerDeathReactionHandler fakePlayerDeathReactionHandler) {
+                         FakePlayerDeathReactionHandler fakePlayerDeathReactionHandler,
+                         PlayerLastMessageTracker playerLastMessageTracker,
+                         DeathAuditLogger deathAuditLogger) {
         this.deathMarkerManager = deathMarkerManager;
         this.teamChatService = teamChatService;
         this.discordWebhookService = discordWebhookService;
         this.fakePlayerDeathReactionHandler = fakePlayerDeathReactionHandler;
+        this.playerLastMessageTracker = playerLastMessageTracker;
+        this.deathAuditLogger = deathAuditLogger;
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -191,10 +202,8 @@ public class DeathListener implements Listener {
                 0.6f
         );
 
-        Bukkit.broadcastMessage(
-                "§4☠ " + TitleManager.getTitleTag(player) + player.getName() + " has fallen... §7("
-                        + formatDeathReason(player, deathMessage) + ")"
-        );
+        String deathReason = formatDeathReason(player, deathMessage);
+        broadcastHoverableDeathMessage(player, deathReason);
         applyRevive(player);
     }
 
@@ -233,10 +242,7 @@ public class DeathListener implements Listener {
                         + " deathReason=" + deathReason
                         + " sendingDiscordWebhook=true"
         );
-        Bukkit.broadcastMessage(
-                "§4☠ " + TitleManager.getTitleTag(player) + player.getName()
-                        + " has perished permanently. §7(" + deathReason + ")"
-        );
+        broadcastHoverableDeathMessage(player, deathReason);
 
         Bukkit.getBanList(BanList.Type.NAME)
                 .addBan(player.getName(), reason, null, null);
@@ -249,8 +255,52 @@ public class DeathListener implements Listener {
                 deathReason,
                 killerLabel,
                 deathLocation,
-                false
+                false,
+                playerLastMessageTracker.getLastMessage(player.getUniqueId())
         );
+    }
+
+    private void broadcastHoverableDeathMessage(Player player, String deathReason) {
+        String lastMessage = playerLastMessageTracker.getLastMessage(player.getUniqueId());
+        deathAuditLogger.recordDeath(player, deathReason, lastMessage);
+        Component hoverText = Component.text(buildHoverDetailText(player, lastMessage), NamedTextColor.LIGHT_PURPLE);
+        Component deathText = Component.text(player.getName() + " " + deathReason, NamedTextColor.RED)
+                .hoverEvent(hoverText);
+        Bukkit.broadcast(deathText);
+    }
+
+    private String buildHoverDetailText(Player player, String lastMessage) {
+        String joinDate = formatDate(player.getFirstPlayed());
+        String deathDate = formatDate(System.currentTimeMillis());
+        String playtime = formatDuration(player.getStatistic(Statistic.PLAY_ONE_MINUTE) / 20L);
+        String finalMessage = (lastMessage == null || lastMessage.isBlank()) ? "No last message recorded." : lastMessage;
+
+        return joinDate + " -> " + deathDate
+                + "\nPlaytime: " + playtime
+                + "\n" + finalMessage;
+    }
+
+    private String formatDate(long epochMillis) {
+        if (epochMillis <= 0L) {
+            return "Unknown";
+        }
+        LocalDate date = Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).toLocalDate();
+        return date.toString();
+    }
+
+    private String formatDuration(long seconds) {
+        long hours = seconds / 3600;
+        long minutes = (seconds % 3600) / 60;
+        long remainingSeconds = seconds % 60;
+        StringBuilder builder = new StringBuilder();
+        if (hours > 0) {
+            builder.append(hours).append("h ");
+        }
+        if (minutes > 0 || hours > 0) {
+            builder.append(minutes).append("m ");
+        }
+        builder.append(remainingSeconds).append("s");
+        return builder.toString().trim();
     }
 
     public void banPlayerForReviveDecision(Player player, String reason) {
