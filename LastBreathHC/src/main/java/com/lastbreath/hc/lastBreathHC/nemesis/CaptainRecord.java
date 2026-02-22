@@ -40,7 +40,7 @@ public record CaptainRecord(
     public record MinionPack(String packType, int minionCount, List<String> minionArchetypes, double reinforcementChance) {
     }
 
-    public record State(String status, boolean active, long spawnedAtEpochMillis, Long despawnedAtEpochMillis) {
+    public record State(CaptainState state, long cooldownUntilEpochMs, long lastSeenEpochMs) {
     }
 
     public record Telemetry(long lastSeenAtEpochMillis, long lastUpdatedAtEpochMillis, int encounters, Map<String, Long> counters) {

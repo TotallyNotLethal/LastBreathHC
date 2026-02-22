@@ -90,7 +90,7 @@ public class NemesisUI {
 
     private CaptainRecord nearestActiveCaptain(Player player) {
         return registry.getAll().stream()
-                .filter(record -> record.state() != null && record.state().active())
+                .filter(record -> record.state() != null && record.state().state() == CaptainState.ACTIVE)
                 .filter(record -> {
                     LivingEntity entity = resolveCaptainEntity(record);
                     return entity != null && entity.getWorld().equals(player.getWorld());

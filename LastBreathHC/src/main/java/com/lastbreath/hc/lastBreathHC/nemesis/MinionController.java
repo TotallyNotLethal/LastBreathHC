@@ -35,6 +35,7 @@ public class MinionController implements Listener {
     private final CaptainEntityBinder captainEntityBinder;
     private final NemesisProgressionService progressionService;
     private final NamespacedKey captainIdKey;
+    private final CaptainStateMachine stateMachine = new CaptainStateMachine();
 
     private final Map<UUID, Set<UUID>> captainToMinions = new ConcurrentHashMap<>();
     private final Map<UUID, Long> nextRespawnAt = new ConcurrentHashMap<>();
@@ -222,6 +223,11 @@ public class MinionController implements Listener {
     }
 
     private void handleCaptainDeath(UUID captainId) {
+        CaptainRecord record = captainRegistry.getByCaptainUuid(captainId);
+        if (record != null) {
+            CaptainRecord.State deadState = stateMachine.onKilled(System.currentTimeMillis());
+            captainRegistry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), deadState, record.telemetry()));
+        }
         Set<UUID> minions = new HashSet<>(captainToMinions.getOrDefault(captainId, Set.of()));
         if (minions.isEmpty()) {
             captainToMinions.remove(captainId);
@@ -308,7 +314,7 @@ public class MinionController implements Listener {
     }
 
     private boolean isActiveCaptain(CaptainRecord record) {
-        return record != null && record.state() != null && record.state().active();
+        return record != null && record.state() != null && record.state().state() == CaptainState.ACTIVE;
     }
 
     private EntityType resolveArchetype(String archetype) {
