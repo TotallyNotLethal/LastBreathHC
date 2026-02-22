@@ -26,6 +26,10 @@ public class CaptainNameGenerator {
 
         String first = pick(firstNames, random, entity.getType().name().substring(0, 1).toUpperCase(Locale.ROOT) + entity.getType().name().substring(1).toLowerCase(Locale.ROOT));
         String suffix = pick(suffixes, random, "fang");
+        String traitSuffix = selectTraitSuffix(random, traits);
+        if (!traitSuffix.isBlank()) {
+            suffix = suffix + " " + traitSuffix;
+        }
 
         NameModifier modifier = selectModifier(random, entity, traits);
         String title = modifier == null ? "Captain" : modifier.title();
@@ -34,8 +38,64 @@ public class CaptainNameGenerator {
         String prefix = modifier == null ? "" : modifier.prefix();
         String tail = modifier == null ? "" : modifier.suffix();
         String displayName = (prefix + first + " " + suffix + tail).trim() + " " + epithet;
+        displayName = ensureUniqueDisplayName(displayName, captainId);
         String aliasSeed = Long.toHexString(seed).toUpperCase(Locale.ROOT);
         return new CaptainRecord.Naming(displayName.trim(), epithet, title, aliasSeed);
+    }
+
+    private String selectTraitSuffix(Random random, CaptainRecord.Traits traits) {
+        if (traits == null) {
+            return "";
+        }
+        String traitType = resolveTraitType(traits);
+        if (traitType == null) {
+            return "";
+        }
+        List<String> pool = weightedEntries("nemesis.naming.orcish.traitSuffixes." + traitType, random);
+        return pick(pool, random, "");
+    }
+
+    private String resolveTraitType(CaptainRecord.Traits traits) {
+        if (containsPrefix(traits.traits(), "strength_")) {
+            return "strength";
+        }
+        if (containsPrefix(traits.immunities(), "immunity_")) {
+            return "immunity";
+        }
+        if (containsPrefix(traits.weaknesses(), "weakness_")) {
+            return "weakness";
+        }
+        if (containsPrefix(traits.traits(), "personality_")) {
+            return "personality";
+        }
+        if (containsPrefix(traits.traits(), "context_")) {
+            return "context";
+        }
+        return null;
+    }
+
+    private boolean containsPrefix(List<String> values, String prefix) {
+        if (values == null) {
+            return false;
+        }
+        return values.stream().anyMatch(value -> value != null && value.startsWith(prefix));
+    }
+
+    private String ensureUniqueDisplayName(String baseName, UUID captainId) {
+        if (plugin.getCaptainRegistry() == null) {
+            return baseName;
+        }
+        String normalizedBase = baseName.trim();
+        long existing = plugin.getCaptainRegistry().getAll().stream()
+                .filter(record -> record.naming() != null)
+                .map(record -> record.naming().displayName())
+                .filter(name -> name != null && name.equalsIgnoreCase(normalizedBase))
+                .count();
+        if (existing == 0L) {
+            return normalizedBase;
+        }
+        String token = captainId.toString().substring(0, 4).toUpperCase(Locale.ROOT);
+        return normalizedBase + " #" + token;
     }
 
     private NameModifier selectModifier(Random random, LivingEntity entity, CaptainRecord.Traits traits) {

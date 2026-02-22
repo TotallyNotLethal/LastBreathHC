@@ -183,6 +183,15 @@ public class CaptainTraitRegistry {
         definitions.put("weakness_sunbound", new SunboundWeaknessTrait());
         definitions.put("weakness_slow_recovery", new SlowRecoveryWeaknessTrait());
         definitions.put("immunity_knockback", new KnockbackImmunityTrait());
+        definitions.put("immunity_fireproof", new FireproofImmunityTrait());
+        definitions.put("weakness_gold_cursed", new GoldCursedWeaknessTrait());
+        definitions.put("weakness_fire_vulnerable", new FireVulnerableWeaknessTrait());
+        definitions.put("weakness_daylight_hunted", new DaylightHuntedWeaknessTrait());
+        definitions.put("weakness_holy_water", new HolyWaterWeaknessTrait());
+        definitions.put("strength_vicious_combo", new ViciousComboTrait());
+        definitions.put("strength_warlord_presence", new WarlordPresenceTrait());
+        definitions.put("strength_venom_blade", new VenomBladeTrait());
+        definitions.put("immunity_projectile_guard", new ProjectileGuardImmunityTrait());
     }
 
     private List<String> normalize(List<String> values) {

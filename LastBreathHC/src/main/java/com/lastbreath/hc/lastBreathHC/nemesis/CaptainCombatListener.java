@@ -5,6 +5,7 @@ import com.lastbreath.hc.lastBreathHC.worldboss.WorldBossConstants;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.damage.DamageSource;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -353,6 +354,49 @@ public class CaptainCombatListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTargetChange(EntityTargetLivingEntityEvent event) {
         traitService.onTargetChange(event);
+    }
+
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onCaptainDeath(EntityDeathEvent event) {
+        if (!(event.getEntity() instanceof LivingEntity deadCaptainEntity)) {
+            return;
+        }
+        CaptainRecord deadCaptain = captainEntityBinder.resolveCaptainRecord(deadCaptainEntity).orElse(null);
+        if (deadCaptain == null || deadCaptain.identity() == null) {
+            return;
+        }
+
+        CaptainRecord.State deadState = stateMachine.onDeath(System.currentTimeMillis());
+        captainRegistry.upsert(new CaptainRecord(
+                deadCaptain.identity(),
+                deadCaptain.origin(),
+                deadCaptain.victims(),
+                deadCaptain.nemesisScores(),
+                deadCaptain.progression(),
+                deadCaptain.naming(),
+                deadCaptain.traits(),
+                deadCaptain.minionPack(),
+                deadState,
+                deadCaptain.telemetry()
+        ));
+
+        DamageSource damageSource = event.getDamageSource();
+        if (damageSource == null || !(damageSource.getCausingEntity() instanceof LivingEntity killerEntity)) {
+            return;
+        }
+        CaptainRecord winner = captainEntityBinder.resolveCaptainRecord(killerEntity).orElse(null);
+        if (winner == null || winner.identity() == null || winner.identity().captainId().equals(deadCaptain.identity().captainId())) {
+            return;
+        }
+
+        CaptainRecord updatedWinner = progressionService.onCaptainVictory(winner, deadCaptain);
+        captainRegistry.upsert(updatedWinner);
+        captainEntityBinder.tryUpgradeInPlace(updatedWinner);
+
+        String winnerName = updatedWinner.naming() == null ? "Nemesis Captain" : updatedWinner.naming().displayName();
+        String loserName = deadCaptain.naming() == null ? "Nemesis Captain" : deadCaptain.naming().displayName();
+        plugin.getServer().broadcastMessage("§4☠ §6" + winnerName + " §7slays rival captain §c" + loserName + "§7.");
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
