@@ -19,23 +19,29 @@ public class CaptainRegistry {
     private final Map<UUID, Set<UUID>> captainsByNemesisPlayer = new ConcurrentHashMap<>();
     private final Map<OriginChunkKey, Set<UUID>> captainsByOriginChunk = new ConcurrentHashMap<>();
     private final Map<String, Set<UUID>> activeCaptainsByWorld = new ConcurrentHashMap<>();
+    private final Set<UUID> dirtyCaptainIds = ConcurrentHashMap.newKeySet();
 
     public synchronized void load(Collection<CaptainRecord> records) {
         captainsByUuid.clear();
         captainsByNemesisPlayer.clear();
         captainsByOriginChunk.clear();
         activeCaptainsByWorld.clear();
+        dirtyCaptainIds.clear();
 
         if (records == null) {
             return;
         }
 
         for (CaptainRecord record : records) {
-            upsert(record);
+            upsert(record, false);
         }
     }
 
     public synchronized void upsert(CaptainRecord record) {
+        upsert(record, true);
+    }
+
+    private void upsert(CaptainRecord record, boolean markDirty) {
         if (record == null || record.identity() == null || record.identity().captainId() == null) {
             return;
         }
@@ -45,6 +51,9 @@ public class CaptainRegistry {
             deindex(existing);
         }
         index(record);
+        if (markDirty) {
+            dirtyCaptainIds.add(record.identity().captainId());
+        }
     }
 
     public synchronized CaptainRecord remove(UUID captainUuid) {
@@ -54,8 +63,18 @@ public class CaptainRegistry {
         CaptainRecord removed = captainsByUuid.remove(captainUuid);
         if (removed != null) {
             deindex(removed);
+            dirtyCaptainIds.add(captainUuid);
         }
         return removed;
+    }
+
+    public synchronized Set<UUID> snapshotAndClearDirtyCaptainIds() {
+        if (dirtyCaptainIds.isEmpty()) {
+            return Set.of();
+        }
+        Set<UUID> dirtySnapshot = Set.copyOf(dirtyCaptainIds);
+        dirtyCaptainIds.clear();
+        return dirtySnapshot;
     }
 
     public CaptainRecord getByCaptainUuid(UUID captainUuid) {
