@@ -608,6 +608,8 @@ nemesis:
     traitUnlockLevel: 5
   scores:
     rivalryPerVictim: 5.0
+  # Optional allowlist applied after hostile/aggressive filtering.
+  # Passive mobs are never eligible by config alone.
   eligibleMobTypes:
     ZOMBIE: true
     SKELETON: true

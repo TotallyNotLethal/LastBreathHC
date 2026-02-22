@@ -6,6 +6,7 @@ import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
 import com.lastbreath.hc.lastBreathHC.nemesis.KillerResolver;
 import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisMobRules;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
@@ -202,6 +203,9 @@ public class NemesisCommands implements BasicCommand {
             sender.sendMessage("§7Resolved: §cnone");
         } else {
             sender.sendMessage("§7Resolved: §f" + debug.resolvedKiller().entity().getType().name() + " §8(" + debug.resolvedKiller().entityUuid() + ") §7via §f" + debug.resolvedKiller().sourceType());
+            if (!NemesisMobRules.isHostileOrAggressive(debug.resolvedKiller().entity())) {
+                sender.sendMessage("§7Eligibility: §crejected (non-hostile/non-aggressive)");
+            }
         }
         if (debug.attributionChain().isEmpty()) {
             sender.sendMessage("§7Attribution chain: §8empty");

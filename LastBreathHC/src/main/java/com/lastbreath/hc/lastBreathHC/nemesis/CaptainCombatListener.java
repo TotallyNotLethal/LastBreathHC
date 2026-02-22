@@ -306,6 +306,10 @@ public class CaptainCombatListener implements Listener {
             return false;
         }
 
+        if (!NemesisMobRules.isHostileOrAggressive(killer)) {
+            return false;
+        }
+
         if (!eligibleMobTypes.isEmpty() && !eligibleMobTypes.contains(killer.getType())) {
             return false;
         }
