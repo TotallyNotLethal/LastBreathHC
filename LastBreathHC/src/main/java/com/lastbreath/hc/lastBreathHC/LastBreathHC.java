@@ -31,6 +31,19 @@ import com.lastbreath.hc.lastBreathHC.mobs.MobStackCombatListener;
 import com.lastbreath.hc.lastBreathHC.mobs.MobStackManager;
 import com.lastbreath.hc.lastBreathHC.mobs.MobStackSignListener;
 import com.lastbreath.hc.lastBreathHC.mobs.AggressiveLogoutMobManager;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainCombatListener;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainEntityBinder;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRegistry;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSerializer;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainTraitRegistry;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainTraitService;
+import com.lastbreath.hc.lastBreathHC.nemesis.KillerResolver;
+import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisProgressionService;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRewardService;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisUI;
+import com.lastbreath.hc.lastBreathHC.nemesis.AntiCheeseMonitor;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
@@ -146,6 +159,18 @@ public final class LastBreathHC extends JavaPlugin {
     private DailyCosmeticListener dailyCosmeticListener;
     private BannedDeathZombieService bannedDeathZombieService;
     private HeadTrackingLogger headTrackingLogger;
+    private CaptainRegistry captainRegistry;
+    private CaptainSerializer captainSerializer;
+    private KillerResolver killerResolver;
+    private CaptainEntityBinder captainEntityBinder;
+    private CaptainSpawner captainSpawner;
+    private CaptainTraitRegistry captainTraitRegistry;
+    private CaptainTraitService captainTraitService;
+    private MinionController minionController;
+    private NemesisUI nemesisUI;
+    private NemesisProgressionService nemesisProgressionService;
+    private NemesisRewardService nemesisRewardService;
+    private AntiCheeseMonitor antiCheeseMonitor;
 
 
     @Override
@@ -172,6 +197,30 @@ public final class LastBreathHC extends JavaPlugin {
                 fakePlayersSettings
         );
         fakePlayerService.startup();
+        captainRegistry = new CaptainRegistry();
+        captainSerializer = new CaptainSerializer(this, new java.io.File(getDataFolder(), "nemesis-captains.yml"));
+        captainRegistry.load(captainSerializer.load());
+        killerResolver = new KillerResolver();
+        captainTraitRegistry = new CaptainTraitRegistry(this);
+        captainEntityBinder = new CaptainEntityBinder(this, captainRegistry);
+        captainTraitService = new CaptainTraitService(captainEntityBinder, captainTraitRegistry);
+        captainEntityBinder.setTraitService(captainTraitService);
+        nemesisProgressionService = new NemesisProgressionService(this, captainRegistry, captainEntityBinder);
+        nemesisProgressionService.start();
+        captainSpawner = new CaptainSpawner(this, captainRegistry, captainEntityBinder, new CaptainSpawner.NoOpProtectedRegionChecker());
+        captainSpawner.start();
+        minionController = new MinionController(this, captainRegistry, captainEntityBinder, nemesisProgressionService);
+        minionController.start();
+        nemesisUI = new NemesisUI(this, captainRegistry);
+        nemesisUI.start();
+        nemesisRewardService = new NemesisRewardService(this, captainEntityBinder, captainRegistry);
+        antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
+        getServer().getPluginManager().registerEvents(killerResolver, this);
+        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, nemesisUI, nemesisProgressionService), this);
+        getServer().getPluginManager().registerEvents(captainSpawner, this);
+        getServer().getPluginManager().registerEvents(minionController, this);
+        getServer().getPluginManager().registerEvents(nemesisRewardService, this);
+        getServer().getPluginManager().registerEvents(antiCheeseMonitor, this);
         dailyRewardManager = new DailyRewardManager(this);
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
         customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");
@@ -437,6 +486,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
+                    event.registrar().register("nemesis", new NemesisCommands(this, captainRegistry, captainSpawner, nemesisUI));
                 }
         );
     }
@@ -514,6 +564,33 @@ public final class LastBreathHC extends JavaPlugin {
             fakePlayerService.shutdown();
             fakePlayerService = null;
         }
+        if (captainRegistry != null && captainSerializer != null) {
+            captainSerializer.save(captainRegistry.getAll());
+            captainRegistry = null;
+        }
+        captainSerializer = null;
+        killerResolver = null;
+        captainEntityBinder = null;
+        if (captainSpawner != null) {
+            captainSpawner.stop();
+            captainSpawner = null;
+        }
+        captainTraitService = null;
+        captainTraitRegistry = null;
+        if (minionController != null) {
+            minionController.stop();
+            minionController = null;
+        }
+        if (nemesisUI != null) {
+            nemesisUI.stop();
+            nemesisUI = null;
+        }
+        if (nemesisProgressionService != null) {
+            nemesisProgressionService.stop();
+            nemesisProgressionService = null;
+        }
+        nemesisRewardService = null;
+        antiCheeseMonitor = null;
         AsteroidManager.clearAllAsteroids();
         BountyManager.save();
         ReviveStateManager.save();
@@ -558,6 +635,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     public FakePlayersSettings getFakePlayersSettings() {
         return fakePlayersSettings;
+    }
+
+    public CaptainRegistry getCaptainRegistry() {
+        return captainRegistry;
     }
 
     private void scheduleNextAsteroid() {
