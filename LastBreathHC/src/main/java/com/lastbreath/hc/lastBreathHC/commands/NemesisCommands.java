@@ -228,8 +228,8 @@ public class NemesisCommands implements BasicCommand {
         sender.sendMessage("§7State: §f" + (record.state() == null ? "null" : record.state().state()));
         sender.sendMessage("§7World/Chunk: §f" + (record.origin() == null ? "unknown" : record.origin().world() + " " + record.origin().chunkX() + "," + record.origin().chunkZ()));
         sender.sendMessage("§7Runtime entity: §f" + (record.state() == null ? "null" : record.state().runtimeEntityUuid()));
-        sender.sendMessage("§7Scores: §f" + (record.nemesisScores() == null ? "none" : "threat=" + record.nemesisScores().threat() + " rivalry=" + record.nemesisScores().rivalry() + " hate=" + record.nemesisScores().hate()));
-        sender.sendMessage("§7Victims: §f" + (record.victims() == null ? "none" : record.victims().killCount() + " recent=" + record.victims().recentVictimIds().size()));
+        sender.sendMessage("§7Scores: §f" + (record.nemesisScores() == null ? "none" : "threat=" + record.nemesisScores().threat() + " rivalry=" + record.nemesisScores().rivalry() + " brutality=" + record.nemesisScores().brutality()));
+        sender.sendMessage("§7Victims: §f" + (record.victims() == null ? "none" : record.victims().totalVictimCount() + " recent=" + record.victims().playerVictims().size()));
         sender.sendMessage("§7Counters: §f" + (record.telemetry() == null ? "{}" : record.telemetry().counters()));
     }
 
