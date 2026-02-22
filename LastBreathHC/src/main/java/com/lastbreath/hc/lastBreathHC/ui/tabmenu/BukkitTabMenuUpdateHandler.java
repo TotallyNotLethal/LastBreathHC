@@ -83,7 +83,7 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
                 if (desired == null) {
                     continue;
                 }
-                fakePlayerService.setTabListDisplayNameOverride(record.getUuid(), desired);
+                //fakePlayerService.setTabListDisplayNameOverride(record.getUuid(), desired);
                 String previous = lastPlayerNames.get(username);
                 boolean changed = !Objects.equals(previous, desired);
                 Player fakePlayer = fakePlayerService.resolveBukkitPlayer(record).orElse(null);
