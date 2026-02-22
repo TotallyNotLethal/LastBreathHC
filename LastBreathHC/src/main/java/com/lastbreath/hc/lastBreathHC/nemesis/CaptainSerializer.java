@@ -157,12 +157,7 @@ public class CaptainSerializer {
                 row.getDouble("minionPack.reinforcementChance", 0.0)
         );
 
-        CaptainRecord.State state = new CaptainRecord.State(
-                row.getString("state.status", "DORMANT"),
-                row.getBoolean("state.active", false),
-                row.getLong("state.spawnedAtEpochMillis", 0L),
-                row.contains("state.despawnedAtEpochMillis") ? row.getLong("state.despawnedAtEpochMillis") : null
-        );
+        CaptainRecord.State state = parseState(row);
 
         CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(
                 row.getLong("telemetry.lastSeenAtEpochMillis", 0L),
@@ -214,10 +209,9 @@ public class CaptainSerializer {
         config.set(base + ".minionPack.minionArchetypes", record.minionPack().minionArchetypes());
         config.set(base + ".minionPack.reinforcementChance", record.minionPack().reinforcementChance());
 
-        config.set(base + ".state.status", record.state().status());
-        config.set(base + ".state.active", record.state().active());
-        config.set(base + ".state.spawnedAtEpochMillis", record.state().spawnedAtEpochMillis());
-        config.set(base + ".state.despawnedAtEpochMillis", record.state().despawnedAtEpochMillis());
+        config.set(base + ".state.state", record.state().state().name());
+        config.set(base + ".state.cooldownUntilEpochMs", record.state().cooldownUntilEpochMs());
+        config.set(base + ".state.lastSeenEpochMs", record.state().lastSeenEpochMs());
 
         config.set(base + ".telemetry.lastSeenAtEpochMillis", record.telemetry().lastSeenAtEpochMillis());
         config.set(base + ".telemetry.lastUpdatedAtEpochMillis", record.telemetry().lastUpdatedAtEpochMillis());
@@ -227,6 +221,53 @@ public class CaptainSerializer {
         config.set(countersPath, null);
         for (Map.Entry<String, Long> entry : record.telemetry().counters().entrySet()) {
             config.set(countersPath + "." + entry.getKey(), entry.getValue());
+        }
+    }
+
+
+    private CaptainRecord.State parseState(ConfigurationSection row) {
+        String rawState = row.getString("state.state");
+        if (rawState != null) {
+            CaptainState parsed = parseCaptainState(rawState, CaptainState.DORMANT);
+            return new CaptainRecord.State(
+                    parsed,
+                    row.getLong("state.cooldownUntilEpochMs", 0L),
+                    row.getLong("state.lastSeenEpochMs", row.getLong("telemetry.lastSeenAtEpochMillis", 0L))
+            );
+        }
+
+        String legacyStatus = row.getString("state.status", "DORMANT");
+        boolean legacyActive = row.getBoolean("state.active", false);
+        long spawnedAt = row.getLong("state.spawnedAtEpochMillis", 0L);
+        long despawnedAt = row.contains("state.despawnedAtEpochMillis") ? row.getLong("state.despawnedAtEpochMillis") : 0L;
+
+        CaptainState state;
+        long cooldownUntil = 0L;
+        if (legacyActive) {
+            state = CaptainState.ACTIVE;
+        } else if ("RETIRED".equalsIgnoreCase(legacyStatus)) {
+            state = CaptainState.RETIRED;
+        } else if ("DEAD".equalsIgnoreCase(legacyStatus)) {
+            state = CaptainState.DEAD;
+        } else if ("ESCAPED".equalsIgnoreCase(legacyStatus)) {
+            state = CaptainState.COOLDOWN;
+            cooldownUntil = despawnedAt;
+        } else {
+            state = CaptainState.DORMANT;
+        }
+
+        long lastSeen = despawnedAt > 0 ? despawnedAt : spawnedAt;
+        return new CaptainRecord.State(state, cooldownUntil, lastSeen);
+    }
+
+    private CaptainState parseCaptainState(String rawState, CaptainState fallback) {
+        if (rawState == null || rawState.isBlank()) {
+            return fallback;
+        }
+        try {
+            return CaptainState.valueOf(rawState.toUpperCase());
+        } catch (IllegalArgumentException ignored) {
+            return fallback;
         }
     }
 

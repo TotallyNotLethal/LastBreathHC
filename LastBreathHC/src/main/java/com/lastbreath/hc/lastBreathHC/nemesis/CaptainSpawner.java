@@ -30,6 +30,7 @@ public class CaptainSpawner implements Listener {
     private final CaptainRegistry registry;
     private final CaptainEntityBinder binder;
     private final ProtectedRegionChecker protectedRegionChecker;
+    private final CaptainStateMachine stateMachine;
 
     private final long movementCheckCooldownMs;
     private final double joinHuntChance;
@@ -38,7 +39,6 @@ public class CaptainSpawner implements Listener {
     private final int nearbyRangeBlocks;
     private final int activeCaptainCap;
     private final int perWorldPerMinuteLimit;
-    private final long recordCooldownMs;
 
     private final Map<UUID, Long> playerMovementProbeCooldown = new HashMap<>();
     private final Map<UUID, Integer> perWorldSpawnCounter = new HashMap<>();
@@ -53,6 +53,7 @@ public class CaptainSpawner implements Listener {
         this.registry = registry;
         this.binder = binder;
         this.protectedRegionChecker = protectedRegionChecker;
+        this.stateMachine = new CaptainStateMachine();
 
         this.movementCheckCooldownMs = Math.max(250L, plugin.getConfig().getLong("nemesis.spawner.movementCheckCooldownMs", 2000L));
         this.joinHuntChance = clampChance(plugin.getConfig().getDouble("nemesis.spawner.joinHuntChance", 0.2));
@@ -61,7 +62,6 @@ public class CaptainSpawner implements Listener {
         this.nearbyRangeBlocks = Math.max(16, plugin.getConfig().getInt("nemesis.spawner.nearbyRangeBlocks", 96));
         this.activeCaptainCap = Math.max(1, plugin.getConfig().getInt("nemesis.spawner.activeCaptainCap", 20));
         this.perWorldPerMinuteLimit = Math.max(1, plugin.getConfig().getInt("nemesis.spawner.perWorldPerMinuteLimit", 3));
-        this.recordCooldownMs = Math.max(1000L, plugin.getConfig().getLong("nemesis.spawner.recordCooldownMs", 30_000L));
     }
 
     public void start() {
@@ -146,14 +146,15 @@ public class CaptainSpawner implements Listener {
         }
 
         CaptainRecord relocated = withLocationAndSeen(candidate, target);
-        Optional<org.bukkit.entity.LivingEntity> bound = binder.spawnOrBind(relocated);
+        CaptainRecord spawned = withState(relocated, stateMachine.onSpawn(System.currentTimeMillis()));
+        Optional<org.bukkit.entity.LivingEntity> bound = binder.spawnOrBind(spawned);
         if (bound.isEmpty()) {
             return false;
         }
 
-        registry.upsert(relocated);
+        registry.upsert(spawned);
         markSpawnInWorld(target.getWorld());
-        announceSpawn(relocated, nearPlayer, reason);
+        announceSpawn(spawned, nearPlayer, reason);
         return true;
     }
 
@@ -163,24 +164,26 @@ public class CaptainSpawner implements Listener {
         if (record == null || record.origin() == null) {
             return false;
         }
-        Optional<org.bukkit.entity.LivingEntity> bound = binder.spawnOrBind(record);
+        CaptainRecord spawned = withState(record, stateMachine.onSpawn(System.currentTimeMillis()));
+        Optional<org.bukkit.entity.LivingEntity> bound = binder.spawnOrBind(spawned);
         if (bound.isEmpty()) {
             return false;
         }
         markSpawnInWorld(bound.get().getWorld());
+        registry.upsert(spawned);
         return true;
     }
 
     public boolean retireCaptain(UUID captainId) {
         CaptainRecord record = registry.getByCaptainUuid(captainId);
-        if (record == null || record.state() == null || !record.state().active()) {
+        if (record == null || record.state() == null || record.state().state() != CaptainState.ACTIVE) {
             return false;
         }
         org.bukkit.entity.Entity entity = record.identity() == null ? null : Bukkit.getEntity(record.identity().spawnEntityUuid());
         if (entity != null && entity.isValid()) {
             entity.remove();
         }
-        CaptainRecord.State retired = new CaptainRecord.State("RETIRED", false, record.state().spawnedAtEpochMillis(), System.currentTimeMillis());
+        CaptainRecord.State retired = stateMachine.onRetire(System.currentTimeMillis());
         registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), retired, record.telemetry()));
         return true;
     }
@@ -201,7 +204,7 @@ public class CaptainSpawner implements Listener {
         if (record == null || record.state() == null) {
             return false;
         }
-        return record.state().active() && !"dead".equalsIgnoreCase(record.state().status());
+        return record.state().state() == CaptainState.DORMANT;
     }
 
     private boolean isNearNemesisPlayer(CaptainRecord record, Player nearPlayer) {
@@ -213,11 +216,18 @@ public class CaptainSpawner implements Listener {
     }
 
     private boolean isOnCooldown(CaptainRecord record, long now) {
-        if (record.telemetry() == null) {
+        if (record.state() == null) {
             return false;
         }
-        long lastSeen = record.telemetry().lastSeenAtEpochMillis();
-        return lastSeen > 0 && now - lastSeen < recordCooldownMs;
+        if (record.state().state() != CaptainState.COOLDOWN) {
+            return false;
+        }
+        if (now >= record.state().cooldownUntilEpochMs()) {
+            CaptainRecord.State dormant = stateMachine.onCooldownElapsed(now);
+            registry.upsert(withState(record, dormant));
+            return false;
+        }
+        return true;
     }
 
     private double hateScore(CaptainRecord record) {
@@ -334,6 +344,10 @@ public class CaptainSpawner implements Listener {
                 record.state(),
                 telemetry
         );
+    }
+
+    private CaptainRecord withState(CaptainRecord record, CaptainRecord.State state) {
+        return new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), state, record.telemetry());
     }
 
     private void announceSpawn(CaptainRecord record, Player nearPlayer, String reason) {

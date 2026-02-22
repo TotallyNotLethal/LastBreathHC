@@ -20,6 +20,7 @@ public class NemesisProgressionService {
     private final CaptainRegistry registry;
     private final CaptainEntityBinder binder;
     private final Map<UUID, Long> combatTrackedAt = new ConcurrentHashMap<>();
+    private final CaptainStateMachine stateMachine = new CaptainStateMachine();
     private BukkitTask combatTask;
 
     private final long xpPerKill;
@@ -97,7 +98,7 @@ public class NemesisProgressionService {
         if (remaining > captain.getMaxHealth() * escapeHpPct || Math.random() > escapeChance) {
             return;
         }
-        if (record.state() == null || !record.state().active()) {
+        if (record.state() == null || record.state().state() != CaptainState.ACTIVE) {
             return;
         }
 
@@ -107,7 +108,8 @@ public class NemesisProgressionService {
             traitIds.add("personality_berserker");
         }
         CaptainRecord.Traits traits = new CaptainRecord.Traits(traitIds, record.traits().weaknesses(), record.traits().immunities());
-        CaptainRecord.State state = new CaptainRecord.State("ESCAPED", false, record.state().spawnedAtEpochMillis(), now);
+        long cooldownUntil = now + plugin.getConfig().getLong("nemesis.spawner.recordCooldownMs", 30_000L);
+        CaptainRecord.State state = stateMachine.onEscapeOrDespawn(now, cooldownUntil);
         CaptainRecord.Telemetry telemetry = withCounter(record, "escapes", 1L, now);
 
         registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), traits, record.minionPack(), state, telemetry));
@@ -123,7 +125,7 @@ public class NemesisProgressionService {
                 continue;
             }
             CaptainRecord record = registry.getByCaptainUuid(entry.getKey());
-            if (record == null || record.state() == null || !record.state().active()) {
+            if (record == null || record.state() == null || record.state().state() != CaptainState.ACTIVE) {
                 continue;
             }
             CaptainRecord.Progression progression = applyXp(record, xpPerCombatTick);

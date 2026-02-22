@@ -37,6 +37,7 @@ public class CaptainCombatListener implements Listener {
     private final CaptainTraitService traitService;
     private final NemesisUI nemesisUI;
     private final NemesisProgressionService progressionService;
+    private final CaptainStateMachine stateMachine;
 
     private final NamespacedKey captainUuidKey;
     private final NamespacedKey captainFlagKey;
@@ -55,6 +56,7 @@ public class CaptainCombatListener implements Listener {
         this.traitService = traitService;
         this.nemesisUI = nemesisUI;
         this.progressionService = progressionService;
+        this.stateMachine = new CaptainStateMachine();
         this.captainUuidKey = new NamespacedKey(plugin, "nemesis_captain_uuid");
         this.captainFlagKey = new NamespacedKey(plugin, "nemesis_captain");
         this.eligibleMobTypes = loadEligibleMobTypes(plugin.getConfig().getConfigurationSection("nemesis.eligibleMobTypes"));
@@ -206,7 +208,8 @@ public class CaptainCombatListener implements Listener {
         int minionCount = Math.max(0, plugin.getConfig().getInt("nemesis.minions.defaultCount", 2));
         List<String> minionArchetypes = plugin.getConfig().getStringList("nemesis.minions.defaultArchetypes");
         CaptainRecord.MinionPack minionPack = new CaptainRecord.MinionPack("default", minionCount, minionArchetypes, plugin.getConfig().getDouble("nemesis.minions.reinforcementChance", 0.0));
-        CaptainRecord.State state = new CaptainRecord.State("ACTIVE", true, now, null);
+        CaptainRecord.State createdState = stateMachine.onCreate(now);
+        CaptainRecord.State state = stateMachine.onSpawn(createdState.lastSeenEpochMs());
 
         Map<String, Long> counters = new HashMap<>();
         counters.put("kills", 1L);
