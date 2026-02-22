@@ -258,7 +258,12 @@ public class MinionController implements Listener {
         captainToMinions.remove(captainId);
     }
 
-    private void cleanupOrphans() {
+    public int cleanupOrphansNow() {
+        return cleanupOrphans();
+    }
+
+    private int cleanupOrphans() {
+        int removed = 0;
         for (Map.Entry<UUID, Set<UUID>> entry : new ArrayList<>(captainToMinions.entrySet())) {
             UUID captainId = entry.getKey();
             if (captainRegistry.getByCaptainUuid(captainId) == null) {
@@ -266,6 +271,7 @@ public class MinionController implements Listener {
                     Entity entity = plugin.getServer().getEntity(minionId);
                     if (entity != null && entity.isValid()) {
                         entity.remove();
+                        removed++;
                     }
                 }
                 captainToMinions.remove(captainId);
@@ -282,9 +288,11 @@ public class MinionController implements Listener {
                     captainToMinions.computeIfAbsent(captainId, ignored -> ConcurrentHashMap.newKeySet()).add(entity.getUniqueId());
                 } else {
                     entity.remove();
+                    removed++;
                 }
             }
         }
+        return removed;
     }
 
     private UUID parseCaptainId(Entity entity) {

@@ -103,6 +103,14 @@ public class CaptainRegistry {
         return resolveRecords(activeCaptainsByWorld.getOrDefault(normalizeWorld(world), Set.of()));
     }
 
+    public Map<String, Integer> getActiveCaptainCountsByWorld() {
+        Map<String, Integer> counts = new HashMap<>();
+        for (Map.Entry<String, Set<UUID>> entry : activeCaptainsByWorld.entrySet()) {
+            counts.put(entry.getKey(), entry.getValue().size());
+        }
+        return Collections.unmodifiableMap(counts);
+    }
+
     public List<CaptainRecord> getActiveByChunk(String world, int chunkX, int chunkZ) {
         List<CaptainRecord> chunkRecords = getByOriginChunk(world, chunkX, chunkZ);
         if (chunkRecords.isEmpty()) {
