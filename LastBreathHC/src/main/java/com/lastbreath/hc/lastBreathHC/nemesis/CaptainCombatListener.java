@@ -37,6 +37,7 @@ public class CaptainCombatListener implements Listener {
     private final CaptainTraitService traitService;
     private final NemesisUI nemesisUI;
     private final NemesisProgressionService progressionService;
+    private final DeathOutcomeResolver deathOutcomeResolver;
     private final CaptainStateMachine stateMachine;
 
     private final NamespacedKey captainUuidKey;
@@ -51,7 +52,7 @@ public class CaptainCombatListener implements Listener {
     private final int creationThrottleMaxCaptains;
     private final long creationThrottleWindowMs;
 
-    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, NemesisUI nemesisUI, NemesisProgressionService progressionService) {
+    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver) {
         this.plugin = plugin;
         this.captainRegistry = captainRegistry;
         this.killerResolver = killerResolver;
@@ -59,6 +60,7 @@ public class CaptainCombatListener implements Listener {
         this.traitService = traitService;
         this.nemesisUI = nemesisUI;
         this.progressionService = progressionService;
+        this.deathOutcomeResolver = deathOutcomeResolver;
         this.stateMachine = new CaptainStateMachine();
         this.captainUuidKey = new NamespacedKey(plugin, "nemesis_captain_uuid");
         this.captainFlagKey = new NamespacedKey(plugin, "nemesis_captain");
@@ -80,6 +82,11 @@ public class CaptainCombatListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player victim = event.getEntity();
+        DeathOutcomeResolver.DeathOutcome deathOutcome = deathOutcomeResolver.resolve(victim);
+        if (deathOutcome != DeathOutcomeResolver.DeathOutcome.DEATH_FINAL) {
+            return;
+        }
+
         KillerResolver.ResolvedKiller resolvedKiller = killerResolver.resolve(victim, attributionTimeouts);
         if (resolvedKiller == null || resolvedKiller.entity() == null) {
             return;

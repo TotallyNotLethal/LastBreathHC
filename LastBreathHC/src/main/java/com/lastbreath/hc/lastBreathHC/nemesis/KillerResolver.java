@@ -70,6 +70,31 @@ public class KillerResolver implements Listener {
         }
     }
 
+    public ResolutionDebugSnapshot inspect(Player player, AttributionTimeouts timeouts) {
+        if (player == null) {
+            return new ResolutionDebugSnapshot(null, List.of());
+        }
+
+        Deque<DamageAttribution> history = recentHostileDamage.get(player.getUniqueId());
+        List<AttributionSnapshot> chain = history == null
+                ? List.of()
+                : history.stream().map(this::toSnapshot).toList();
+
+        ResolvedKiller resolved = resolve(player, timeouts);
+        return new ResolutionDebugSnapshot(resolved, chain);
+    }
+
+    public List<AttributionSnapshot> getAttributionChain(Player player) {
+        if (player == null) {
+            return List.of();
+        }
+        Deque<DamageAttribution> history = recentHostileDamage.get(player.getUniqueId());
+        if (history == null) {
+            return List.of();
+        }
+        return history.stream().map(this::toSnapshot).toList();
+    }
+
     public ResolvedKiller resolve(Player player, AttributionTimeouts timeouts) {
         if (player == null) {
             return null;
@@ -98,6 +123,18 @@ public class KillerResolver implements Listener {
         }
 
         return new ResolvedKiller(best.damager().getUniqueId(), best.damager(), best.sourceType(), best.damageCause(), best.timestamp());
+    }
+
+    private AttributionSnapshot toSnapshot(DamageAttribution attribution) {
+        String displayName = attribution.damager().getName();
+        return new AttributionSnapshot(
+                attribution.damager().getUniqueId(),
+                displayName == null || displayName.isBlank() ? attribution.damager().getType().name() : displayName,
+                attribution.sourceType(),
+                attribution.damageCause(),
+                attribution.timestamp(),
+                attribution.damager().isValid()
+        );
     }
 
     private DamageAttribution resolveDirect(Player player) {
@@ -223,6 +260,12 @@ public class KillerResolver implements Listener {
         private DamageAttribution withSourceType(SourceType newSourceType) {
             return new DamageAttribution(damager, newSourceType, damageCause, Instant.now());
         }
+    }
+
+    public record AttributionSnapshot(UUID entityUuid, String displayName, SourceType sourceType, EntityDamageEvent.DamageCause damageCause, Instant timestamp, boolean valid) {
+    }
+
+    public record ResolutionDebugSnapshot(ResolvedKiller resolvedKiller, List<AttributionSnapshot> attributionChain) {
     }
 
     public record ResolvedKiller(UUID entityUuid, LivingEntity entity, SourceType sourceType, EntityDamageEvent.DamageCause damageCause, Instant timestamp) {
