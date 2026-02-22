@@ -6,7 +6,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
@@ -19,13 +18,15 @@ import java.util.UUID;
 public class NemesisUI {
     private final LastBreathHC plugin;
     private final CaptainRegistry registry;
+    private final CaptainEntityBinder captainEntityBinder;
 
     private final Map<UUID, BossBar> playerBars = new HashMap<>();
     private BukkitTask uiTask;
 
-    public NemesisUI(LastBreathHC plugin, CaptainRegistry registry) {
+    public NemesisUI(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder captainEntityBinder) {
         this.plugin = plugin;
         this.registry = registry;
+        this.captainEntityBinder = captainEntityBinder;
     }
 
     public void start() {
@@ -62,7 +63,7 @@ public class NemesisUI {
                 continue;
             }
 
-            LivingEntity captainEntity = resolveCaptainEntity(nearest);
+            LivingEntity captainEntity = resolveActiveCaptainEntity(nearest);
             if (captainEntity == null) {
                 clearBossbar(player);
                 continue;
@@ -92,22 +93,18 @@ public class NemesisUI {
         return registry.getAll().stream()
                 .filter(record -> record.state() != null && record.state().state() == CaptainState.ACTIVE)
                 .filter(record -> {
-                    LivingEntity entity = resolveCaptainEntity(record);
+                    LivingEntity entity = resolveActiveCaptainEntity(record);
                     return entity != null && entity.getWorld().equals(player.getWorld());
                 })
                 .min(Comparator.comparingDouble(record -> {
-                    LivingEntity entity = resolveCaptainEntity(record);
+                    LivingEntity entity = resolveActiveCaptainEntity(record);
                     return entity == null ? Double.MAX_VALUE : entity.getLocation().distanceSquared(player.getLocation());
                 }))
                 .orElse(null);
     }
 
-    private LivingEntity resolveCaptainEntity(CaptainRecord record) {
-        if (record.identity() == null || record.identity().spawnEntityUuid() == null) {
-            return null;
-        }
-        Entity entity = Bukkit.getEntity(record.identity().spawnEntityUuid());
-        return entity instanceof LivingEntity living && living.isValid() ? living : null;
+    private LivingEntity resolveActiveCaptainEntity(CaptainRecord record) {
+        return captainEntityBinder.resolveLiveKillerEntity(record);
     }
 
     private void clearBossbar(Player player) {

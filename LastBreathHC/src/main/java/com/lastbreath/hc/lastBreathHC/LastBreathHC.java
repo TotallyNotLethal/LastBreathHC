@@ -211,7 +211,7 @@ public final class LastBreathHC extends JavaPlugin {
         captainSpawner.start();
         minionController = new MinionController(this, captainRegistry, captainEntityBinder, nemesisProgressionService);
         minionController.start();
-        nemesisUI = new NemesisUI(this, captainRegistry);
+        nemesisUI = new NemesisUI(this, captainRegistry, captainEntityBinder);
         nemesisUI.start();
         nemesisRewardService = new NemesisRewardService(this, captainEntityBinder, captainRegistry);
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);

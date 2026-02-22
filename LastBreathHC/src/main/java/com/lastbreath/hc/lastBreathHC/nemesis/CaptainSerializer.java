@@ -78,11 +78,11 @@ public class CaptainSerializer {
 
         if (records != null) {
             for (CaptainRecord record : records) {
-                if (record == null || record.identity() == null || record.identity().captainUuid() == null) {
+                if (record == null || record.identity() == null || record.identity().captainId() == null) {
                     continue;
                 }
 
-                String base = "captains." + record.identity().captainUuid();
+                String base = "captains." + record.identity().captainId();
                 writeCaptain(config, base, record);
             }
         }
@@ -103,10 +103,9 @@ public class CaptainSerializer {
 
     private CaptainRecord parseCaptain(UUID captainUuid, ConfigurationSection row) {
         UUID nemesisOf = parseUuid(row.getString("identity.nemesisOf"));
-        UUID spawnEntityUuid = parseUuid(row.getString("identity.spawnEntityUuid"));
         long createdAt = row.getLong("identity.createdAtEpochMillis", System.currentTimeMillis());
 
-        CaptainRecord.Identity identity = new CaptainRecord.Identity(captainUuid, nemesisOf, spawnEntityUuid, createdAt);
+        CaptainRecord.Identity identity = new CaptainRecord.Identity(captainUuid, nemesisOf, createdAt);
         CaptainRecord.Origin origin = new CaptainRecord.Origin(
                 row.getString("origin.world", "world"),
                 row.getInt("origin.chunkX", 0),
@@ -157,7 +156,7 @@ public class CaptainSerializer {
                 row.getDouble("minionPack.reinforcementChance", 0.0)
         );
 
-        CaptainRecord.State state = parseState(row);
+        CaptainRecord.State state = parseState(row, parseUuid(row.getString("identity.spawnEntityUuid")));
 
         CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(
                 row.getLong("telemetry.lastSeenAtEpochMillis", 0L),
@@ -171,7 +170,6 @@ public class CaptainSerializer {
 
     private void writeCaptain(YamlConfiguration config, String base, CaptainRecord record) {
         config.set(base + ".identity.nemesisOf", stringify(record.identity().nemesisOf()));
-        config.set(base + ".identity.spawnEntityUuid", stringify(record.identity().spawnEntityUuid()));
         config.set(base + ".identity.createdAtEpochMillis", record.identity().createdAtEpochMillis());
 
         config.set(base + ".origin.world", record.origin().world());
@@ -212,6 +210,7 @@ public class CaptainSerializer {
         config.set(base + ".state.state", record.state().state().name());
         config.set(base + ".state.cooldownUntilEpochMs", record.state().cooldownUntilEpochMs());
         config.set(base + ".state.lastSeenEpochMs", record.state().lastSeenEpochMs());
+        config.set(base + ".state.runtimeEntityUuid", stringify(record.state().runtimeEntityUuid()));
 
         config.set(base + ".telemetry.lastSeenAtEpochMillis", record.telemetry().lastSeenAtEpochMillis());
         config.set(base + ".telemetry.lastUpdatedAtEpochMillis", record.telemetry().lastUpdatedAtEpochMillis());
@@ -225,14 +224,15 @@ public class CaptainSerializer {
     }
 
 
-    private CaptainRecord.State parseState(ConfigurationSection row) {
+    private CaptainRecord.State parseState(ConfigurationSection row, UUID legacyRuntimeEntityUuid) {
         String rawState = row.getString("state.state");
         if (rawState != null) {
             CaptainState parsed = parseCaptainState(rawState, CaptainState.DORMANT);
             return new CaptainRecord.State(
                     parsed,
                     row.getLong("state.cooldownUntilEpochMs", 0L),
-                    row.getLong("state.lastSeenEpochMs", row.getLong("telemetry.lastSeenAtEpochMillis", 0L))
+                    row.getLong("state.lastSeenEpochMs", row.getLong("telemetry.lastSeenAtEpochMillis", 0L)),
+                    parseUuid(row.getString("state.runtimeEntityUuid"))
             );
         }
 
@@ -257,7 +257,7 @@ public class CaptainSerializer {
         }
 
         long lastSeen = despawnedAt > 0 ? despawnedAt : spawnedAt;
-        return new CaptainRecord.State(state, cooldownUntil, lastSeen);
+        return new CaptainRecord.State(state, cooldownUntil, lastSeen, legacyRuntimeEntityUuid);
     }
 
     private CaptainState parseCaptainState(String rawState, CaptainState fallback) {

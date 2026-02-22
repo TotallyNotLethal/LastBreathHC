@@ -32,11 +32,11 @@ public class CaptainRegistry {
     }
 
     public synchronized void upsert(CaptainRecord record) {
-        if (record == null || record.identity() == null || record.identity().captainUuid() == null) {
+        if (record == null || record.identity() == null || record.identity().captainId() == null) {
             return;
         }
 
-        CaptainRecord existing = captainsByUuid.put(record.identity().captainUuid(), record);
+        CaptainRecord existing = captainsByUuid.put(record.identity().captainId(), record);
         if (existing != null) {
             deindex(existing);
         }
@@ -78,7 +78,7 @@ public class CaptainRegistry {
     }
 
     private void index(CaptainRecord record) {
-        UUID captainUuid = record.identity().captainUuid();
+        UUID captainUuid = record.identity().captainId();
 
         UUID nemesisOf = record.identity().nemesisOf();
         if (nemesisOf != null) {
@@ -97,7 +97,7 @@ public class CaptainRegistry {
     }
 
     private void deindex(CaptainRecord record) {
-        UUID captainUuid = record.identity().captainUuid();
+        UUID captainUuid = record.identity().captainId();
 
         UUID nemesisOf = record.identity().nemesisOf();
         if (nemesisOf != null) {

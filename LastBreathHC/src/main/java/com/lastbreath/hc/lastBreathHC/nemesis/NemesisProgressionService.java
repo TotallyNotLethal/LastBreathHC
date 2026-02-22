@@ -65,7 +65,7 @@ public class NemesisProgressionService {
         CaptainRecord.Victims updatedVictims = new CaptainRecord.Victims(victims, record.victims().totalVictimCount() + 1, now);
         CaptainRecord.Telemetry telemetry = withCounter(record, "playerKills", 1L, now);
         CaptainRecord updated = new CaptainRecord(record.identity(), record.origin(), updatedVictims, scores, progression, record.naming(), record.traits(), record.minionPack(), record.state(), telemetry);
-        combatTrackedAt.put(record.identity().captainUuid(), now);
+        combatTrackedAt.put(record.identity().captainId(), now);
         return updated;
     }
 
@@ -90,7 +90,7 @@ public class NemesisProgressionService {
         if (!(event.getDamager() instanceof Player)) {
             return;
         }
-        combatTrackedAt.put(record.identity().captainUuid(), System.currentTimeMillis());
+        combatTrackedAt.put(record.identity().captainId(), System.currentTimeMillis());
 
         double remaining = captain.getHealth() - event.getFinalDamage();
         double escapeHpPct = plugin.getConfig().getDouble("nemesis.escape.healthThreshold", 0.12);

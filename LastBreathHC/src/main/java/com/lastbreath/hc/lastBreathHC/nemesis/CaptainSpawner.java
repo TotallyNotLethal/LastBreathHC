@@ -152,9 +152,10 @@ public class CaptainSpawner implements Listener {
             return false;
         }
 
-        registry.upsert(spawned);
+        CaptainRecord persisted = withRuntimeEntity(spawned, bound.get().getUniqueId());
+        registry.upsert(persisted);
         markSpawnInWorld(target.getWorld());
-        announceSpawn(spawned, nearPlayer, reason);
+        announceSpawn(persisted, nearPlayer, reason);
         return true;
     }
 
@@ -170,7 +171,7 @@ public class CaptainSpawner implements Listener {
             return false;
         }
         markSpawnInWorld(bound.get().getWorld());
-        registry.upsert(spawned);
+        registry.upsert(withRuntimeEntity(spawned, bound.get().getUniqueId()));
         return true;
     }
 
@@ -179,7 +180,7 @@ public class CaptainSpawner implements Listener {
         if (record == null || record.state() == null || record.state().state() != CaptainState.ACTIVE) {
             return false;
         }
-        org.bukkit.entity.Entity entity = record.identity() == null ? null : Bukkit.getEntity(record.identity().spawnEntityUuid());
+        org.bukkit.entity.LivingEntity entity = binder.resolveLiveKillerEntity(record);
         if (entity != null && entity.isValid()) {
             entity.remove();
         }
@@ -348,6 +349,14 @@ public class CaptainSpawner implements Listener {
 
     private CaptainRecord withState(CaptainRecord record, CaptainRecord.State state) {
         return new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), state, record.telemetry());
+    }
+
+    private CaptainRecord withRuntimeEntity(CaptainRecord record, UUID runtimeEntityUuid) {
+        if (record.state() == null) {
+            return record;
+        }
+        CaptainRecord.State state = new CaptainRecord.State(record.state().state(), record.state().cooldownUntilEpochMs(), record.state().lastSeenEpochMs(), runtimeEntityUuid);
+        return withState(record, state);
     }
 
     private void announceSpawn(CaptainRecord record, Player nearPlayer, String reason) {

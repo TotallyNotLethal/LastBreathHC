@@ -42,7 +42,7 @@ public class AntiCheeseMonitor implements Listener {
             return;
         }
 
-        String key = player.getUniqueId() + ":" + record.identity().captainUuid();
+        String key = player.getUniqueId() + ":" + record.identity().captainId();
         if (!living.hasLineOfSight(player)) {
             int count = losAbuse.getOrDefault(key, 0) + 1;
             losAbuse.put(key, count);
