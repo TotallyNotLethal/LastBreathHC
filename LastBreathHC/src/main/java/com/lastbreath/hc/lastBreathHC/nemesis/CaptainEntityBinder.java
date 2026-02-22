@@ -47,27 +47,31 @@ public class CaptainEntityBinder {
 
     public Optional<LivingEntity> spawnOrBind(CaptainRecord record) {
         if (record == null || record.identity() == null || record.origin() == null) {
+            transitionToDormantOrCooldown(record);
             return Optional.empty();
         }
 
         LivingEntity upgradeCandidate = resolveLiveKillerEntity(record);
-        if (upgradeCandidate != null) {
+        if (upgradeCandidate != null && isChunkLoaded(upgradeCandidate.getLocation())) {
             bind(upgradeCandidate, record);
             return Optional.of(upgradeCandidate);
         }
 
         Location spawnLocation = buildLocation(record.origin());
         if (spawnLocation == null || spawnLocation.getWorld() == null) {
+            transitionToDormantOrCooldown(record);
             return Optional.empty();
         }
 
-        if (!spawnLocation.getChunk().isLoaded() && !spawnLocation.getChunk().load()) {
+        if (!isChunkLoaded(spawnLocation)) {
+            transitionToDormantOrCooldown(record);
             return Optional.empty();
         }
 
         Entity entity = spawnLocation.getWorld().spawnEntity(spawnLocation, resolveEntityType(record));
         if (!(entity instanceof LivingEntity livingEntity)) {
             entity.remove();
+            transitionToDormantOrCooldown(record);
             return Optional.empty();
         }
 
@@ -258,6 +262,14 @@ public class CaptainEntityBinder {
             return;
         }
 
+        transitionToDormantOrCooldown(record);
+    }
+
+    private void transitionToDormantOrCooldown(CaptainRecord record) {
+        if (record == null || record.state() == null || record.state().state() != CaptainState.ACTIVE) {
+            return;
+        }
+
         long now = System.currentTimeMillis();
         long cooldownMs = Math.max(0L, plugin.getConfig().getLong("nemesis.lifecycle.missingEntityCooldownMs", 60000L));
         CaptainRecord.State nextState = cooldownMs > 0
@@ -283,6 +295,13 @@ public class CaptainEntityBinder {
                 clearedState,
                 record.telemetry()
         ));
+    }
+
+    private boolean isChunkLoaded(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        return location.getWorld().isChunkLoaded(location.getBlockX() >> 4, location.getBlockZ() >> 4);
     }
 
 
