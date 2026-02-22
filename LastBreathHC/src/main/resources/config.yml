@@ -584,3 +584,95 @@ dailyRewards:
         amount: 1
     "7":
       - type: DAILY_RANDOM_COSMETIC
+
+nemesis:
+  recentHostileTimeoutSeconds: 20
+  progression:
+    xpPerVictim: 25
+    xpPerCombatTick: 2
+    angerPerKill: 3.0
+    statPerLevel: 0.15
+    traitUnlockLevel: 5
+  scores:
+    rivalryPerVictim: 5.0
+  eligibleMobTypes:
+    ZOMBIE: true
+    SKELETON: true
+    SPIDER: true
+    CREEPER: true
+    WITHER_SKELETON: true
+  scaling:
+    baseHealth: 30.0
+    healthPerLevel: 5.0
+    damagePerLevel: 1.0
+    tierMultipliers:
+      common: 1.0
+      elite: 1.25
+      mythic: 1.5
+      legendary: 2.0
+  equipment:
+    rollChance: 0.15
+  rewards:
+    playerCooldownMs: 120000
+    bonusChance: 0.1
+  minions:
+    tickPeriodTicks: 10
+    defaultCount: 2
+    defaultArchetypes:
+      - ZOMBIE
+      - SKELETON
+    reinforcementChance: 0.1
+    respawnCooldownMs: 5000
+    leashDistance: 24.0
+    retreatHealthThreshold: 0.35
+    captainDeathOutcome: flee
+    xpPerMinionDeath: 8
+    angerPerMinionDeath: 1.5
+  antiCheese:
+    losThreshold: 8
+  spawner:
+    movementCheckCooldownMs: 2000
+    joinHuntChance: 0.2
+    deathHuntChance: 0.35
+    worldTickSpawnChance: 0.001
+    worldTickPeriodTicks: 200
+    nearbyRangeBlocks: 96
+    activeCaptainCap: 20
+    perWorldPerMinuteLimit: 3
+    recordCooldownMs: 30000
+    minLight: 0
+    maxLight: 12
+    deniedBiomes:
+      - DEEP_DARK
+
+  traits:
+    definitions:
+      context_night_stalker:
+        weight: 3
+        requirements:
+          - OVERWORLD
+        incompatibilities: []
+        weakness: false
+      personality_berserker:
+        weight: 3
+        requirements: []
+        incompatibilities:
+          - personality_predator
+        weakness: false
+      personality_predator:
+        weight: 2
+        requirements: []
+        incompatibilities:
+          - personality_berserker
+        weakness: false
+      weakness_fragile:
+        weight: 4
+        requirements: []
+        incompatibilities: []
+        weakness: true
+      weakness_sunbound:
+        weight: 2
+        requirements:
+          - OVERWORLD
+        incompatibilities: []
+        weakness: true

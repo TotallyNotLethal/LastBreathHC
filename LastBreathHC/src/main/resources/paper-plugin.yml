@@ -16,3 +16,10 @@ permissions:
   lastbreathhc.fake.chat:
     description: Allows use of /chat fake message command.
     default: false
+
+  lastbreathhc.nemesis:
+    description: Allows player nemesis command usage.
+    default: true
+  lastbreathhc.nemesis.admin:
+    description: Allows admin nemesis command usage.
+    default: op
