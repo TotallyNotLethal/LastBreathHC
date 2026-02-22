@@ -22,9 +22,11 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -60,6 +62,11 @@ public class CaptainCombatListener implements Listener {
     private final long lowHealthFleeProbeCooldownMs;
     private final double playerEventRadiusCap;
     private final double playerEventRadiusBlocks;
+    private final boolean defyDeathPromotionEnabled;
+    private final int defyDeathStartingLevel;
+    private final String defyDeathStartingTier;
+    private final long defyDeathBonusXp;
+    private final double defyDeathBonusRivalry;
 
     public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver, CaptainNameGenerator nameGenerator) {
         this.plugin = plugin;
@@ -91,6 +98,11 @@ public class CaptainCombatListener implements Listener {
         this.lowHealthFleeProbeCooldownMs = Math.max(250L, plugin.getConfig().getLong("nemesis.creation.lowHealthFleeProbeCooldownMs", 2000L));
         this.playerEventRadiusBlocks = Math.max(32.0, plugin.getConfig().getDouble("nemesis.creation.playerEvent.maxRadiusBlocks", 5000.0));
         this.playerEventRadiusCap = Math.max(1.0, plugin.getConfig().getDouble("nemesis.creation.playerEvent.activeCapWithinRadius", 20.0));
+        this.defyDeathPromotionEnabled = plugin.getConfig().getBoolean("nemesis.creation.defyDeath.enabled", true);
+        this.defyDeathStartingLevel = Math.max(1, plugin.getConfig().getInt("nemesis.creation.defyDeath.startingLevel", 4));
+        this.defyDeathStartingTier = normalizeTier(plugin.getConfig().getString("nemesis.creation.defyDeath.tier", "ELITE"));
+        this.defyDeathBonusXp = Math.max(0L, plugin.getConfig().getLong("nemesis.creation.defyDeath.bonusXP", 300L));
+        this.defyDeathBonusRivalry = Math.max(0.0, plugin.getConfig().getDouble("nemesis.creation.defyDeath.bonusRivalry", 20.0));
         indexExistingCaptains();
     }
 
@@ -136,7 +148,7 @@ public class CaptainCombatListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player victim = event.getEntity();
         DeathOutcomeResolver.DeathOutcome deathOutcome = deathOutcomeResolver.resolve(victim);
-        if (deathOutcome != DeathOutcomeResolver.DeathOutcome.DEATH_FINAL) {
+        if (deathOutcome == DeathOutcomeResolver.DeathOutcome.DEATH_PREVENTED) {
             return;
         }
 
@@ -145,7 +157,64 @@ public class CaptainCombatListener implements Listener {
             return;
         }
 
+        boolean promoted;
+        if (deathOutcome == DeathOutcomeResolver.DeathOutcome.DEATH_SOFT) {
+            promoted = createHighRankingCaptainFromDefyDeath(resolvedKiller.entity(), victim.getUniqueId(), victim, true);
+            if (!promoted) {
+                plugin.getLogger().info("[Nemesis] Defy-death promotion skipped for " + victim.getName() + " due to anti-abuse constraints.");
+            }
+            return;
+        }
+
         createCaptainFromEntity(resolvedKiller.entity(), victim.getUniqueId(), victim, true);
+    }
+
+    private boolean createHighRankingCaptainFromDefyDeath(LivingEntity killer, UUID victimUuid, Player victimPlayer, boolean enforcePlayerEventRadiusCap) {
+        if (!defyDeathPromotionEnabled) {
+            return createCaptainFromEntity(killer, victimUuid, victimPlayer, enforcePlayerEventRadiusCap);
+        }
+
+        if (!isEligibleKiller(killer)) {
+            return false;
+        }
+
+        if (enforcePlayerEventRadiusCap && isPlayerEventAreaOverCap(killer.getLocation())) {
+            return false;
+        }
+
+        UUID captainUuid = resolveCaptainUuid(killer);
+        if (captainUuid != null) {
+            CaptainRecord existing = captainRegistry.getByCaptainUuid(captainUuid);
+            if (existing != null) {
+                CaptainRecord promoted = promoteExistingCaptainFromDefyDeath(existing, victimUuid);
+                captainRegistry.upsert(promoted);
+                captainEntityBinder.tryUpgradeInPlace(promoted);
+                return true;
+            }
+        }
+
+        CaptainRecord nearbyMatch = findNearbyDedupeMatch(killer, victimUuid);
+        if (nearbyMatch != null) {
+            entityToCaptainId.put(killer.getUniqueId(), nearbyMatch.identity().captainId());
+            stampCaptainPdc(killer, nearbyMatch.identity().captainId());
+            captainEntityBinder.bind(killer, nearbyMatch);
+            CaptainRecord promoted = promoteExistingCaptainFromDefyDeath(nearbyMatch, victimUuid);
+            captainRegistry.upsert(promoted);
+            captainEntityBinder.tryUpgradeInPlace(promoted);
+            return true;
+        }
+
+        if (isCreationThrottled(killer)) {
+            return false;
+        }
+
+        CaptainRecord created = createCaptainRecord(killer, victimUuid, true);
+        entityToCaptainId.put(killer.getUniqueId(), created.identity().captainId());
+        stampCaptainPdc(killer, created.identity().captainId());
+        captainEntityBinder.bind(killer, created);
+        captainRegistry.upsert(created);
+        nemesisUI.announceCaptainBirth(created, victimPlayer);
+        return true;
     }
 
     private boolean createCaptainFromEntity(LivingEntity killer, UUID victimUuid, Player victimPlayer, boolean enforcePlayerEventRadiusCap) {
@@ -179,7 +248,7 @@ public class CaptainCombatListener implements Listener {
             return false;
         }
 
-        CaptainRecord created = createCaptainRecord(killer, victimUuid);
+        CaptainRecord created = createCaptainRecord(killer, victimUuid, false);
         entityToCaptainId.put(killer.getUniqueId(), created.identity().captainId());
         stampCaptainPdc(killer, created.identity().captainId());
         captainEntityBinder.bind(killer, created);
@@ -349,7 +418,7 @@ public class CaptainCombatListener implements Listener {
         }
     }
 
-    private CaptainRecord createCaptainRecord(LivingEntity killer, UUID victimUuid) {
+    private CaptainRecord createCaptainRecord(LivingEntity killer, UUID victimUuid, boolean elevatedDefyDeath) {
         long now = System.currentTimeMillis();
         UUID captainId = UUID.randomUUID();
         Location location = killer.getLocation();
@@ -370,9 +439,14 @@ public class CaptainCombatListener implements Listener {
                 location.getBlock().getBiome().name()
         );
 
+        int startingLevel = elevatedDefyDeath ? defyDeathStartingLevel : 1;
+        long startingXp = Math.max((long) (startingLevel - 1) * 100L, elevatedDefyDeath ? defyDeathBonusXp : xpPerKill);
+        String startingTier = elevatedDefyDeath ? defyDeathStartingTier : "COMMON";
+        double rivalry = elevatedDefyDeath ? rivalryPerKill + defyDeathBonusRivalry : rivalryPerKill;
+
         CaptainRecord.Victims victims = new CaptainRecord.Victims(List.of(victimUuid), 1, now);
-        CaptainRecord.NemesisScores scores = new CaptainRecord.NemesisScores(1.0, rivalryPerKill, 0.5, 0.5);
-        CaptainRecord.Progression progression = new CaptainRecord.Progression(1, xpPerKill, "COMMON");
+        CaptainRecord.NemesisScores scores = new CaptainRecord.NemesisScores(elevatedDefyDeath ? 3.0 : 1.0, rivalry, elevatedDefyDeath ? 1.5 : 0.5, elevatedDefyDeath ? 1.0 : 0.5);
+        CaptainRecord.Progression progression = new CaptainRecord.Progression(startingLevel, startingXp, startingTier);
         CaptainRecord.Traits traits = traitService.selectInitialTraits(identity, killer, scores);
         CaptainRecord.Naming naming = nameGenerator.generate(captainId, killer, traits);
         int minionCount = Math.max(0, plugin.getConfig().getInt("nemesis.minions.defaultCount", 2));
@@ -385,6 +459,9 @@ public class CaptainCombatListener implements Listener {
         Map<String, Long> counters = new HashMap<>();
         counters.put("kills", 1L);
         counters.put("spawns", 1L);
+        if (elevatedDefyDeath) {
+            counters.put("defyDeathPromotions", 1L);
+        }
         CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(now, now, 1, counters);
 
         return new CaptainRecord(identity, origin, victims, scores, progression, naming, traits, minionPack, state, telemetry);
@@ -421,5 +498,79 @@ public class CaptainCombatListener implements Listener {
             return 0.0;
         }
         return Math.min(raw, 1.0);
+    }
+
+    private CaptainRecord promoteExistingCaptainFromDefyDeath(CaptainRecord existing, UUID victimUuid) {
+        long now = System.currentTimeMillis();
+        List<UUID> victims = new ArrayList<>(existing.victims().playerVictims());
+        if (!victims.contains(victimUuid)) {
+            victims.add(victimUuid);
+        }
+        CaptainRecord.Victims updatedVictims = new CaptainRecord.Victims(victims, existing.victims().totalVictimCount() + 1, now);
+
+        CaptainRecord.Progression currentProgression = existing.progression();
+        int baseLevel = Math.max(currentProgression.level(), defyDeathStartingLevel);
+        long boostedXp = Math.max(currentProgression.experience() + defyDeathBonusXp, (long) (baseLevel - 1) * 100L);
+        int boostedLevel = Math.max(baseLevel, (int) (boostedXp / 100L) + 1);
+        String bumpedTier = bumpTier(currentProgression.tier(), defyDeathStartingTier);
+        CaptainRecord.Progression boostedProgression = new CaptainRecord.Progression(boostedLevel, boostedXp, bumpedTier);
+
+        CaptainRecord.NemesisScores currentScores = existing.nemesisScores();
+        CaptainRecord.NemesisScores boostedScores = new CaptainRecord.NemesisScores(
+                currentScores.threat() + 2.0,
+                currentScores.rivalry() + defyDeathBonusRivalry,
+                currentScores.brutality() + 1.0,
+                currentScores.cunning() + 0.5
+        );
+
+        Map<String, Long> counters = new HashMap<>(existing.telemetry().counters());
+        counters.put("defyDeathPromotions", counters.getOrDefault("defyDeathPromotions", 0L) + 1L);
+        counters.put("playerKills", counters.getOrDefault("playerKills", 0L) + 1L);
+        CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(
+                now,
+                now,
+                existing.telemetry().encounters(),
+                counters
+        );
+
+        return new CaptainRecord(
+                existing.identity(),
+                existing.origin(),
+                updatedVictims,
+                boostedScores,
+                boostedProgression,
+                existing.naming(),
+                existing.traits(),
+                existing.minionPack(),
+                existing.state(),
+                telemetry
+        );
+    }
+
+    private String bumpTier(String currentTier, String minimumTier) {
+        List<String> tiers = List.of("COMMON", "ELITE", "MYTHIC", "LEGENDARY");
+        String normalizedCurrent = normalizeTier(currentTier);
+        String normalizedMinimum = normalizeTier(minimumTier);
+        int currentIndex = tiers.indexOf(normalizedCurrent);
+        int minimumIndex = tiers.indexOf(normalizedMinimum);
+        if (currentIndex < 0) {
+            currentIndex = 0;
+        }
+        if (minimumIndex < 0) {
+            minimumIndex = 1;
+        }
+        int nextIndex = Math.min(tiers.size() - 1, Math.max(minimumIndex, currentIndex + 1));
+        return tiers.get(nextIndex);
+    }
+
+    private String normalizeTier(String tier) {
+        if (tier == null || tier.isBlank()) {
+            return "COMMON";
+        }
+        String normalized = tier.trim().toUpperCase(Locale.ROOT);
+        return switch (normalized) {
+            case "COMMON", "ELITE", "MYTHIC", "LEGENDARY" -> normalized;
+            default -> "COMMON";
+        };
     }
 }
