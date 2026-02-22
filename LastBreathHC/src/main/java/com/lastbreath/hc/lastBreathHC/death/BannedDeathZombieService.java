@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC.death;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
+import com.lastbreath.hc.lastBreathHC.heads.HeadTrackingLogger;
 import org.bukkit.BanEntry;
 import org.bukkit.BanList;
 import org.bukkit.Bukkit;
@@ -41,12 +42,14 @@ public class BannedDeathZombieService implements Listener {
     private static final String REMNANT_TAG = "lastbreathhc.remnantZombie";
 
     private final LastBreathHC plugin;
+    private final HeadTrackingLogger headTrackingLogger;
     private final NamespacedKey remnantOwnerKey;
     private final Map<UUID, LocalDate> lastSpawnDateByPlayer = new HashMap<>();
     private BukkitTask task;
 
-    public BannedDeathZombieService(LastBreathHC plugin) {
+    public BannedDeathZombieService(LastBreathHC plugin, HeadTrackingLogger headTrackingLogger) {
         this.plugin = plugin;
+        this.headTrackingLogger = headTrackingLogger;
         this.remnantOwnerKey = new NamespacedKey(plugin, "remnant-owner");
     }
 
@@ -119,6 +122,10 @@ public class BannedDeathZombieService implements Listener {
             }
 
             if (protectedHeadOwners.contains(playerId)) {
+                continue;
+            }
+
+            if (headTrackingLogger.hasPlacedHead(playerId)) {
                 continue;
             }
 

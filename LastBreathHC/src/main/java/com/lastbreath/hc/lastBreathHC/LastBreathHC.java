@@ -19,6 +19,7 @@ import com.lastbreath.hc.lastBreathHC.daily.DailyJoinListener;
 import com.lastbreath.hc.lastBreathHC.daily.DailyRewardManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
+import com.lastbreath.hc.lastBreathHC.heads.HeadTrackingLogger;
 import com.lastbreath.hc.lastBreathHC.gui.CosmeticsGUI;
 import com.lastbreath.hc.lastBreathHC.gui.DailyRewardGUI;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
@@ -142,6 +143,7 @@ public final class LastBreathHC extends JavaPlugin {
     private DailyRewardGUI dailyRewardGUI;
     private DailyCosmeticListener dailyCosmeticListener;
     private BannedDeathZombieService bannedDeathZombieService;
+    private HeadTrackingLogger headTrackingLogger;
 
 
     @Override
@@ -172,6 +174,7 @@ public final class LastBreathHC extends JavaPlugin {
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
         customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");
         HeadManager.init();
+        headTrackingLogger = new HeadTrackingLogger(this);
         BountyManager.load();
         AsteroidManager.initialize(this);
         ReviveStateManager.initialize(this);
@@ -194,9 +197,9 @@ public final class LastBreathHC extends JavaPlugin {
                 new DeathRejoinListener(), this
         );
         getServer().getPluginManager().registerEvents(
-                new HeadListener(), this
+                new HeadListener(this, headTrackingLogger), this
         );
-        bannedDeathZombieService = new BannedDeathZombieService(this);
+        bannedDeathZombieService = new BannedDeathZombieService(this, headTrackingLogger);
         bannedDeathZombieService.start();
         getServer().getPluginManager().registerEvents(
                 new ReviveGUI(deathListener), this
