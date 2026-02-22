@@ -108,7 +108,7 @@ public class NemesisProgressionService {
             traitIds.add("personality_berserker");
         }
         CaptainRecord.Traits traits = new CaptainRecord.Traits(traitIds, record.traits().weaknesses(), record.traits().immunities());
-        long cooldownUntil = now + plugin.getConfig().getLong("nemesis.spawner.recordCooldownMs", 30_000L);
+        long cooldownUntil = now + plugin.getConfig().getLong("nemesis.spawn.recordCooldownMs", 30_000L);
         CaptainRecord.State state = stateMachine.onEscapeOrDespawn(now, cooldownUntil);
         CaptainRecord.Telemetry telemetry = withCounter(record, "escapes", 1L, now);
 

@@ -17,10 +17,12 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -33,17 +35,22 @@ public class CaptainSpawner implements Listener {
     private final CaptainStateMachine stateMachine;
 
     private final long movementCheckCooldownMs;
+    private final double movementInterestChance;
     private final double joinHuntChance;
     private final double deathHuntChance;
-    private final double worldTickSpawnChance;
+    private final long directorMinTickDelay;
+    private final long directorMaxTickDelay;
+    private final int attemptsPerTick;
+    private final long interestDurationMs;
     private final int nearbyRangeBlocks;
     private final int activeCaptainCap;
     private final int perWorldPerMinuteLimit;
 
+    private final Map<UUID, Long> playerSpawnInterest = new HashMap<>();
     private final Map<UUID, Long> playerMovementProbeCooldown = new HashMap<>();
     private final Map<UUID, Integer> perWorldSpawnCounter = new HashMap<>();
     private final Map<UUID, Long> perWorldSpawnWindowStart = new HashMap<>();
-    private BukkitTask worldTickTask;
+    private BukkitTask directorTask;
 
     public CaptainSpawner(LastBreathHC plugin,
                           CaptainRegistry registry,
@@ -55,26 +62,30 @@ public class CaptainSpawner implements Listener {
         this.protectedRegionChecker = protectedRegionChecker;
         this.stateMachine = new CaptainStateMachine();
 
-        this.movementCheckCooldownMs = Math.max(250L, plugin.getConfig().getLong("nemesis.spawner.movementCheckCooldownMs", 2000L));
-        this.joinHuntChance = clampChance(plugin.getConfig().getDouble("nemesis.spawner.joinHuntChance", 0.2));
-        this.deathHuntChance = clampChance(plugin.getConfig().getDouble("nemesis.spawner.deathHuntChance", 0.35));
-        this.worldTickSpawnChance = clampChance(plugin.getConfig().getDouble("nemesis.spawner.worldTickSpawnChance", 0.001));
-        this.nearbyRangeBlocks = Math.max(16, plugin.getConfig().getInt("nemesis.spawner.nearbyRangeBlocks", 96));
-        this.activeCaptainCap = Math.max(1, plugin.getConfig().getInt("nemesis.spawner.activeCaptainCap", 20));
-        this.perWorldPerMinuteLimit = Math.max(1, plugin.getConfig().getInt("nemesis.spawner.perWorldPerMinuteLimit", 3));
+        this.movementCheckCooldownMs = Math.max(250L, plugin.getConfig().getLong("nemesis.spawn.interest.movementCheckCooldownMs", 2000L));
+        this.movementInterestChance = clampChance(plugin.getConfig().getDouble("nemesis.spawn.interest.movementChance", 0.2));
+        this.joinHuntChance = clampChance(plugin.getConfig().getDouble("nemesis.spawn.interest.joinChance", 0.2));
+        this.deathHuntChance = clampChance(plugin.getConfig().getDouble("nemesis.spawn.interest.deathChance", 0.35));
+        this.directorMinTickDelay = Math.max(20L, plugin.getConfig().getLong("nemesis.spawn.director.minTickDelay", 20L));
+        this.directorMaxTickDelay = Math.max(this.directorMinTickDelay, plugin.getConfig().getLong("nemesis.spawn.director.maxTickDelay", 40L));
+        this.attemptsPerTick = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.director.attemptsPerTick", 2));
+        this.interestDurationMs = Math.max(1_000L, plugin.getConfig().getLong("nemesis.spawn.director.interestDurationMs", 30_000L));
+        this.nearbyRangeBlocks = Math.max(16, plugin.getConfig().getInt("nemesis.spawn.location.nearbyRangeBlocks", 96));
+        this.activeCaptainCap = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.world.activeCaptainCap", 20));
+        this.perWorldPerMinuteLimit = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.world.perMinuteAttemptCap", 3));
     }
 
     public void start() {
         stop();
-        long periodTicks = Math.max(20L, plugin.getConfig().getLong("nemesis.spawner.worldTickPeriodTicks", 200L));
-        worldTickTask = Bukkit.getScheduler().runTaskTimer(plugin, this::runWorldTickProbe, periodTicks, periodTicks);
+        scheduleDirectorTick();
     }
 
     public void stop() {
-        if (worldTickTask != null) {
-            worldTickTask.cancel();
-            worldTickTask = null;
+        if (directorTask != null) {
+            directorTask.cancel();
+            directorTask = null;
         }
+        playerSpawnInterest.clear();
         playerMovementProbeCooldown.clear();
         perWorldSpawnCounter.clear();
         perWorldSpawnWindowStart.clear();
@@ -94,39 +105,80 @@ public class CaptainSpawner implements Listener {
         }
         playerMovementProbeCooldown.put(player.getUniqueId(), now + movementCheckCooldownMs);
 
-        triggerHunt(player, 0.2, "movement");
+        queueInterest(player, movementInterestChance);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
-        triggerHunt(event.getPlayer(), joinHuntChance, "join");
+        queueInterest(event.getPlayer(), joinHuntChance);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(PlayerDeathEvent event) {
-        triggerHunt(event.getEntity(), deathHuntChance, "death");
+        queueInterest(event.getEntity(), deathHuntChance);
     }
 
-    private void runWorldTickProbe() {
-        if (Bukkit.getOnlinePlayers().isEmpty()) {
+    private void scheduleDirectorTick() {
+        long delay = ThreadLocalRandom.current().nextLong(directorMinTickDelay, directorMaxTickDelay + 1);
+        directorTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            try {
+                runDirectorTick();
+            } finally {
+                if (directorTask != null) {
+                    scheduleDirectorTick();
+                }
+            }
+        }, delay);
+    }
+
+    private void runDirectorTick() {
+        if (playerSpawnInterest.isEmpty() || Bukkit.getOnlinePlayers().isEmpty()) {
             return;
         }
 
-        if (ThreadLocalRandom.current().nextDouble() > worldTickSpawnChance) {
+        long now = System.currentTimeMillis();
+        Set<UUID> toRemove = new HashSet<>();
+        List<Player> eligiblePlayers = new ArrayList<>(playerSpawnInterest.entrySet().stream()
+                .filter(entry -> {
+                    if (entry.getValue() < now) {
+                        toRemove.add(entry.getKey());
+                        return false;
+                    }
+                    Player player = Bukkit.getPlayer(entry.getKey());
+                    if (player == null || !player.isOnline() || player.getWorld() == null) {
+                        toRemove.add(entry.getKey());
+                        return false;
+                    }
+                    return canSpawnInWorld(player.getWorld());
+                })
+                .map(entry -> Bukkit.getPlayer(entry.getKey()))
+                .filter(player -> player != null && player.isOnline() && player.getWorld() != null)
+                .toList());
+
+        toRemove.forEach(playerSpawnInterest::remove);
+        if (eligiblePlayers.isEmpty()) {
             return;
         }
 
-        List<Player> online = new ArrayList<>(Bukkit.getOnlinePlayers());
-        Player chosen = online.get(ThreadLocalRandom.current().nextInt(online.size()));
-        triggerHunt(chosen, 1.0, "world_tick");
+        for (int i = 0; i < attemptsPerTick && !eligiblePlayers.isEmpty(); i++) {
+            int index = ThreadLocalRandom.current().nextInt(eligiblePlayers.size());
+            Player chosen = eligiblePlayers.remove(index);
+            boolean spawned = attemptSpawn(chosen, "director_tick");
+            if (spawned) {
+                playerSpawnInterest.remove(chosen.getUniqueId());
+            }
+        }
     }
 
     public boolean triggerHunt(Player nearPlayer, double chance, String reason) {
-        if (nearPlayer == null || nearPlayer.getWorld() == null || !nearPlayer.isOnline()) {
+        if (ThreadLocalRandom.current().nextDouble() > chance) {
             return false;
         }
+        return attemptSpawn(nearPlayer, reason);
+    }
 
-        if (ThreadLocalRandom.current().nextDouble() > chance) {
+    private boolean attemptSpawn(Player nearPlayer, String reason) {
+        if (nearPlayer == null || nearPlayer.getWorld() == null || !nearPlayer.isOnline()) {
             return false;
         }
 
@@ -157,6 +209,16 @@ public class CaptainSpawner implements Listener {
         markSpawnInWorld(target.getWorld());
         announceSpawn(persisted, nearPlayer, reason);
         return true;
+    }
+
+    private void queueInterest(Player player, double chance) {
+        if (player == null || player.getWorld() == null || !player.isOnline()) {
+            return;
+        }
+        if (ThreadLocalRandom.current().nextDouble() > chance) {
+            return;
+        }
+        playerSpawnInterest.put(player.getUniqueId(), System.currentTimeMillis() + interestDurationMs);
     }
 
 
@@ -190,7 +252,9 @@ public class CaptainSpawner implements Listener {
     }
 
     public String debugSummary() {
-        return "records=" + registry.getAll().size() + ", worldsTracked=" + perWorldSpawnCounter.size();
+        return "records=" + registry.getAll().size()
+                + ", worldsTracked=" + perWorldSpawnCounter.size()
+                + ", interestedPlayers=" + playerSpawnInterest.size();
     }
     private Optional<CaptainRecord> selectCandidate(Player nearPlayer) {
         long now = System.currentTimeMillis();
@@ -271,7 +335,7 @@ public class CaptainSpawner implements Listener {
         }
 
         String biome = location.getBlock().getBiome().name().toLowerCase(Locale.ROOT);
-        List<String> deniedBiomes = plugin.getConfig().getStringList("nemesis.spawner.deniedBiomes");
+        List<String> deniedBiomes = plugin.getConfig().getStringList("nemesis.spawn.location.deniedBiomes");
         for (String denied : deniedBiomes) {
             if (biome.equals(denied.toLowerCase(Locale.ROOT))) {
                 return false;
@@ -279,8 +343,8 @@ public class CaptainSpawner implements Listener {
         }
 
         int light = location.getBlock().getLightLevel();
-        int minLight = plugin.getConfig().getInt("nemesis.spawner.minLight", 0);
-        int maxLight = plugin.getConfig().getInt("nemesis.spawner.maxLight", 15);
+        int minLight = plugin.getConfig().getInt("nemesis.spawn.location.minLight", 0);
+        int maxLight = plugin.getConfig().getInt("nemesis.spawn.location.maxLight", 15);
         return light >= minLight && light <= maxLight;
     }
 
@@ -302,10 +366,7 @@ public class CaptainSpawner implements Listener {
             return false;
         }
 
-        long activeInWorld = world.getEntities().stream()
-                .filter(e -> e.getScoreboardTags().contains(CaptainEntityBinder.CAPTAIN_SCOREBOARD_TAG))
-                .count();
-        return activeInWorld < activeCaptainCap;
+        return registry.getActiveByWorld(world.getName()).size() < activeCaptainCap;
     }
 
     private void markSpawnInWorld(World world) {

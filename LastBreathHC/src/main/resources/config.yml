@@ -638,20 +638,27 @@ nemesis:
     angerPerMinionDeath: 1.5
   antiCheese:
     losThreshold: 8
-  spawner:
-    movementCheckCooldownMs: 2000
-    joinHuntChance: 0.2
-    deathHuntChance: 0.35
-    worldTickSpawnChance: 0.001
-    worldTickPeriodTicks: 200
-    nearbyRangeBlocks: 96
-    activeCaptainCap: 20
-    perWorldPerMinuteLimit: 3
+  spawn:
+    director:
+      minTickDelay: 20
+      maxTickDelay: 40
+      attemptsPerTick: 2
+      interestDurationMs: 30000
+    interest:
+      movementCheckCooldownMs: 2000
+      movementChance: 0.2
+      joinChance: 0.2
+      deathChance: 0.35
+    world:
+      activeCaptainCap: 20
+      perMinuteAttemptCap: 3
+    location:
+      nearbyRangeBlocks: 96
+      minLight: 0
+      maxLight: 12
+      deniedBiomes:
+        - DEEP_DARK
     recordCooldownMs: 30000
-    minLight: 0
-    maxLight: 12
-    deniedBiomes:
-      - DEEP_DARK
 
   traits:
     definitions:
