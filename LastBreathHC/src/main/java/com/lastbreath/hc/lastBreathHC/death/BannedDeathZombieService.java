@@ -7,8 +7,13 @@ import org.bukkit.BanList;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Zombie;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
@@ -28,22 +33,26 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class BannedDeathZombieService {
+public class BannedDeathZombieService implements Listener {
 
     private static final long CHECK_INTERVAL_TICKS = 20L * 60L * 30L; // every 30 minutes
     private static final long ACTIVE_WINDOW_MS = 7L * 24L * 60L * 60L * 1000L;
     private static final String STORAGE_PATH = "deathZombieLastSpawn";
+    private static final String REMNANT_TAG = "lastbreathhc.remnantZombie";
 
     private final LastBreathHC plugin;
+    private final NamespacedKey remnantOwnerKey;
     private final Map<UUID, LocalDate> lastSpawnDateByPlayer = new HashMap<>();
     private BukkitTask task;
 
     public BannedDeathZombieService(LastBreathHC plugin) {
         this.plugin = plugin;
+        this.remnantOwnerKey = new NamespacedKey(plugin, "remnant-owner");
     }
 
     public void start() {
         loadState();
+        Bukkit.getPluginManager().registerEvents(this, plugin);
         if (task != null) {
             task.cancel();
         }
@@ -55,7 +64,34 @@ public class BannedDeathZombieService {
             task.cancel();
             task = null;
         }
+        HandlerList.unregisterAll(this);
         saveState();
+    }
+
+    @EventHandler
+    public void onRemnantDeath(EntityDeathEvent event) {
+        if (!(event.getEntity() instanceof Zombie zombie)) {
+            return;
+        }
+        if (!zombie.getScoreboardTags().contains(REMNANT_TAG)) {
+            return;
+        }
+
+        String ownerUuidRaw = zombie.getPersistentDataContainer().get(remnantOwnerKey, PersistentDataType.STRING);
+        if (ownerUuidRaw == null || ownerUuidRaw.isBlank()) {
+            return;
+        }
+
+        UUID ownerUuid;
+        try {
+            ownerUuid = UUID.fromString(ownerUuidRaw);
+        } catch (IllegalArgumentException ex) {
+            return;
+        }
+
+        ItemStack ownerHead = createOwnedHead(Bukkit.getOfflinePlayer(ownerUuid));
+        event.getDrops().removeIf(this::isStoredPlayerHead);
+        event.getDrops().add(ownerHead);
     }
 
     private void runSweep() {
@@ -100,7 +136,25 @@ public class BannedDeathZombieService {
 
     private void spawnZombieWithHead(OfflinePlayer player, Location location) {
         Zombie zombie = location.getWorld().spawn(location, Zombie.class);
+        UUID ownerUuid = player.getUniqueId();
 
+        zombie.getEquipment().setHelmet(createOwnedHead(player));
+        zombie.getEquipment().setHelmetDropChance(1.0f);
+        zombie.setRemoveWhenFarAway(false);
+        zombie.setPersistent(true);
+        zombie.setAdult();
+        zombie.setCanBreakDoors(true);
+        zombie.setShouldBurnInDay(false);
+        zombie.setCustomName("§8Remnant of " + (player.getName() == null ? "Unknown" : player.getName()));
+        zombie.setCustomNameVisible(true);
+        zombie.addScoreboardTag(REMNANT_TAG);
+
+        if (ownerUuid != null) {
+            zombie.getPersistentDataContainer().set(remnantOwnerKey, PersistentDataType.STRING, ownerUuid.toString());
+        }
+    }
+
+    private ItemStack createOwnedHead(OfflinePlayer player) {
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         meta.setOwningPlayer(player);
@@ -110,12 +164,7 @@ public class BannedDeathZombieService {
                 player.getUniqueId().toString()
         );
         head.setItemMeta(meta);
-
-        zombie.getEquipment().setHelmet(head);
-        zombie.setAdult();
-        zombie.setCanBreakDoors(true);
-        zombie.setCustomName("§8Remnant of " + (player.getName() == null ? "Unknown" : player.getName()));
-        zombie.setCustomNameVisible(true);
+        return head;
     }
 
     private Set<UUID> resolveProtectedHeadOwners() {
@@ -127,13 +176,12 @@ public class BannedDeathZombieService {
                 continue;
             }
 
-            scanInventoryForHeads(offlinePlayer.getPlayer() != null
-                    ? offlinePlayer.getPlayer().getInventory()
-                    : null, protectedOwners);
+            if (offlinePlayer.getPlayer() == null) {
+                continue;
+            }
 
-            scanInventoryForHeads(offlinePlayer.getPlayer() != null
-                    ? offlinePlayer.getPlayer().getEnderChest()
-                    : null, protectedOwners);
+            scanInventoryForHeads(offlinePlayer.getPlayer().getInventory(), protectedOwners);
+            scanInventoryForHeads(offlinePlayer.getPlayer().getEnderChest(), protectedOwners);
         }
 
         return protectedOwners;
