@@ -176,7 +176,7 @@ public class KillerResolver implements Listener {
             }
         } else if (damager instanceof Explosive explosive) {
             sourceType = SourceType.EXPLOSION;
-            Entity source = explosive.getSource();
+            Entity source = explosive.copy();//.getSource();
             if (source != null) {
                 damager = source;
             }

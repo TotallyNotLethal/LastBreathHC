@@ -250,8 +250,15 @@ public class MinionController implements Listener {
             } else {
                 if (minion instanceof Mob mob) {
                     mob.setTarget(null);
+
+                    Location dest = minion.getLocation().clone().add(
+                            (Math.random() - 0.5) * 12.0,
+                            0.0,
+                            (Math.random() - 0.5) * 12.0
+                    );
+
+                    mob.getPathfinder().moveTo(dest);
                 }
-                minion.getPathfinder().moveTo(minion.getLocation().clone().add((Math.random() - 0.5) * 12, 0, (Math.random() - 0.5) * 12));
             }
         }
 
