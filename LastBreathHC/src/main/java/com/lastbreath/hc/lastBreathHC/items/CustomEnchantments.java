@@ -24,6 +24,8 @@ public class CustomEnchantments {
 
     private static final NamespacedKey ENCHANTS_KEY =
             new NamespacedKey(LastBreathHC.getInstance(), "custom_enchants");
+    private static final NamespacedKey ENCHANTS_ENABLED_KEY =
+            new NamespacedKey(LastBreathHC.getInstance(), "custom_enchants_enabled");
 
     private static final Component LORE_HEADER = Component.text("Custom Enchants")
             .color(NamedTextColor.DARK_PURPLE)
@@ -60,7 +62,8 @@ public class CustomEnchantments {
             ids.add(enchantId);
         }
         updateEnchantData(meta, ids);
-        updateLore(meta, ids);
+        setEnabled(meta, true);
+        updateLore(meta, ids, true);
         result.setItemMeta(meta);
         return result;
     }
@@ -124,6 +127,39 @@ public class CustomEnchantments {
         return List.copyOf(ids);
     }
 
+
+    public static boolean areEnchantsEnabled(ItemMeta meta) {
+        if (meta == null) {
+            return true;
+        }
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        Byte enabled = container.get(ENCHANTS_ENABLED_KEY, PersistentDataType.BYTE);
+        return enabled == null || enabled != 0;
+    }
+
+    public static boolean areEnchantsEnabled(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) {
+            return true;
+        }
+        return areEnchantsEnabled(item.getItemMeta());
+    }
+
+    public static boolean toggleEnchants(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR) {
+            return true;
+        }
+        ItemMeta meta = item.getItemMeta();
+        List<String> ids = getEnchantIds(meta);
+        if (ids.isEmpty()) {
+            return true;
+        }
+        boolean enabled = !areEnchantsEnabled(meta);
+        setEnabled(meta, enabled);
+        updateLore(meta, ids, enabled);
+        item.setItemMeta(meta);
+        return enabled;
+    }
+
     public static int countArmorPiecesWithEnchant(Player player, String enchantId) {
         if (player == null || enchantId == null || enchantId.isBlank()) {
             return 0;
@@ -139,7 +175,7 @@ public class CustomEnchantments {
                 continue;
             }
             ItemMeta meta = item.getItemMeta();
-            if (meta == null) {
+            if (meta == null || !areEnchantsEnabled(meta)) {
                 continue;
             }
             for (String id : getEnchantIds(meta)) {
@@ -161,12 +197,28 @@ public class CustomEnchantments {
         }
     }
 
-    private static void updateLore(ItemMeta meta, List<String> ids) {
+    private static void setEnabled(ItemMeta meta, boolean enabled) {
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        if (enabled) {
+            container.remove(ENCHANTS_ENABLED_KEY);
+            return;
+        }
+        container.set(ENCHANTS_ENABLED_KEY, PersistentDataType.BYTE, (byte) 0);
+    }
+
+    private static void updateLore(ItemMeta meta, List<String> ids, boolean enabled) {
         List<Component> lore = meta.lore();
         List<Component> updated = lore == null ? new ArrayList<>() : new ArrayList<>(lore);
         updated.removeIf(CustomEnchantments::isCustomEnchantLore);
         if (!ids.isEmpty()) {
             updated.add(LORE_HEADER);
+            if (!enabled) {
+                updated.add(
+                        Component.text("• Disabled (Shift + Right Click Air)")
+                                .color(NamedTextColor.RED)
+                                .decoration(TextDecoration.ITALIC, false)
+                );
+            }
             for (String id : ids) {
                 updated.add(
                         Component.text("• " + CustomEnchantPage.formatEnchantId(id))

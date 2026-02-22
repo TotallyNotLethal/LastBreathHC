@@ -3,6 +3,8 @@ package com.lastbreath.hc.lastBreathHC.listeners;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantments;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -113,6 +115,9 @@ public class CustomEnchantListener implements Listener {
             return;
         }
         ItemMeta meta = tool.getItemMeta();
+        if (!CustomEnchantments.areEnchantsEnabled(meta)) {
+            return;
+        }
         List<String> enchantIds = CustomEnchantments.getEnchantIds(meta);
         if (enchantIds.isEmpty()) {
             return;
@@ -122,6 +127,13 @@ public class CustomEnchantListener implements Listener {
         boolean treeFeller = normalized.contains(CustomEnchant.TREE_FELLER.getId());
         boolean excavator = normalized.contains(CustomEnchant.EXCAVATOR.getId());
         boolean quarry = normalized.contains(CustomEnchant.QUARRY.getId());
+        boolean swiftTiller = normalized.contains(CustomEnchant.SWIFT_TILLER.getId());
+        boolean autoReplant = normalized.contains(CustomEnchant.AUTO_REPLANT.getId());
+
+        if (isHoe(tool.getType()) && autoReplant && isReplantableCrop(block) && !isMatureCrop(block)) {
+            event.setCancelled(true);
+            return;
+        }
 
         boolean forceOreDrops = veinMiner && isOre(block.getType());
         if (handleCustomDrops(player, tool, block, normalized, block.getLocation(), forceOreDrops)) {
@@ -142,6 +154,30 @@ public class CustomEnchantListener implements Listener {
         if (quarry && isPickaxe(tool.getType()) && isPickaxeMineable(block.getType())) {
             breakExtraBlocks(player, tool, getQuarryBlocks(block, player), normalized, block.getLocation());
         }
+        if (swiftTiller && isHoe(tool.getType()) && isReplantableCrop(block) && isMatureCrop(block)) {
+            breakExtraBlocks(player, tool, getSwiftTillerHarvestBlocks(block, autoReplant), normalized, block.getLocation());
+        }
+    }
+
+
+    @EventHandler(ignoreCancelled = true)
+    public void onToggleEnchants(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR || !event.getPlayer().isSneaking()) {
+            return;
+        }
+        Player player = event.getPlayer();
+        ItemStack tool = player.getInventory().getItemInMainHand();
+        if (tool == null || tool.getType() == Material.AIR) {
+            return;
+        }
+        ItemMeta meta = tool.getItemMeta();
+        if (CustomEnchantments.getEnchantIds(meta).isEmpty()) {
+            return;
+        }
+        boolean enabled = CustomEnchantments.toggleEnchants(tool);
+        player.sendActionBar(Component.text(
+                enabled ? "Custom enchants enabled." : "Custom enchants disabled."
+        ).color(enabled ? NamedTextColor.GREEN : NamedTextColor.RED));
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -158,6 +194,9 @@ public class CustomEnchantListener implements Listener {
             return;
         }
         ItemMeta meta = tool.getItemMeta();
+        if (!CustomEnchantments.areEnchantsEnabled(meta)) {
+            return;
+        }
         List<String> enchantIds = CustomEnchantments.getEnchantIds(meta);
         if (enchantIds.isEmpty()) {
             return;
@@ -222,6 +261,10 @@ public class CustomEnchantListener implements Listener {
             return ageable.getAge() >= ageable.getMaximumAge();
         }
         return false;
+    }
+
+    private boolean isReplantableCrop(Block block) {
+        return CROP_SEEDS.containsKey(block.getType());
     }
 
     private void scheduleReplant(Block block, BlockData originalData) {
@@ -760,6 +803,26 @@ public class CustomEnchantListener implements Listener {
         if (isPickaxeMineable(candidate.getType())) {
             blocks.add(candidate);
         }
+    }
+
+    private Collection<Block> getSwiftTillerHarvestBlocks(Block origin, boolean requireMature) {
+        Set<Block> blocks = new HashSet<>();
+        for (int x = -1; x <= 1; x++) {
+            for (int z = -1; z <= 1; z++) {
+                if (x == 0 && z == 0) {
+                    continue;
+                }
+                Block candidate = origin.getRelative(x, 0, z);
+                if (!isReplantableCrop(candidate)) {
+                    continue;
+                }
+                if (requireMature && !isMatureCrop(candidate)) {
+                    continue;
+                }
+                blocks.add(candidate);
+            }
+        }
+        return blocks;
     }
 
     private BlockFace resolveDirectionalFace(Player player) {
