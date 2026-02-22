@@ -19,6 +19,7 @@ import com.lastbreath.hc.lastBreathHC.daily.DailyJoinListener;
 import com.lastbreath.hc.lastBreathHC.daily.DailyRewardManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
+import com.lastbreath.hc.lastBreathHC.heads.HeadTrackingLogger;
 import com.lastbreath.hc.lastBreathHC.gui.CosmeticsGUI;
 import com.lastbreath.hc.lastBreathHC.gui.DailyRewardGUI;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
@@ -71,6 +72,8 @@ import com.lastbreath.hc.lastBreathHC.death.DeathListener;
 import com.lastbreath.hc.lastBreathHC.death.DeathMarkerManager;
 import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
 import com.lastbreath.hc.lastBreathHC.death.BannedDeathZombieService;
+import com.lastbreath.hc.lastBreathHC.death.DeathAuditLogger;
+import com.lastbreath.hc.lastBreathHC.death.PlayerLastMessageTracker;
 import com.lastbreath.hc.lastBreathHC.environment.AnvilCrushListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerDeathReactionHandler;
@@ -142,6 +145,7 @@ public final class LastBreathHC extends JavaPlugin {
     private DailyRewardGUI dailyRewardGUI;
     private DailyCosmeticListener dailyCosmeticListener;
     private BannedDeathZombieService bannedDeathZombieService;
+    private HeadTrackingLogger headTrackingLogger;
 
 
     @Override
@@ -172,6 +176,7 @@ public final class LastBreathHC extends JavaPlugin {
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
         customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");
         HeadManager.init();
+        headTrackingLogger = new HeadTrackingLogger(this);
         BountyManager.load();
         AsteroidManager.initialize(this);
         ReviveStateManager.initialize(this);
@@ -186,7 +191,19 @@ public final class LastBreathHC extends JavaPlugin {
         deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
 
         FakePlayerDeathReactionHandler fakePlayerDeathReactionHandler = new FakePlayerDeathReactionHandler(this, fakePlayerService);
-        DeathListener deathListener = new DeathListener(deathMarkerManager, teamChatService, discordWebhookService, fakePlayerDeathReactionHandler);
+        PlayerLastMessageTracker playerLastMessageTracker = new PlayerLastMessageTracker();
+        DeathAuditLogger deathAuditLogger = new DeathAuditLogger(this);
+        DeathListener deathListener = new DeathListener(
+                deathMarkerManager,
+                teamChatService,
+                discordWebhookService,
+                fakePlayerDeathReactionHandler,
+                playerLastMessageTracker,
+                deathAuditLogger
+        );
+        getServer().getPluginManager().registerEvents(
+                playerLastMessageTracker, this
+        );
         getServer().getPluginManager().registerEvents(
                 deathListener, this
         );
@@ -194,9 +211,9 @@ public final class LastBreathHC extends JavaPlugin {
                 new DeathRejoinListener(), this
         );
         getServer().getPluginManager().registerEvents(
-                new HeadListener(), this
+                new HeadListener(this, headTrackingLogger), this
         );
-        bannedDeathZombieService = new BannedDeathZombieService(this);
+        bannedDeathZombieService = new BannedDeathZombieService(this, headTrackingLogger);
         bannedDeathZombieService.start();
         getServer().getPluginManager().registerEvents(
                 new ReviveGUI(deathListener), this

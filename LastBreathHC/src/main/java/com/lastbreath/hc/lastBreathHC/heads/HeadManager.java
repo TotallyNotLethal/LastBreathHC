@@ -13,11 +13,16 @@ public class HeadManager {
     private static final Map<UUID, Inventory> PENDING_RESTORE = new HashMap<>();
 
     private static NamespacedKey KEY;
+    private static NamespacedKey RECORD_KEY;
 
     public static void init() {
         KEY = new NamespacedKey(
                 Objects.requireNonNull(Bukkit.getPluginManager().getPlugin("LastBreathHC")),
                 "death_head"
+        );
+        RECORD_KEY = new NamespacedKey(
+                Objects.requireNonNull(Bukkit.getPluginManager().getPlugin("LastBreathHC")),
+                "death_head_record"
         );
     }
 
@@ -71,5 +76,9 @@ public class HeadManager {
 
     public static NamespacedKey getKey() {
         return KEY;
+    }
+
+    public static NamespacedKey getRecordKey() {
+        return RECORD_KEY;
     }
 }

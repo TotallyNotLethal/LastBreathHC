@@ -1,5 +1,6 @@
 package com.lastbreath.hc.lastBreathHC.heads;
 
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.token.ReviveTokenHelper;
 import net.kyori.adventure.text.Component;
@@ -29,6 +30,14 @@ import java.util.UUID;
 
 public class HeadListener implements Listener {
 
+    private final LastBreathHC plugin;
+    private final HeadTrackingLogger headTrackingLogger;
+
+    public HeadListener(LastBreathHC plugin, HeadTrackingLogger headTrackingLogger) {
+        this.plugin = plugin;
+        this.headTrackingLogger = headTrackingLogger;
+    }
+
     /* =======================
        PLAYER DEATH
        ======================= */
@@ -57,11 +66,24 @@ public class HeadListener implements Listener {
                 PersistentDataType.STRING,
                 player.getUniqueId().toString()
         );
+        UUID recordId = UUID.randomUUID();
+        meta.getPersistentDataContainer().set(
+                HeadManager.getRecordKey(),
+                PersistentDataType.STRING,
+                recordId.toString()
+        );
 
         head.setItemMeta(meta);
 
         Item dropped = player.getWorld().dropItemNaturally(player.getLocation(), head);
         dropped.setGlowing(true);
+        headTrackingLogger.recordHeadDropped(
+                player.getUniqueId(),
+                player.getName(),
+                recordId,
+                dropped.getUniqueId(),
+                dropped.getLocation()
+        );
     }
 
     /* =======================
@@ -107,14 +129,35 @@ public class HeadListener implements Listener {
         String uuid = ((SkullMeta) item.getItemMeta())
                 .getPersistentDataContainer()
                 .get(HeadManager.getKey(), PersistentDataType.STRING);
+        String recordIdRaw = ((SkullMeta) item.getItemMeta())
+                .getPersistentDataContainer()
+                .get(HeadManager.getRecordKey(), PersistentDataType.STRING);
 
         skull.getPersistentDataContainer().set(
                 HeadManager.getKey(),
                 PersistentDataType.STRING,
                 uuid
         );
+        if (recordIdRaw != null) {
+            skull.getPersistentDataContainer().set(
+                    HeadManager.getRecordKey(),
+                    PersistentDataType.STRING,
+                    recordIdRaw
+            );
+        }
 
         skull.update();
+
+        try {
+            if (uuid != null && recordIdRaw != null) {
+                UUID ownerUuid = UUID.fromString(uuid);
+                UUID recordId = UUID.fromString(recordIdRaw);
+                OfflinePlayer owner = Bukkit.getOfflinePlayer(ownerUuid);
+                headTrackingLogger.recordHeadPlaced(ownerUuid, owner.getName(), recordId, e.getPlayer(), e.getBlockPlaced().getLocation());
+            }
+        } catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning("Failed to parse head owner/record for placement logging.");
+        }
     }
 
     /* =======================
@@ -213,7 +256,19 @@ public class HeadListener implements Listener {
         if (!(e.getBlock().getState() instanceof Skull skull)) return;
 
         // Admins can always break
-        if (isAdmin(e.getPlayer())) return;
+        if (isAdmin(e.getPlayer())) {
+            var pdc = skull.getPersistentDataContainer();
+            if (pdc.has(HeadManager.getKey(), PersistentDataType.STRING)) {
+                String storedOwnerId = pdc.get(HeadManager.getKey(), PersistentDataType.STRING);
+                if (storedOwnerId != null) {
+                    try {
+                        headTrackingLogger.recordHeadUnplaced(UUID.fromString(storedOwnerId), "BROKEN_BY_ADMIN", e.getPlayer(), e.getBlock().getLocation());
+                    } catch (IllegalArgumentException ignored) {
+                    }
+                }
+            }
+            return;
+        }
 
         var pdc = skull.getPersistentDataContainer();
         if (!pdc.has(HeadManager.getKey(), PersistentDataType.STRING)) return;
@@ -226,7 +281,10 @@ public class HeadListener implements Listener {
         if (HeadManager.has(uuid)) {
             e.setCancelled(true);
             e.getPlayer().sendMessage("§cThis head still contains a soul.");
+            return;
         }
+
+        headTrackingLogger.recordHeadUnplaced(uuid, "BROKEN", e.getPlayer(), e.getBlock().getLocation());
     }
 
 
@@ -273,6 +331,7 @@ public class HeadListener implements Listener {
                     if (stored != null && stored.equals(target.toString())) {
                         pdc.remove(HeadManager.getKey());
                         skull.update();
+                        headTrackingLogger.recordHeadUnplaced(target, "SOUL_CLAIMED", null, skull.getLocation());
                     }
                 }
             }
