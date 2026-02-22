@@ -1,5 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.nemesis;
 
+import org.bukkit.entity.EntityType;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -16,11 +18,13 @@ public class CaptainRegistry {
     private final Map<UUID, CaptainRecord> captainsByUuid = new ConcurrentHashMap<>();
     private final Map<UUID, Set<UUID>> captainsByNemesisPlayer = new ConcurrentHashMap<>();
     private final Map<OriginChunkKey, Set<UUID>> captainsByOriginChunk = new ConcurrentHashMap<>();
+    private final Map<String, Set<UUID>> activeCaptainsByWorld = new ConcurrentHashMap<>();
 
     public synchronized void load(Collection<CaptainRecord> records) {
         captainsByUuid.clear();
         captainsByNemesisPlayer.clear();
         captainsByOriginChunk.clear();
+        activeCaptainsByWorld.clear();
 
         if (records == null) {
             return;
@@ -73,6 +77,61 @@ public class CaptainRegistry {
         return resolveRecords(captainsByOriginChunk.getOrDefault(key, Set.of()));
     }
 
+    public List<CaptainRecord> getActiveByWorld(String world) {
+        if (world == null || world.isBlank()) {
+            return List.of();
+        }
+        return resolveRecords(activeCaptainsByWorld.getOrDefault(normalizeWorld(world), Set.of()));
+    }
+
+    public List<CaptainRecord> getActiveByChunk(String world, int chunkX, int chunkZ) {
+        List<CaptainRecord> chunkRecords = getByOriginChunk(world, chunkX, chunkZ);
+        if (chunkRecords.isEmpty()) {
+            return chunkRecords;
+        }
+        List<CaptainRecord> active = new ArrayList<>(chunkRecords.size());
+        for (CaptainRecord record : chunkRecords) {
+            if (isActive(record)) {
+                active.add(record);
+            }
+        }
+        return active;
+    }
+
+    public List<CaptainRecord> getActiveByRadius(String world, double x, double z, double radius, EntityType typeFilter, UUID nemesisFilter) {
+        if (world == null || world.isBlank() || radius < 0.0) {
+            return List.of();
+        }
+
+        int minChunkX = floorToChunk(x - radius);
+        int maxChunkX = floorToChunk(x + radius);
+        int minChunkZ = floorToChunk(z - radius);
+        int maxChunkZ = floorToChunk(z + radius);
+        double radiusSquared = radius * radius;
+
+        List<CaptainRecord> matches = new ArrayList<>();
+        Set<UUID> seen = ConcurrentHashMap.newKeySet();
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                for (CaptainRecord record : getActiveByChunk(world, chunkX, chunkZ)) {
+                    if (!seen.add(record.identity().captainId()) || !matchesFilter(record, typeFilter, nemesisFilter)) {
+                        continue;
+                    }
+                    CaptainRecord.Origin origin = record.origin();
+                    if (origin == null) {
+                        continue;
+                    }
+                    double dx = origin.spawnX() - x;
+                    double dz = origin.spawnZ() - z;
+                    if ((dx * dx) + (dz * dz) <= radiusSquared) {
+                        matches.add(record);
+                    }
+                }
+            }
+        }
+        return matches;
+    }
+
     public Collection<CaptainRecord> getAll() {
         return Collections.unmodifiableCollection(captainsByUuid.values());
     }
@@ -93,6 +152,12 @@ public class CaptainRegistry {
             captainsByOriginChunk
                     .computeIfAbsent(key, ignored -> ConcurrentHashMap.newKeySet())
                     .add(captainUuid);
+
+            if (isActive(record)) {
+                activeCaptainsByWorld
+                        .computeIfAbsent(normalizeWorld(origin.world()), ignored -> ConcurrentHashMap.newKeySet())
+                        .add(captainUuid);
+            }
         }
     }
 
@@ -108,7 +173,40 @@ public class CaptainRegistry {
         if (origin != null && origin.world() != null && !origin.world().isBlank()) {
             OriginChunkKey key = new OriginChunkKey(origin.world(), origin.chunkX(), origin.chunkZ());
             removeFromIndex(captainsByOriginChunk, key, captainUuid);
+            removeFromIndex(activeCaptainsByWorld, normalizeWorld(origin.world()), captainUuid);
         }
+    }
+
+    private boolean matchesFilter(CaptainRecord record, EntityType typeFilter, UUID nemesisFilter) {
+        if (typeFilter != null) {
+            String typeName = record.naming() == null ? null : record.naming().aliasSeed();
+            if (typeName == null || !typeName.equalsIgnoreCase(typeFilter.name())) {
+                return false;
+            }
+        }
+
+        if (nemesisFilter != null) {
+            UUID nemesisOf = record.identity() == null ? null : record.identity().nemesisOf();
+            if (!nemesisFilter.equals(nemesisOf)) {
+                return false;
+            }
+        }
+
+        return isActive(record);
+    }
+
+    private boolean isActive(CaptainRecord record) {
+        return record != null
+                && record.state() != null
+                && record.state().state() == CaptainState.ACTIVE;
+    }
+
+    private static String normalizeWorld(String world) {
+        return Objects.requireNonNullElse(world, "").trim().toLowerCase();
+    }
+
+    private static int floorToChunk(double value) {
+        return (int) Math.floor(value) >> 4;
     }
 
     private <K> void removeFromIndex(Map<K, Set<UUID>> index, K key, UUID captainUuid) {
