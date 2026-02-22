@@ -70,6 +70,7 @@ import com.lastbreath.hc.lastBreathHC.gui.ReviveNameGUI;
 import com.lastbreath.hc.lastBreathHC.death.DeathListener;
 import com.lastbreath.hc.lastBreathHC.death.DeathMarkerManager;
 import com.lastbreath.hc.lastBreathHC.death.DeathRejoinListener;
+import com.lastbreath.hc.lastBreathHC.death.BannedDeathZombieService;
 import com.lastbreath.hc.lastBreathHC.environment.AnvilCrushListener;
 import com.lastbreath.hc.lastBreathHC.environment.EnvironmentalEffectsManager;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerDeathReactionHandler;
@@ -140,6 +141,7 @@ public final class LastBreathHC extends JavaPlugin {
     private DailyRewardManager dailyRewardManager;
     private DailyRewardGUI dailyRewardGUI;
     private DailyCosmeticListener dailyCosmeticListener;
+    private BannedDeathZombieService bannedDeathZombieService;
 
 
     @Override
@@ -194,6 +196,8 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new HeadListener(), this
         );
+        bannedDeathZombieService = new BannedDeathZombieService(this);
+        bannedDeathZombieService.start();
         getServer().getPluginManager().registerEvents(
                 new ReviveGUI(deathListener), this
         );
@@ -504,6 +508,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (dailyRewardManager != null) {
             dailyRewardManager.saveAll();
             dailyRewardManager = null;
+        }
+        if (bannedDeathZombieService != null) {
+            bannedDeathZombieService.stop();
+            bannedDeathZombieService = null;
         }
         dailyRewardGUI = null;
         potionDefinitionRegistry = null;
