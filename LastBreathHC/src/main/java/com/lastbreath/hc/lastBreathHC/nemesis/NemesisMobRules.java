@@ -4,11 +4,37 @@ import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
 import com.lastbreath.hc.lastBreathHC.worldboss.WorldBossConstants;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Enemy;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
+import org.bukkit.entity.Monster;
+import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Set;
+
 public final class NemesisMobRules {
+    private static final Set<EntityType> KNOWN_HOSTILE_TYPES = Set.of(
+            EntityType.ENDER_DRAGON,
+            EntityType.WITHER,
+            EntityType.GIANT
+    );
+
     private NemesisMobRules() {
+    }
+
+    public static boolean isHostileOrAggressive(LivingEntity entity) {
+        if (entity == null) {
+            return false;
+        }
+        if (entity instanceof Monster || entity instanceof Enemy || KNOWN_HOSTILE_TYPES.contains(entity.getType())) {
+            return true;
+        }
+        if (entity instanceof Mob mob) {
+            return mob.getTarget() instanceof Player;
+        }
+        return false;
     }
 
     public static boolean isExcludedFromCaptainPromotion(LivingEntity entity, NamespacedKey worldBossTypeKey) {

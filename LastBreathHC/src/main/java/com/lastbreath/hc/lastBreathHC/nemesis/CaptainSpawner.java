@@ -272,6 +272,9 @@ public class CaptainSpawner implements Listener {
         if (entity == null || entity.getType() == org.bukkit.entity.EntityType.ARMOR_STAND) {
             return false;
         }
+        if (!NemesisMobRules.isHostileOrAggressive(entity)) {
+            return false;
+        }
         return !NemesisMobRules.isExcludedFromCaptainPromotion(entity, worldBossTypeKey);
     }
 
