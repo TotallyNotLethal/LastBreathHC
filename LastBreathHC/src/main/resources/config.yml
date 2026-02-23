@@ -1353,6 +1353,58 @@ nemesis:
           of_the_hollow:
             value: "of the Hollow"
             weight: 1
+      epithets:
+        strength:
+          the_skullcracker: { value: "the Skullcracker", weight: 1 }
+          the_warmonger: { value: "the Warmonger", weight: 1 }
+          the_earthrender: { value: "the Earthrender", weight: 1 }
+          the_steel_reaper: { value: "the Steel Reaper", weight: 1 }
+          the_battleborn: { value: "the Battleborn", weight: 1 }
+          the_crusher: { value: "the Crusher", weight: 1 }
+          the_colossus: { value: "the Colossus", weight: 1 }
+          the_bonebreaker: { value: "the Bonebreaker", weight: 1 }
+        weakness:
+          the_frayed: { value: "the Frayed", weight: 1 }
+          the_dimmed: { value: "the Dimmed", weight: 1 }
+          the_trembling: { value: "the Trembling", weight: 1 }
+          the_unsteady: { value: "the Unsteady", weight: 1 }
+          the_shattered: { value: "the Shattered", weight: 1 }
+          the_haunted: { value: "the Haunted", weight: 1 }
+          the_ashen: { value: "the Ashen", weight: 1 }
+          the_marked: { value: "the Marked", weight: 1 }
+        immunity:
+          the_fire_scorned: { value: "the Fire-Scorned", weight: 1 }
+          the_storm_hardened: { value: "the Storm-Hardened", weight: 1 }
+          the_unfading: { value: "the Unfading", weight: 1 }
+          the_marrowforged: { value: "the Marrowforged", weight: 1 }
+          the_voidproof: { value: "the Voidproof", weight: 1 }
+          the_hardbound: { value: "the Hardbound", weight: 1 }
+          the_warded: { value: "the Warded", weight: 1 }
+          the_everstanding: { value: "the Everstanding", weight: 1 }
+        personality:
+          the_blackhearted: { value: "the Blackhearted", weight: 1 }
+          the_howling: { value: "the Howling", weight: 1 }
+          the_ambusher: { value: "the Ambusher", weight: 1 }
+          the_tormentor: { value: "the Tormentor", weight: 1 }
+          the_ravenous: { value: "the Ravenous", weight: 1 }
+          the_schemer: { value: "the Schemer", weight: 1 }
+          the_red_handed: { value: "the Red-Handed", weight: 1 }
+          the_merciless_hunter: { value: "the Merciless Hunter", weight: 1 }
+        context:
+          of_black_marsh: { value: "of Black Marsh", weight: 1 }
+          of_the_rime: { value: "of the Rime", weight: 1 }
+          of_shattered_storms: { value: "of Shattered Storms", weight: 1 }
+          of_the_blighted_dunes: { value: "of the Blighted Dunes", weight: 1 }
+          of_the_bone_pit: { value: "of the Bone Pit", weight: 1 }
+          of_the_ashen_deep: { value: "of the Ashen Deep", weight: 1 }
+          of_the_night_hunt: { value: "of the Night Hunt", weight: 1 }
+          of_the_sundered_wastes: { value: "of the Sundered Wastes", weight: 1 }
+        generic:
+          the_relentless: { value: "the Relentless", weight: 1 }
+          the_vengeful: { value: "the Vengeful", weight: 1 }
+          the_ominous: { value: "the Ominous", weight: 1 }
+          the_undying: { value: "the Undying", weight: 1 }
+          the_ruthless_warborn: { value: "the Ruthless Warborn", weight: 1 }
     modifiers:
       undead:
         weight: 3
