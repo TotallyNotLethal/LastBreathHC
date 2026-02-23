@@ -6,6 +6,7 @@ import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.World;
 import com.lastbreath.hc.lastBreathHC.worldboss.WorldBossConstants;
+import com.lastbreath.hc.lastBreathHC.spawners.SpawnerTags;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -276,6 +277,9 @@ public class CaptainSpawner implements Listener {
             return false;
         }
         if (!NemesisMobRules.isHostileOrAggressive(entity)) {
+            return false;
+        }
+        if (entity.getScoreboardTags().contains(SpawnerTags.PLAYER_SPAWNER_MOB_TAG)) {
             return false;
         }
         return !NemesisMobRules.isExcludedFromCaptainPromotion(entity, worldBossTypeKey);

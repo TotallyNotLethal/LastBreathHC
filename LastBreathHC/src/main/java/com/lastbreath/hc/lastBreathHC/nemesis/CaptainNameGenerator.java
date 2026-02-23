@@ -6,13 +6,10 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.LivingEntity;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 public class CaptainNameGenerator {
     private final LastBreathHC plugin;
@@ -30,24 +27,47 @@ public class CaptainNameGenerator {
 
         String first = pick(firstNames, random, entity.getType().name().substring(0, 1).toUpperCase(Locale.ROOT) + entity.getType().name().substring(1).toLowerCase(Locale.ROOT));
         String suffix = pick(suffixes, random, "fang");
-        String traitSuffix = selectTraitSuffix(random, traits);
-        if (!traitSuffix.isBlank()) {
-            suffix = suffix + " " + traitSuffix;
-        }
 
         NameModifier modifier = selectModifier(random, entity, traits);
         String title = modifier == null ? "Captain" : modifier.title();
-        String epithet = selectEpithet(random, traits, modifier);
+        String descriptor = selectDescriptor(random, traits, modifier);
 
         String prefix = modifier == null ? "" : modifier.prefix();
-        String tail = modifier == null ? "" : modifier.suffix();
-        String displayName = (prefix + first + " " + suffix + tail).trim() + " " + epithet;
+        String displayName = (prefix + first + " " + suffix).trim() + " " + descriptor;
         displayName = ensureUniqueDisplayName(displayName, captainId);
         String aliasSeed = Long.toHexString(seed).toUpperCase(Locale.ROOT);
-        return new CaptainRecord.Naming(displayName.trim(), epithet, title, aliasSeed);
+        return new CaptainRecord.Naming(displayName.trim(), descriptor, title, aliasSeed);
     }
 
-    private String selectTraitSuffix(Random random, CaptainRecord.Traits traits) {
+    private String selectDescriptor(Random random, CaptainRecord.Traits traits, NameModifier modifier) {
+        List<String> pool = new ArrayList<>();
+
+        String traitSuffix = pickTraitSuffix(random, traits);
+        if (!traitSuffix.isBlank()) {
+            pool.add(traitSuffix);
+        }
+
+        if (modifier != null) {
+            String modifierSuffix = modifier.suffix().trim();
+            if (!modifierSuffix.isBlank()) {
+                pool.add(modifierSuffix);
+            }
+            if (!modifier.epithet().isBlank()) {
+                pool.add(modifier.epithet());
+            }
+        }
+
+        if (pool.isEmpty()) {
+            String weightedEpithet = pick(weightedEpithetEntries(random, traits), random, "the Relentless");
+            if (!weightedEpithet.isBlank()) {
+                pool.add(weightedEpithet);
+            }
+        }
+
+        return pick(pool, random, "the Relentless");
+    }
+
+    private String pickTraitSuffix(Random random, CaptainRecord.Traits traits) {
         if (traits == null) {
             return "";
         }
@@ -102,29 +122,6 @@ public class CaptainNameGenerator {
         return normalizedBase + " #" + token;
     }
 
-    private String selectEpithet(Random random, CaptainRecord.Traits traits, NameModifier modifier) {
-        List<String> pool = new ArrayList<>(weightedEpithetEntries(random, traits));
-        String modifierEpithet = modifier == null ? "the Relentless" : modifier.epithet();
-        if (!modifierEpithet.isBlank()) {
-            pool.add(modifierEpithet);
-        }
-        if (pool.isEmpty()) {
-            pool.add("the Relentless");
-        }
-        Collections.shuffle(pool, random);
-
-        Set<String> usedEpithets = existingEpithets();
-        for (String candidate : pool) {
-            if (candidate == null || candidate.isBlank()) {
-                continue;
-            }
-            if (!usedEpithets.contains(candidate.toLowerCase(Locale.ROOT))) {
-                return candidate;
-            }
-        }
-        return pick(pool, random, "the Relentless");
-    }
-
     private List<String> weightedEpithetEntries(Random random, CaptainRecord.Traits traits) {
         List<String> weighted = new ArrayList<>();
         String traitType = traits == null ? null : resolveTraitType(traits);
@@ -133,18 +130,6 @@ public class CaptainNameGenerator {
         }
         weighted.addAll(weightedEntries("nemesis.naming.epithets.generic", random));
         return weighted;
-    }
-
-    private Set<String> existingEpithets() {
-        if (plugin.getCaptainRegistry() == null) {
-            return Set.of();
-        }
-        return plugin.getCaptainRegistry().getAll().stream()
-                .filter(record -> record.naming() != null)
-                .map(record -> record.naming().epithet())
-                .filter(epithet -> epithet != null && !epithet.isBlank())
-                .map(epithet -> epithet.toLowerCase(Locale.ROOT))
-                .collect(Collectors.toSet());
     }
 
     private NameModifier selectModifier(Random random, LivingEntity entity, CaptainRecord.Traits traits) {
