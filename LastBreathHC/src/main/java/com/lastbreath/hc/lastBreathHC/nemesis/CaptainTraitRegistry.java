@@ -72,12 +72,31 @@ public class CaptainTraitRegistry {
         }
 
         String strength = pickOne(filterByPrefixAndValidity("strength_", killer, selectedTraits), random);
-        if (strength != null) {
-            selectedTraits.add(strength);
-        }
+        selectedTraits.add(strength == null ? "strength_brutal_strikes" : strength);
 
-        String weakness = pickOne(filterWeaknesses(killer, selectedTraits), random);
-        weaknesses.add(weakness == null ? "weakness_fragile" : weakness);
+        if (random.nextDouble() <= 0.5) {
+            int weaknessCount = 1;
+            if (random.nextDouble() <= 0.35) {
+                weaknessCount++;
+            }
+            if (weaknessCount < 3 && random.nextDouble() <= 0.2) {
+                weaknessCount++;
+            }
+
+            for (int i = 0; i < weaknessCount; i++) {
+                List<String> selectedAndWeaknesses = new ArrayList<>(selectedTraits);
+                selectedAndWeaknesses.addAll(weaknesses);
+                String weakness = pickOne(filterWeaknesses(killer, selectedAndWeaknesses), random);
+                if (weakness == null || weaknesses.contains(weakness)) {
+                    break;
+                }
+                weaknesses.add(weakness);
+            }
+
+            if (weaknesses.isEmpty()) {
+                weaknesses.add("weakness_fragile");
+            }
+        }
 
         String immunity = pickOne(filterImmunities(killer, selectedTraits), random);
         if (immunity != null) {

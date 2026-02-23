@@ -589,13 +589,13 @@ nemesis:
   creation:
     dedupeRadius: 48.0
     throttle:
-      maxCaptainsPerWorld: 3
+      maxCaptainsPerWorld: 2
       windowMinutes: 10
     timeoutMs:
       projectile: 20000
       knockback: 8000
       ambient: 15000
-    lowHealthFleeChance: 0.25
+    lowHealthFleeChance: 0.05
     lowHealthFleeProbeCooldownMs: 2000
     playerEvent:
       maxRadiusBlocks: 5000
@@ -609,6 +609,11 @@ nemesis:
   progression:
     xpPerVictim: 25
     xpPerCombatTick: 2
+    xpPerPlayerInteraction: 8
+    xpPerCaptainSkirmish: 10
+    xpPerActiveTick: 1
+    interactionAwardCooldownMs: 6000
+    skirmishAwardCooldownMs: 5000
     angerPerKill: 3.0
     statPerLevel: 0.15
     traitUnlockLevel: 5
@@ -654,13 +659,13 @@ nemesis:
     losThreshold: 8
   rivalries:
     tickPeriodTicks: 200
-    triggerChancePerTick: 0.08
+    triggerChancePerTick: 0.03
     maxDistance: 96.0
   spawn:
     director:
       minTickDelay: 20
       maxTickDelay: 40
-      attemptsPerTick: 2
+      attemptsPerTick: 1
       interestDurationMs: 30000
     interest:
       movementCheckCooldownMs: 2000
@@ -668,13 +673,13 @@ nemesis:
       joinChance: 0.2
       deathChance: 0.35
     world:
-      activeCaptainCap: 20
-      perMinuteAttemptCap: 3
+      activeCaptainCap: 10
+      perMinuteAttemptCap: 1
     overworldRandomCaptain:
-      chancePerDirectorTick: 0.02
+      chancePerDirectorTick: 0.005
       probeRadius: 80
       mobPoolLimit: 64
-      activeCap: 20
+      activeCap: 8
     location:
       nearbyRangeBlocks: 96
       minLight: 0

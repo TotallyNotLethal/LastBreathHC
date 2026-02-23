@@ -342,6 +342,13 @@ public class CaptainCombatListener implements Listener {
             CaptainRecord record = captainEntityBinder.resolveCaptainRecord(living).orElse(null);
             if (record != null) {
                 progressionService.onCaptainDamaged(living, record, event);
+                if (event.getDamager() instanceof LivingEntity attacker) {
+                    CaptainRecord attackerRecord = captainEntityBinder.resolveCaptainRecord(attacker).orElse(null);
+                    if (attackerRecord != null && !attackerRecord.identity().captainId().equals(record.identity().captainId())) {
+                        progressionService.onCaptainSkirmish(record);
+                        progressionService.onCaptainSkirmish(attackerRecord);
+                    }
+                }
             }
         }
     }
@@ -349,11 +356,40 @@ public class CaptainCombatListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onCaptainAttack(EntityDamageByEntityEvent event) {
         traitService.onAttack(event);
+
+        if (!(event.getDamager() instanceof LivingEntity attackingEntity)) {
+            return;
+        }
+        CaptainRecord attackingCaptain = captainEntityBinder.resolveCaptainRecord(attackingEntity).orElse(null);
+        if (attackingCaptain == null) {
+            return;
+        }
+
+        if (event.getEntity() instanceof Player) {
+            progressionService.onPlayerInteraction(attackingCaptain);
+            return;
+        }
+
+        if (event.getEntity() instanceof LivingEntity victimEntity) {
+            CaptainRecord victimCaptain = captainEntityBinder.resolveCaptainRecord(victimEntity).orElse(null);
+            if (victimCaptain != null && !victimCaptain.identity().captainId().equals(attackingCaptain.identity().captainId())) {
+                progressionService.onCaptainSkirmish(attackingCaptain);
+                progressionService.onCaptainSkirmish(victimCaptain);
+            }
+        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onTargetChange(EntityTargetLivingEntityEvent event) {
         traitService.onTargetChange(event);
+
+        if (!(event.getTarget() instanceof Player) || !(event.getEntity() instanceof LivingEntity livingEntity)) {
+            return;
+        }
+        CaptainRecord record = captainEntityBinder.resolveCaptainRecord(livingEntity).orElse(null);
+        if (record != null) {
+            progressionService.onPlayerInteraction(record);
+        }
     }
 
 

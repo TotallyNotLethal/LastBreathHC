@@ -11,6 +11,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
+import org.bukkit.Material;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -21,6 +22,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CaptainEntityBinder {
     public static final String CAPTAIN_SCOREBOARD_TAG = "LB_NEMESIS_CAPTAIN";
@@ -151,23 +153,154 @@ public class CaptainEntityBinder {
             return;
         }
 
-        double chance = plugin.getConfig().getDouble("nemesis.equipment.rollChance", 0.0);
-        if (chance <= 0.0 || Math.random() > chance) {
-            return;
-        }
-
         EntityEquipment equipment = mob.getEquipment();
         if (equipment == null) {
             return;
         }
 
-        ItemStack helmet = new ItemStack(org.bukkit.Material.IRON_HELMET);
+        int level = Math.max(1, record.progression() == null ? 1 : record.progression().level());
+        Material helmetMaterial = rollArmorMaterial(level, ArmorSlot.HELMET);
+        Material chestplateMaterial = rollArmorMaterial(level, ArmorSlot.CHESTPLATE);
+        Material leggingsMaterial = rollArmorMaterial(level, ArmorSlot.LEGGINGS);
+        Material bootsMaterial = rollArmorMaterial(level, ArmorSlot.BOOTS);
+
+        ItemStack helmet = new ItemStack(helmetMaterial);
         ItemMeta meta = helmet.getItemMeta();
         if (meta != null) {
             meta.setDisplayName("Nemesis Crown");
             helmet.setItemMeta(meta);
         }
+
         equipment.setHelmet(helmet);
+        equipment.setChestplate(new ItemStack(chestplateMaterial));
+        equipment.setLeggings(new ItemStack(leggingsMaterial));
+        equipment.setBoots(new ItemStack(bootsMaterial));
+
+        equipment.setItemInMainHand(new ItemStack(rollMainHandMaterial(level)));
+        equipment.setItemInOffHand(new ItemStack(rollOffHandMaterial(level)));
+    }
+
+    private Material rollArmorMaterial(int level, ArmorSlot slot) {
+        Material[][] tieredArmor = new Material[][]{
+                {Material.CHAINMAIL_HELMET, Material.CHAINMAIL_CHESTPLATE, Material.CHAINMAIL_LEGGINGS, Material.CHAINMAIL_BOOTS},
+                {
+                        resolveArmorMaterial("COPPER_HELMET", Material.CHAINMAIL_HELMET),
+                        resolveArmorMaterial("COPPER_CHESTPLATE", Material.CHAINMAIL_CHESTPLATE),
+                        resolveArmorMaterial("COPPER_LEGGINGS", Material.CHAINMAIL_LEGGINGS),
+                        resolveArmorMaterial("COPPER_BOOTS", Material.CHAINMAIL_BOOTS)
+                },
+                {Material.GOLDEN_HELMET, Material.GOLDEN_CHESTPLATE, Material.GOLDEN_LEGGINGS, Material.GOLDEN_BOOTS},
+                {Material.IRON_HELMET, Material.IRON_CHESTPLATE, Material.IRON_LEGGINGS, Material.IRON_BOOTS},
+                {Material.DIAMOND_HELMET, Material.DIAMOND_CHESTPLATE, Material.DIAMOND_LEGGINGS, Material.DIAMOND_BOOTS},
+                {Material.NETHERITE_HELMET, Material.NETHERITE_CHESTPLATE, Material.NETHERITE_LEGGINGS, Material.NETHERITE_BOOTS}
+        };
+
+        int rolledTier = rollTierForLevel(level, tieredArmor.length);
+        return tieredArmor[rolledTier][slot.ordinal()];
+    }
+
+
+    private Material rollMainHandMaterial(int level) {
+        Material[][] tieredMainHandItems = new Material[][]{
+                {
+                        Material.WOODEN_SWORD,
+                        Material.WOODEN_AXE,
+                        Material.WOODEN_PICKAXE,
+                        Material.WOODEN_SHOVEL,
+                        Material.WOODEN_HOE,
+                        Material.BUCKET
+                },
+                {
+                        resolveMaterial("STONE_SWORD", Material.STONE_AXE),
+                        Material.STONE_AXE,
+                        Material.STONE_PICKAXE,
+                        Material.STONE_SHOVEL,
+                        Material.STONE_HOE,
+                        Material.BUCKET
+                },
+                {
+                        Material.GOLDEN_SWORD,
+                        Material.GOLDEN_AXE,
+                        Material.GOLDEN_PICKAXE,
+                        Material.GOLDEN_SHOVEL,
+                        Material.GOLDEN_HOE,
+                        Material.BUCKET
+                },
+                {
+                        Material.IRON_SWORD,
+                        Material.IRON_AXE,
+                        Material.IRON_PICKAXE,
+                        Material.IRON_SHOVEL,
+                        Material.IRON_HOE,
+                        resolveMaterial("TRIDENT", Material.IRON_SWORD),
+                        Material.BUCKET
+                },
+                {
+                        Material.DIAMOND_SWORD,
+                        Material.DIAMOND_AXE,
+                        Material.DIAMOND_PICKAXE,
+                        Material.DIAMOND_SHOVEL,
+                        Material.DIAMOND_HOE,
+                        resolveMaterial("TRIDENT", Material.DIAMOND_SWORD),
+                        Material.BUCKET
+                },
+                {
+                        Material.NETHERITE_SWORD,
+                        Material.NETHERITE_AXE,
+                        Material.NETHERITE_PICKAXE,
+                        Material.NETHERITE_SHOVEL,
+                        Material.NETHERITE_HOE,
+                        resolveMaterial("TRIDENT", Material.NETHERITE_SWORD),
+                        resolveMaterial("MACE", Material.NETHERITE_SWORD),
+                        Material.BUCKET
+                }
+        };
+
+        int tier = rollTierForLevel(level, tieredMainHandItems.length);
+        Material[] candidates = tieredMainHandItems[tier];
+        return candidates[ThreadLocalRandom.current().nextInt(candidates.length)];
+    }
+
+    private Material rollOffHandMaterial(int level) {
+        double utilityChance = Math.min(0.8, 0.25 + (level * 0.03));
+        if (ThreadLocalRandom.current().nextDouble() > utilityChance) {
+            return Material.AIR;
+        }
+
+        Material[] utility = {
+                Material.BUCKET,
+                Material.WATER_BUCKET,
+                Material.LAVA_BUCKET,
+                resolveMaterial("POWDER_SNOW_BUCKET", Material.BUCKET)
+        };
+        return utility[ThreadLocalRandom.current().nextInt(utility.length)];
+    }
+
+    private int rollTierForLevel(int level, int tierCount) {
+        int targetTier = Math.min(tierCount - 1, Math.max(0, (level - 1) / 4));
+        int[] weights = new int[tierCount];
+        int totalWeight = 0;
+        for (int tier = 0; tier < tierCount; tier++) {
+            int distance = Math.abs(tier - targetTier);
+            int weight = switch (distance) {
+                case 0 -> 55;
+                case 1 -> 24;
+                case 2 -> 12;
+                case 3 -> 6;
+                default -> 3;
+            };
+            weights[tier] = weight;
+            totalWeight += weight;
+        }
+
+        int roll = ThreadLocalRandom.current().nextInt(totalWeight);
+        for (int tier = 0; tier < tierCount; tier++) {
+            roll -= weights[tier];
+            if (roll < 0) {
+                return tier;
+            }
+        }
+        return targetTier;
     }
 
     private void applyTraitHooks(LivingEntity entity, CaptainRecord record) {
@@ -184,6 +317,22 @@ public class CaptainEntityBinder {
                 }
             }
         }
+    }
+
+    private Material resolveArmorMaterial(String candidate, Material fallback) {
+        return resolveMaterial(candidate, fallback);
+    }
+
+    private Material resolveMaterial(String candidate, Material fallback) {
+        Material resolved = Material.matchMaterial(candidate);
+        return resolved == null ? fallback : resolved;
+    }
+
+    private enum ArmorSlot {
+        HELMET,
+        CHESTPLATE,
+        LEGGINGS,
+        BOOTS
     }
 
     private double tierMultiplier(String tier) {

@@ -20,12 +20,19 @@ public class NemesisProgressionService {
     private final CaptainRegistry registry;
     private final CaptainEntityBinder binder;
     private final Map<UUID, Long> combatTrackedAt = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastPlayerInteractionAward = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> lastCaptainSkirmishAward = new ConcurrentHashMap<>();
     private final CaptainStateMachine stateMachine = new CaptainStateMachine();
     private BukkitTask combatTask;
 
     private final long xpPerKill;
     private final long xpPerCombatTick;
     private final double angerPerKill;
+    private final long xpPerPlayerInteraction;
+    private final long xpPerCaptainSkirmish;
+    private final long xpPerActiveTick;
+    private final long interactionAwardCooldownMs;
+    private final long skirmishAwardCooldownMs;
 
     public NemesisProgressionService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder) {
         this.plugin = plugin;
@@ -34,6 +41,11 @@ public class NemesisProgressionService {
         this.xpPerKill = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerVictim", 25L));
         this.xpPerCombatTick = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerCombatTick", 2L));
         this.angerPerKill = Math.max(0.0, plugin.getConfig().getDouble("nemesis.progression.angerPerKill", 3.0));
+        this.xpPerPlayerInteraction = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerPlayerInteraction", 8L));
+        this.xpPerCaptainSkirmish = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerCaptainSkirmish", 10L));
+        this.xpPerActiveTick = Math.max(0L, plugin.getConfig().getLong("nemesis.progression.xpPerActiveTick", 1L));
+        this.interactionAwardCooldownMs = Math.max(500L, plugin.getConfig().getLong("nemesis.progression.interactionAwardCooldownMs", 6000L));
+        this.skirmishAwardCooldownMs = Math.max(500L, plugin.getConfig().getLong("nemesis.progression.skirmishAwardCooldownMs", 5000L));
     }
 
     public void start() {
@@ -47,6 +59,8 @@ public class NemesisProgressionService {
             combatTask = null;
         }
         combatTrackedAt.clear();
+        lastPlayerInteractionAward.clear();
+        lastCaptainSkirmishAward.clear();
     }
 
     public CaptainRecord onPlayerKill(CaptainRecord record, UUID victimUuid) {
@@ -67,6 +81,32 @@ public class NemesisProgressionService {
         CaptainRecord updated = new CaptainRecord(record.identity(), record.origin(), updatedVictims, scores, progression, record.naming(), record.traits(), record.minionPack(), record.state(), telemetry);
         combatTrackedAt.put(record.identity().captainId(), now);
         return updated;
+    }
+
+    public void onPlayerInteraction(CaptainRecord record) {
+        long now = System.currentTimeMillis();
+        if (!isEligibleTimedAward(lastPlayerInteractionAward, record.identity().captainId(), now, interactionAwardCooldownMs)) {
+            return;
+        }
+
+        CaptainRecord.Progression progression = applyXp(record, xpPerPlayerInteraction);
+        CaptainRecord.Telemetry telemetry = withCounter(record, "playerInteractions", 1L, now);
+        CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
+        registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
+        combatTrackedAt.put(record.identity().captainId(), now);
+    }
+
+    public void onCaptainSkirmish(CaptainRecord record) {
+        long now = System.currentTimeMillis();
+        if (!isEligibleTimedAward(lastCaptainSkirmishAward, record.identity().captainId(), now, skirmishAwardCooldownMs)) {
+            return;
+        }
+
+        CaptainRecord.Progression progression = applyXp(record, xpPerCaptainSkirmish);
+        CaptainRecord.Telemetry telemetry = withCounter(record, "captainSkirmishes", 1L, now);
+        CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
+        registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
+        combatTrackedAt.put(record.identity().captainId(), now);
     }
 
     public void onMinionDeath(UUID captainId, long xp, double anger) {
@@ -133,6 +173,19 @@ public class NemesisProgressionService {
             CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
             registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
         }
+
+        if (xpPerActiveTick <= 0L) {
+            return;
+        }
+        for (CaptainRecord record : registry.getAll()) {
+            if (record.state() == null || record.state().state() != CaptainState.ACTIVE) {
+                continue;
+            }
+            CaptainRecord.Progression progression = applyXp(record, xpPerActiveTick);
+            CaptainRecord.Telemetry telemetry = withCounter(record, "activeTicks", 1L, now);
+            CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
+            registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
+        }
     }
 
     private CaptainRecord.Naming maybeUnlockTrait(CaptainRecord record, int level) {
@@ -182,6 +235,15 @@ public class NemesisProgressionService {
             immunities.add("immunity_projectile_guard");
         }
         return new CaptainRecord.Traits(strengths, record.traits().weaknesses(), immunities);
+    }
+
+    private boolean isEligibleTimedAward(Map<UUID, Long> tracker, UUID captainId, long now, long cooldownMs) {
+        long nextEligible = tracker.getOrDefault(captainId, 0L);
+        if (now < nextEligible) {
+            return false;
+        }
+        tracker.put(captainId, now + cooldownMs);
+        return true;
     }
 
     private CaptainRecord.Progression applyXp(CaptainRecord record, long delta) {
