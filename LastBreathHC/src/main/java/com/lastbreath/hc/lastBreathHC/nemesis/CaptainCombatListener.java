@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC.nemesis;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.worldboss.WorldBossConstants;
+import com.lastbreath.hc.lastBreathHC.spawners.SpawnerTags;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -458,6 +459,10 @@ public class CaptainCombatListener implements Listener {
         }
 
         if (!NemesisMobRules.isHostileOrAggressive(killer)) {
+            return false;
+        }
+
+        if (killer.getScoreboardTags().contains(SpawnerTags.PLAYER_SPAWNER_MOB_TAG)) {
             return false;
         }
 

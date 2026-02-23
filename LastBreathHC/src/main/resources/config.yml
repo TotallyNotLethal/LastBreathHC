@@ -663,20 +663,20 @@ nemesis:
     maxDistance: 96.0
   spawn:
     director:
-      minTickDelay: 20
-      maxTickDelay: 40
+      minTickDelay: 40
+      maxTickDelay: 80
       attemptsPerTick: 1
       interestDurationMs: 30000
     interest:
       movementCheckCooldownMs: 2000
-      movementChance: 0.2
-      joinChance: 0.2
-      deathChance: 0.35
+      movementChance: 0.08
+      joinChance: 0.08
+      deathChance: 0.15
     world:
-      activeCaptainCap: 10
+      activeCaptainCap: 6
       perMinuteAttemptCap: 1
     overworldRandomCaptain:
-      chancePerDirectorTick: 0.005
+      chancePerDirectorTick: 0.002
       probeRadius: 80
       mobPoolLimit: 64
       activeCap: 8
@@ -686,7 +686,7 @@ nemesis:
       maxLight: 12
       deniedBiomes:
         - DEEP_DARK
-    recordCooldownMs: 30000
+    recordCooldownMs: 60000
 
   naming:
     orcish:
