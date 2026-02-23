@@ -299,7 +299,12 @@ public class CaptainSpawner implements Listener {
         CaptainRecord.Victims victims = new CaptainRecord.Victims(List.of(), 0, 0L);
         CaptainRecord.NemesisScores scores = new CaptainRecord.NemesisScores(1.5, 0.0, 0.8, 0.7);
         CaptainRecord.Progression progression = new CaptainRecord.Progression(1, 0L, "COMMON");
-        CaptainRecord.Traits traits = new CaptainRecord.Traits(List.of("raider"), List.of(), List.of());
+        List<String> starterTraits = new ArrayList<>(List.of("raider", "strength_brutal_strikes"));
+        List<String> starterWeaknesses = new ArrayList<>();
+        if (ThreadLocalRandom.current().nextDouble() <= 0.5) {
+            starterWeaknesses.add("weakness_fragile");
+        }
+        CaptainRecord.Traits traits = new CaptainRecord.Traits(starterTraits, starterWeaknesses, List.of());
         CaptainRecord.Naming naming = nameGenerator.generate(captainId, mob, traits);
         int minionCount = Math.max(0, plugin.getConfig().getInt("nemesis.minions.defaultCount", 2));
         List<String> minionArchetypes = plugin.getConfig().getStringList("nemesis.minions.defaultArchetypes");
