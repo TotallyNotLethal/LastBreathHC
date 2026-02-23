@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC.nemesis;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.LivingEntity;
 
 import java.util.ArrayList;
@@ -99,7 +100,7 @@ public class CaptainNameGenerator {
     }
 
     private NameModifier selectModifier(Random random, LivingEntity entity, CaptainRecord.Traits traits) {
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection("nemesis.naming.modifiers");
+        ConfigurationSection section = getConfigSection("nemesis.naming.modifiers");
         if (section == null) {
             return null;
         }
@@ -146,7 +147,7 @@ public class CaptainNameGenerator {
     }
 
     private List<String> weightedEntries(String path, Random random) {
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection(path);
+        ConfigurationSection section = getConfigSection(path);
         List<String> weighted = new ArrayList<>();
         if (section == null) {
             return weighted;
@@ -159,6 +160,25 @@ public class CaptainNameGenerator {
             }
         }
         return weighted;
+    }
+
+    private ConfigurationSection getConfigSection(String path) {
+        FileConfiguration config = plugin.getConfig();
+        ConfigurationSection section = config.getConfigurationSection(path);
+        if (section != null && !section.getKeys(false).isEmpty()) {
+            return section;
+        }
+
+        FileConfiguration defaults = config.getDefaults();
+        if (defaults == null) {
+            return section;
+        }
+
+        ConfigurationSection defaultSection = defaults.getConfigurationSection(path);
+        if (defaultSection != null && !defaultSection.getKeys(false).isEmpty()) {
+            return defaultSection;
+        }
+        return section;
     }
 
     private String pick(List<String> options, Random random, String fallback) {
