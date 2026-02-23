@@ -403,7 +403,7 @@ public class CaptainCombatListener implements Listener {
             return;
         }
 
-        CaptainRecord.State deadState = stateMachine.onDeath(System.currentTimeMillis());
+        CaptainRecord.State deadState = stateMachine.onKilled(System.currentTimeMillis());
         captainRegistry.upsert(new CaptainRecord(
                 deadCaptain.identity(),
                 deadCaptain.origin(),
