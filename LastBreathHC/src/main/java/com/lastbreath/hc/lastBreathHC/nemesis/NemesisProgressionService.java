@@ -130,15 +130,58 @@ public class NemesisProgressionService {
             }
             CaptainRecord.Progression progression = applyXp(record, xpPerCombatTick);
             CaptainRecord.Telemetry telemetry = withCounter(record, "combatTicks", 1L, now);
-            registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), record.traits(), record.minionPack(), record.state(), telemetry));
+            CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
+            registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
         }
     }
 
     private CaptainRecord.Naming maybeUnlockTrait(CaptainRecord record, int level) {
-        if (level < plugin.getConfig().getInt("nemesis.progression.traitUnlockLevel", 5)) {
+        int unlockLevel = plugin.getConfig().getInt("nemesis.progression.traitUnlockLevel", 5);
+        if (level < unlockLevel || level % unlockLevel != 0) {
             return record.naming();
         }
+        maybeGrantProgressionStrength(record, level);
         return record.naming();
+    }
+
+    public CaptainRecord onCaptainVictory(CaptainRecord winner, CaptainRecord loser) {
+        long bonusXp = Math.max(10L, plugin.getConfig().getLong("nemesis.progression.xpPerCaptainVictory", 55L));
+        CaptainRecord.Progression progression = applyXp(winner, bonusXp);
+        List<UUID> victims = new ArrayList<>(winner.victims().playerVictims());
+        if (loser.identity() != null && loser.identity().nemesisOf() != null && !victims.contains(loser.identity().nemesisOf())) {
+            victims.add(loser.identity().nemesisOf());
+        }
+        long now = System.currentTimeMillis();
+        CaptainRecord.Victims updatedVictims = new CaptainRecord.Victims(victims, winner.victims().totalVictimCount() + 1, now);
+        CaptainRecord.NemesisScores updatedScores = new CaptainRecord.NemesisScores(
+                winner.nemesisScores().threat() + 1.5,
+                winner.nemesisScores().rivalry() + 2.0,
+                winner.nemesisScores().brutality() + 1.0,
+                winner.nemesisScores().cunning() + 0.5
+        );
+        CaptainRecord.Traits boostedTraits = maybeGrantProgressionStrength(winner, progression.level());
+        CaptainRecord.Telemetry telemetry = withCounter(winner, "captainVictories", 1L, now);
+        return new CaptainRecord(winner.identity(), winner.origin(), updatedVictims, updatedScores, progression, maybeUnlockTrait(winner, progression.level()), boostedTraits, winner.minionPack(), winner.state(), telemetry);
+    }
+
+    private CaptainRecord.Traits maybeGrantProgressionStrength(CaptainRecord record, int level) {
+        int unlockLevel = Math.max(2, plugin.getConfig().getInt("nemesis.progression.traitUnlockLevel", 5));
+        if (level < unlockLevel || level % unlockLevel != 0) {
+            return record.traits();
+        }
+
+        List<String> strengths = new ArrayList<>(record.traits().traits());
+        List<String> immunities = new ArrayList<>(record.traits().immunities());
+        if (!strengths.contains("strength_vicious_combo")) {
+            strengths.add("strength_vicious_combo");
+        } else if (!strengths.contains("strength_warlord_presence")) {
+            strengths.add("strength_warlord_presence");
+        } else if (!immunities.contains("immunity_fireproof")) {
+            immunities.add("immunity_fireproof");
+        } else if (!immunities.contains("immunity_projectile_guard")) {
+            immunities.add("immunity_projectile_guard");
+        }
+        return new CaptainRecord.Traits(strengths, record.traits().weaknesses(), immunities);
     }
 
     private CaptainRecord.Progression applyXp(CaptainRecord record, long delta) {
