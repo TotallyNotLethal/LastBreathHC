@@ -217,7 +217,7 @@ public class CaptainNameGenerator {
             return section;
         }
 
-        FileConfiguration defaults = config.getDefaults();
+        FileConfiguration defaults = (FileConfiguration) config.getDefaults();
         if (defaults == null) {
             return section;
         }
