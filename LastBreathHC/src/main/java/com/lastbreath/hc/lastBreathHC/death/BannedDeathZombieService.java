@@ -129,7 +129,7 @@ public class BannedDeathZombieService implements Listener {
                 continue;
             }
 
-            Location deathLocation = bannedPlayer.getLastDeathLocation();
+            Location deathLocation = safeLastDeathLocation(bannedPlayer);
             if (deathLocation == null || deathLocation.getWorld() == null) {
                 continue;
             }
@@ -139,6 +139,16 @@ public class BannedDeathZombieService implements Listener {
         }
 
         saveState();
+    }
+
+    private Location safeLastDeathLocation(OfflinePlayer player) {
+        try {
+            return player.getLastDeathLocation();
+        } catch (RuntimeException ex) {
+            plugin.getLogger().warning("Skipping last-death remnant spawn for "
+                    + player.getName() + " due to invalid stored death location: " + ex.getMessage());
+            return null;
+        }
     }
 
     private void spawnZombieWithHead(OfflinePlayer player, Location location) {
