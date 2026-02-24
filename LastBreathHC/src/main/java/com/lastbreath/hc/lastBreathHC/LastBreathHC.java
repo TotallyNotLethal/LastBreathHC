@@ -37,10 +37,13 @@ import com.lastbreath.hc.lastBreathHC.nemesis.CaptainNameGenerator;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSerializer;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
+import com.lastbreath.hc.lastBreathHC.nemesis.ArmyGraphSerializer;
+import com.lastbreath.hc.lastBreathHC.nemesis.ArmyGraphService;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainTraitRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainTraitService;
 import com.lastbreath.hc.lastBreathHC.nemesis.KillerResolver;
 import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
+import com.lastbreath.hc.lastBreathHC.nemesis.PromotionEvaluator;
 import com.lastbreath.hc.lastBreathHC.nemesis.TokenAwareDeathOutcomeResolver;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisProgressionService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRewardService;
@@ -166,6 +169,8 @@ public final class LastBreathHC extends JavaPlugin {
     private HeadTrackingLogger headTrackingLogger;
     private CaptainRegistry captainRegistry;
     private CaptainSerializer captainSerializer;
+    private ArmyGraphSerializer armyGraphSerializer;
+    private ArmyGraphService armyGraphService;
     private KillerResolver killerResolver;
     private CaptainEntityBinder captainEntityBinder;
     private CaptainSpawner captainSpawner;
@@ -179,6 +184,7 @@ public final class LastBreathHC extends JavaPlugin {
     private NemesisRewardService nemesisRewardService;
     private NemesisRivalryDirector nemesisRivalryDirector;
     private AntiCheeseMonitor antiCheeseMonitor;
+    private PromotionEvaluator promotionEvaluator;
 
 
     @Override
@@ -208,6 +214,11 @@ public final class LastBreathHC extends JavaPlugin {
         captainRegistry = new CaptainRegistry();
         captainSerializer = new CaptainSerializer(this, new java.io.File(getDataFolder(), "nemesis-captains.yml"));
         captainRegistry.load(captainSerializer.load());
+        armyGraphSerializer = new ArmyGraphSerializer(this, new java.io.File(getDataFolder(), "nemesis-army-graph.yml"));
+        armyGraphService = new ArmyGraphService();
+        armyGraphService.load(armyGraphSerializer.load());
+        armyGraphService.seedFromCaptains(captainRegistry.getAll());
+        armyGraphService.pruneMissingCaptains(captainRegistry.getAll().stream().map(record -> record.identity().captainId()).collect(java.util.stream.Collectors.toSet()));
         long captainFlushIntervalTicks = 20L * 60L * 3L;
         captainFlushTask = getServer().getScheduler().runTaskTimer(this, this::flushDirtyCaptains, captainFlushIntervalTicks, captainFlushIntervalTicks);
         killerResolver = new KillerResolver();
@@ -228,6 +239,8 @@ public final class LastBreathHC extends JavaPlugin {
         nemesisRewardService = new NemesisRewardService(this, captainEntityBinder, captainRegistry);
         nemesisRivalryDirector = new NemesisRivalryDirector(this, captainRegistry, captainEntityBinder);
         nemesisRivalryDirector.start();
+        promotionEvaluator = new PromotionEvaluator(this, captainRegistry);
+        promotionEvaluator.start();
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
         getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator), this);
@@ -501,7 +514,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
-                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry));
+                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService));
                 }
         );
     }
@@ -586,6 +599,7 @@ public final class LastBreathHC extends JavaPlugin {
         flushDirtyCaptains();
         captainRegistry = null;
         captainSerializer = null;
+        armyGraphSerializer = null;
         killerResolver = null;
         captainEntityBinder = null;
         if (captainSpawner != null) {
@@ -612,6 +626,11 @@ public final class LastBreathHC extends JavaPlugin {
             nemesisRivalryDirector.stop();
             nemesisRivalryDirector = null;
         }
+        if (promotionEvaluator != null) {
+            promotionEvaluator.stop();
+            promotionEvaluator = null;
+        }
+        armyGraphService = null;
         antiCheeseMonitor = null;
         int removedAsteroidMobs = AsteroidManager.clearAsteroidMobsForShutdown();
         AsteroidManager.clearAllAsteroids();
@@ -648,6 +667,9 @@ public final class LastBreathHC extends JavaPlugin {
             return;
         }
         captainSerializer.saveDirty(captainRegistry.getAll(), captainRegistry.snapshotAndClearDirtyCaptainIds());
+        if (armyGraphService != null && armyGraphSerializer != null) {
+            armyGraphSerializer.saveDirty(armyGraphService.snapshot(), armyGraphService.consumeDirty());
+        }
     }
 
     public static LastBreathHC getInstance() {

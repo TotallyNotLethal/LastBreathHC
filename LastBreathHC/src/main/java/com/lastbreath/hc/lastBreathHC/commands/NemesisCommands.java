@@ -6,6 +6,8 @@ import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainTraitRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.KillerResolver;
 import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
+import com.lastbreath.hc.lastBreathHC.nemesis.Rank;
+import com.lastbreath.hc.lastBreathHC.nemesis.ArmyGraphService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisMobRules;
 import io.papermc.paper.command.brigadier.BasicCommand;
@@ -15,11 +17,13 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class NemesisCommands implements BasicCommand {
     private final CaptainRegistry registry;
@@ -28,20 +32,22 @@ public class NemesisCommands implements BasicCommand {
     private final KillerResolver killerResolver;
     private final MinionController minionController;
     private final CaptainTraitRegistry traitRegistry;
+    private final ArmyGraphService armyGraphService;
 
-    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry) {
+    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService) {
         this.registry = registry;
         this.spawner = spawner;
         this.captainListGUI = captainListGUI;
         this.killerResolver = killerResolver;
         this.minionController = minionController;
         this.traitRegistry = traitRegistry;
+        this.armyGraphService = armyGraphService;
     }
 
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("list", "nearby", "info", "hunt", "spawn", "retire", "clear", "debug");
+            return List.of("list", "nearby", "info", "hunt", "army", "spawn", "retire", "clear", "debug");
         }
         if (args.length == 2) {
             if ("debug".equalsIgnoreCase(args[0])) {
@@ -58,7 +64,7 @@ public class NemesisCommands implements BasicCommand {
     public void execute(CommandSourceStack source, String[] args) {
         CommandSender sender = source.getSender();
         if (args.length == 0) {
-            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|spawn|retire|clear|debug>");
+            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|spawn|retire|clear|debug>");
             return;
         }
 
@@ -68,12 +74,56 @@ public class NemesisCommands implements BasicCommand {
             case "nearby" -> handleNearby(sender);
             case "info" -> handleInfo(sender, args);
             case "hunt" -> handleHunt(sender);
+            case "army" -> handleArmy(sender);
             case "spawn" -> handleSpawn(sender, args);
             case "retire" -> handleRetire(sender, args);
             case "clear" -> handleClear(sender, args);
             case "debug" -> handleDebug(sender, args);
-            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|spawn|retire|clear|debug>");
+            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|spawn|retire|clear|debug>");
         }
+    }
+
+    private void handleArmy(CommandSender sender) {
+        if (!sender.hasPermission("lastbreathhc.nemesis")) {
+            sender.sendMessage("§cNo permission.");
+            return;
+        }
+
+        Map<String, List<CaptainRecord>> byRegion = registry.getAll().stream().collect(Collectors.groupingBy(record -> {
+            if (record.political().isPresent() && record.political().get().region() != null && !record.political().get().region().isBlank()) {
+                return record.political().get().region();
+            }
+            return "unassigned";
+        }));
+
+        if (byRegion.isEmpty()) {
+            sender.sendMessage("§eNo captains are registered in the army graph.");
+            return;
+        }
+
+        sender.sendMessage("§6Nemesis Army");
+        byRegion.entrySet().stream().sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER)).forEach(entry -> {
+            sender.sendMessage("§7Region §f" + entry.getKey());
+            for (Rank rank : Rank.values()) {
+                List<CaptainRecord> ranked = entry.getValue().stream()
+                        .filter(record -> Rank.from(record.political().map(CaptainRecord.Political::rank).orElse(Rank.CAPTAIN.name()), Rank.CAPTAIN) == rank)
+                        .sorted(Comparator.comparingDouble((CaptainRecord record) -> record.political().map(CaptainRecord.Political::promotionScore).orElse(0.0)).reversed())
+                        .limit(rank.slots())
+                        .toList();
+
+                List<String> slots = new ArrayList<>();
+                for (CaptainRecord record : ranked) {
+                    String name = record.naming() == null ? record.identity().captainId().toString().substring(0, 8) : record.naming().displayName();
+                    double score = record.political().map(CaptainRecord.Political::promotionScore).orElse(0.0);
+                    ArmyGraphService.ArmyLinks links = armyGraphService.linksOf(record.identity().captainId());
+                    slots.add("§c" + name + " §8[" + String.format(Locale.US, "%.1f", score) + "|rivals=" + links.rivals().size() + "]");
+                }
+                while (slots.size() < rank.slots()) {
+                    slots.add("§8<empty>");
+                }
+                sender.sendMessage("§8- §6" + rank.name() + " §7(" + ranked.size() + "/" + rank.slots() + ") §f" + String.join(" §7| ", slots));
+            }
+        });
     }
 
     private void handleNearby(CommandSender sender) {
@@ -185,6 +235,7 @@ public class NemesisCommands implements BasicCommand {
         }
 
         int captainsRemoved = registry.clearAll();
+        armyGraphService.pruneMissingCaptains(java.util.Set.of());
         int minionsRemoved = minionController.despawnAllMinions();
         sender.sendMessage("§aNemesis data cleared. Captains removed: §e" + captainsRemoved + "§a, minions removed: §e" + minionsRemoved);
     }
