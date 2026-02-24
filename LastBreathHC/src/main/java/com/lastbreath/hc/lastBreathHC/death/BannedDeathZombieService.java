@@ -6,16 +6,26 @@ import com.lastbreath.hc.lastBreathHC.heads.HeadTrackingLogger;
 import org.bukkit.BanEntry;
 import org.bukkit.BanList;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Container;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.ChestedHorse;
+import org.bukkit.entity.Llama;
+import org.bukkit.entity.Mule;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.BundleMeta;
@@ -38,14 +48,21 @@ public class BannedDeathZombieService implements Listener {
 
     private static final long CHECK_INTERVAL_TICKS = 20L * 60L * 30L; // every 30 minutes
     private static final long ACTIVE_WINDOW_MS = 7L * 24L * 60L * 60L * 1000L;
+    private static final long RECENT_CHUNK_WINDOW_MS = 7L * 24L * 60L * 60L * 1000L;
+    private static final long PROTECTED_OWNER_CACHE_MS = 2L * 60L * 1000L;
     private static final String STORAGE_PATH = "deathZombieLastSpawn";
+    private static final String HEAD_CHUNK_CACHE_PATH = "protectedHeadChunkCache";
     private static final String REMNANT_TAG = "lastbreathhc.remnantZombie";
 
     private final LastBreathHC plugin;
     private final HeadTrackingLogger headTrackingLogger;
     private final NamespacedKey remnantOwnerKey;
     private final Map<UUID, LocalDate> lastSpawnDateByPlayer = new HashMap<>();
+    private final Map<ChunkRef, Long> chunkLastLoadedAtMs = new HashMap<>();
+    private final Map<UUID, HeadChunkSnapshot> headChunkSnapshots = new HashMap<>();
     private BukkitTask task;
+    private long protectedOwnerCacheExpiresAtMs;
+    private Set<UUID> cachedProtectedOwners = new HashSet<>();
 
     public BannedDeathZombieService(LastBreathHC plugin, HeadTrackingLogger headTrackingLogger) {
         this.plugin = plugin;
@@ -55,6 +72,8 @@ public class BannedDeathZombieService implements Listener {
 
     public void start() {
         loadState();
+        loadHeadChunkSnapshots();
+        seedLoadedChunkTimestamps();
         Bukkit.getPluginManager().registerEvents(this, plugin);
         if (task != null) {
             task.cancel();
@@ -68,6 +87,7 @@ public class BannedDeathZombieService implements Listener {
             task = null;
         }
         HandlerList.unregisterAll(this);
+        saveHeadChunkSnapshots();
         saveState();
     }
 
@@ -95,6 +115,11 @@ public class BannedDeathZombieService implements Listener {
         ItemStack ownerHead = createOwnedHead(Bukkit.getOfflinePlayer(ownerUuid));
         event.getDrops().removeIf(this::isStoredPlayerHead);
         event.getDrops().add(ownerHead);
+    }
+
+    @EventHandler
+    public void onChunkLoad(ChunkLoadEvent event) {
+        chunkLastLoadedAtMs.put(ChunkRef.from(event.getChunk()), System.currentTimeMillis());
     }
 
     private void runSweep() {
@@ -138,6 +163,7 @@ public class BannedDeathZombieService implements Listener {
             lastSpawnDateByPlayer.put(playerId, today);
         }
 
+        saveHeadChunkSnapshots();
         saveState();
     }
 
@@ -185,8 +211,23 @@ public class BannedDeathZombieService implements Listener {
     }
 
     private Set<UUID> resolveProtectedHeadOwners() {
-        Set<UUID> protectedOwners = new HashSet<>();
         long now = System.currentTimeMillis();
+        if (now < protectedOwnerCacheExpiresAtMs) {
+            return new HashSet<>(cachedProtectedOwners);
+        }
+
+        Set<UUID> protectedOwners = new HashSet<>();
+
+        scanOnlinePlayerStorageForHeads(protectedOwners, now);
+        scanWorldChunkStorageForHeads(protectedOwners, now);
+        mergeRecentChunkSnapshots(protectedOwners, now);
+
+        cachedProtectedOwners = new HashSet<>(protectedOwners);
+        protectedOwnerCacheExpiresAtMs = now + PROTECTED_OWNER_CACHE_MS;
+        return protectedOwners;
+    }
+
+    private void scanOnlinePlayerStorageForHeads(Set<UUID> protectedOwners, long now) {
 
         for (OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
             if (!hasLoggedInWithinWindow(offlinePlayer, now)) {
@@ -200,8 +241,155 @@ public class BannedDeathZombieService implements Listener {
             scanInventoryForHeads(offlinePlayer.getPlayer().getInventory(), protectedOwners);
             scanInventoryForHeads(offlinePlayer.getPlayer().getEnderChest(), protectedOwners);
         }
+    }
 
-        return protectedOwners;
+    private void scanWorldChunkStorageForHeads(Set<UUID> protectedOwners, long now) {
+        long earliestAllowedLoad = now - RECENT_CHUNK_WINDOW_MS;
+        chunkLastLoadedAtMs.entrySet().removeIf(entry -> entry.getValue() < earliestAllowedLoad);
+
+        for (World world : Bukkit.getWorlds()) {
+            for (Chunk chunk : world.getLoadedChunks()) {
+                if (!wasChunkLoadedRecently(chunk, earliestAllowedLoad)) {
+                    continue;
+                }
+
+                scanTileContainersInChunk(chunk, protectedOwners, now);
+                scanEntityContainersInChunk(chunk, protectedOwners, now);
+            }
+        }
+    }
+
+    private void scanTileContainersInChunk(Chunk chunk, Set<UUID> protectedOwners, long now) {
+        for (BlockState state : chunk.getTileEntities()) {
+            if (!(state instanceof Container container)) {
+                continue;
+            }
+            Set<UUID> ownersInInventory = collectOwnersFromInventory(container.getInventory());
+            protectedOwners.addAll(ownersInInventory);
+            rememberProtectedOwnersInChunk(ownersInInventory, chunk, now);
+        }
+    }
+
+    private void scanEntityContainersInChunk(Chunk chunk, Set<UUID> protectedOwners, long now) {
+        for (Entity entity : chunk.getEntities()) {
+            Inventory inventory = extractEntityInventory(entity);
+            if (inventory == null) {
+                continue;
+            }
+            Set<UUID> ownersInInventory = collectOwnersFromInventory(inventory);
+            protectedOwners.addAll(ownersInInventory);
+            rememberProtectedOwnersInChunk(ownersInInventory, chunk, now);
+        }
+    }
+
+    private Inventory extractEntityInventory(Entity entity) {
+        if (entity instanceof InventoryHolder inventoryHolder) {
+            return inventoryHolder.getInventory();
+        }
+        if (entity instanceof Llama llama) {
+            return llama.getInventory();
+        }
+        if (entity instanceof Mule mule) {
+            return mule.getInventory();
+        }
+        if (entity instanceof ChestedHorse chestedHorse && chestedHorse.isCarryingChest()) {
+            return chestedHorse.getInventory();
+        }
+        return null;
+    }
+
+    private boolean wasChunkLoadedRecently(Chunk chunk, long earliestAllowedLoad) {
+        Long loadedAt = chunkLastLoadedAtMs.get(ChunkRef.from(chunk));
+        return loadedAt != null && loadedAt >= earliestAllowedLoad;
+    }
+
+    private void seedLoadedChunkTimestamps() {
+        long now = System.currentTimeMillis();
+        chunkLastLoadedAtMs.clear();
+        for (World world : Bukkit.getWorlds()) {
+            for (Chunk chunk : world.getLoadedChunks()) {
+                chunkLastLoadedAtMs.put(ChunkRef.from(chunk), now);
+            }
+        }
+
+        protectedOwnerCacheExpiresAtMs = 0L;
+        cachedProtectedOwners.clear();
+    }
+
+    private record ChunkRef(UUID worldId, int x, int z) {
+        private static ChunkRef from(Chunk chunk) {
+            return new ChunkRef(chunk.getWorld().getUID(), chunk.getX(), chunk.getZ());
+        }
+    }
+
+    private record HeadChunkSnapshot(ChunkRef chunkRef, long lastSeenAtMs) {
+    }
+
+
+    private void rememberProtectedOwnersInChunk(Set<UUID> ownersInInventory, Chunk chunk, long now) {
+        if (ownersInInventory.isEmpty()) {
+            return;
+        }
+
+        ChunkRef chunkRef = ChunkRef.from(chunk);
+        for (UUID ownerId : ownersInInventory) {
+            headChunkSnapshots.put(ownerId, new HeadChunkSnapshot(chunkRef, now));
+        }
+    }
+
+    private Set<UUID> collectOwnersFromInventory(Inventory inventory) {
+        Set<UUID> owners = new HashSet<>();
+        scanInventoryForHeads(inventory, owners);
+        return owners;
+    }
+
+    private void mergeRecentChunkSnapshots(Set<UUID> protectedOwners, long now) {
+        long earliestAllowedLoad = now - RECENT_CHUNK_WINDOW_MS;
+        headChunkSnapshots.entrySet().removeIf(entry -> entry.getValue().lastSeenAtMs() < earliestAllowedLoad);
+
+        for (Map.Entry<UUID, HeadChunkSnapshot> entry : headChunkSnapshots.entrySet()) {
+            Long chunkLoadedAt = chunkLastLoadedAtMs.get(entry.getValue().chunkRef());
+            if (chunkLoadedAt != null && chunkLoadedAt >= earliestAllowedLoad) {
+                protectedOwners.add(entry.getKey());
+            }
+        }
+    }
+
+    private void loadHeadChunkSnapshots() {
+        headChunkSnapshots.clear();
+        if (!plugin.getConfig().isConfigurationSection(HEAD_CHUNK_CACHE_PATH)) {
+            return;
+        }
+
+        for (String ownerRaw : plugin.getConfig().getConfigurationSection(HEAD_CHUNK_CACHE_PATH).getKeys(false)) {
+            String base = HEAD_CHUNK_CACHE_PATH + "." + ownerRaw;
+            String worldRaw = plugin.getConfig().getString(base + ".world");
+            if (worldRaw == null || worldRaw.isBlank()) {
+                continue;
+            }
+            try {
+                UUID ownerId = UUID.fromString(ownerRaw);
+                UUID worldId = UUID.fromString(worldRaw);
+                int x = plugin.getConfig().getInt(base + ".x");
+                int z = plugin.getConfig().getInt(base + ".z");
+                long lastSeenAt = plugin.getConfig().getLong(base + ".lastSeenAt", 0L);
+                if (lastSeenAt > 0L) {
+                    headChunkSnapshots.put(ownerId, new HeadChunkSnapshot(new ChunkRef(worldId, x, z), lastSeenAt));
+                }
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+    }
+
+    private void saveHeadChunkSnapshots() {
+        plugin.getConfig().set(HEAD_CHUNK_CACHE_PATH, null);
+        for (Map.Entry<UUID, HeadChunkSnapshot> entry : headChunkSnapshots.entrySet()) {
+            String base = HEAD_CHUNK_CACHE_PATH + "." + entry.getKey();
+            plugin.getConfig().set(base + ".world", entry.getValue().chunkRef().worldId().toString());
+            plugin.getConfig().set(base + ".x", entry.getValue().chunkRef().x());
+            plugin.getConfig().set(base + ".z", entry.getValue().chunkRef().z());
+            plugin.getConfig().set(base + ".lastSeenAt", entry.getValue().lastSeenAtMs());
+        }
     }
 
     private boolean hasLoggedInWithinWindow(OfflinePlayer player, long nowMs) {
