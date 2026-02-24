@@ -10,6 +10,7 @@ import com.lastbreath.hc.lastBreathHC.nemesis.Rank;
 import com.lastbreath.hc.lastBreathHC.nemesis.ArmyGraphService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisMobRules;
+import com.lastbreath.hc.lastBreathHC.nemesis.TerritoryPressureService;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
@@ -33,8 +34,9 @@ public class NemesisCommands implements BasicCommand {
     private final MinionController minionController;
     private final CaptainTraitRegistry traitRegistry;
     private final ArmyGraphService armyGraphService;
+    private final TerritoryPressureService territoryPressureService;
 
-    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService) {
+    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService, TerritoryPressureService territoryPressureService) {
         this.registry = registry;
         this.spawner = spawner;
         this.captainListGUI = captainListGUI;
@@ -42,16 +44,17 @@ public class NemesisCommands implements BasicCommand {
         this.minionController = minionController;
         this.traitRegistry = traitRegistry;
         this.armyGraphService = armyGraphService;
+        this.territoryPressureService = territoryPressureService;
     }
 
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("list", "nearby", "info", "hunt", "army", "spawn", "retire", "clear", "debug");
+            return List.of("list", "nearby", "info", "hunt", "army", "territory", "spawn", "retire", "clear", "debug");
         }
         if (args.length == 2) {
             if ("debug".equalsIgnoreCase(args[0])) {
-                return List.of("resolvekiller", "dump", "active", "cleanupOrphans");
+                return List.of("resolvekiller", "dump", "active", "cleanupOrphans", "resetpressure", "clearrelationships", "forcepromotion");
             }
             if ("clear".equalsIgnoreCase(args[0])) {
                 return List.of("confirm");
@@ -64,7 +67,7 @@ public class NemesisCommands implements BasicCommand {
     public void execute(CommandSourceStack source, String[] args) {
         CommandSender sender = source.getSender();
         if (args.length == 0) {
-            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|spawn|retire|clear|debug>");
+            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|territory|spawn|retire|clear|debug>");
             return;
         }
 
@@ -75,12 +78,32 @@ public class NemesisCommands implements BasicCommand {
             case "info" -> handleInfo(sender, args);
             case "hunt" -> handleHunt(sender);
             case "army" -> handleArmy(sender);
+            case "territory" -> handleTerritory(sender);
             case "spawn" -> handleSpawn(sender, args);
             case "retire" -> handleRetire(sender, args);
             case "clear" -> handleClear(sender, args);
             case "debug" -> handleDebug(sender, args);
-            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|spawn|retire|clear|debug>");
+            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|territory|spawn|retire|clear|debug>");
         }
+    }
+
+    private void handleTerritory(CommandSender sender) {
+        if (!sender.hasPermission("lastbreathhc.nemesis")) {
+            sender.sendMessage("§cNo permission.");
+            return;
+        }
+        if (territoryPressureService == null || !territoryPressureService.enabled()) {
+            sender.sendMessage("§eTerritory pressure subsystem disabled.");
+            return;
+        }
+        Map<String, Double> snapshot = territoryPressureService.snapshot();
+        if (snapshot.isEmpty()) {
+            sender.sendMessage("§7No territory pressure tracked yet.");
+            return;
+        }
+        sender.sendMessage("§6Territory pressure summary:");
+        snapshot.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(entry ->
+                sender.sendMessage("§7- §f" + entry.getKey() + ": §e" + String.format(Locale.US, "%.1f", entry.getValue())));
     }
 
     private void handleArmy(CommandSender sender) {
@@ -251,7 +274,7 @@ public class NemesisCommands implements BasicCommand {
             long totalEscapes = registry.getAll().stream().mapToLong(r -> r.telemetry().counters().getOrDefault("escapes", 0L)).sum();
             long totalMinionDeaths = registry.getAll().stream().mapToLong(r -> r.telemetry().counters().getOrDefault("minionDeaths", 0L)).sum();
             sender.sendMessage("§6Nemesis Debug: §e" + spawner.debugSummary() + " §7kills=" + totalKills + " escapes=" + totalEscapes + " minionDeaths=" + totalMinionDeaths);
-            sender.sendMessage("§7Subcommands: resolvekiller, dump, active, cleanupOrphans");
+            sender.sendMessage("§7Subcommands: resolvekiller, dump, active, cleanupOrphans, resetPressure, clearRelationships, forcePromotion");
             return;
         }
 
@@ -261,8 +284,57 @@ public class NemesisCommands implements BasicCommand {
             case "dump" -> handleDebugDump(sender, args);
             case "active" -> handleDebugActive(sender);
             case "cleanuporphans" -> handleDebugCleanupOrphans(sender);
-            default -> sender.sendMessage("§cUsage: /nemesis debug <resolvekiller|dump|active|cleanupOrphans>");
+            case "resetpressure" -> handleDebugResetPressure(sender);
+            case "clearrelationships" -> handleDebugClearRelationships(sender, args);
+            case "forcepromotion" -> handleDebugForcePromotion(sender, args);
+            default -> sender.sendMessage("§cUsage: /nemesis debug <resolvekiller|dump|active|cleanupOrphans|resetPressure|clearRelationships|forcePromotion>");
         }
+    }
+
+    private void handleDebugResetPressure(CommandSender sender) {
+        if (territoryPressureService == null || !territoryPressureService.enabled()) {
+            sender.sendMessage("§eTerritory pressure subsystem disabled.");
+            return;
+        }
+        territoryPressureService.resetAll();
+        sender.sendMessage("§aTerritory pressure reset.");
+    }
+
+    private void handleDebugClearRelationships(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage("§cUsage: /nemesis debug clearRelationships <id>");
+            return;
+        }
+        CaptainRecord record = findRecord(args[2]);
+        if (record == null) {
+            sender.sendMessage("§cCaptain not found.");
+            return;
+        }
+        armyGraphService.clearRelationship(record.identity().captainId());
+        sender.sendMessage("§aRelationships cleared for §e" + record.naming().displayName());
+    }
+
+    private void handleDebugForcePromotion(CommandSender sender, String[] args) {
+        if (args.length < 4) {
+            sender.sendMessage("§cUsage: /nemesis debug forcePromotion <id> <score>");
+            return;
+        }
+        CaptainRecord record = findRecord(args[2]);
+        if (record == null) {
+            sender.sendMessage("§cCaptain not found.");
+            return;
+        }
+        double score;
+        try {
+            score = Double.parseDouble(args[3]);
+        } catch (NumberFormatException ex) {
+            sender.sendMessage("§cInvalid score.");
+            return;
+        }
+        CaptainRecord.Political political = record.political().orElse(new CaptainRecord.Political(Rank.CAPTAIN.name(), "overworld", "", 0.0, 0.0));
+        CaptainRecord updated = new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry(), Optional.of(new CaptainRecord.Political(political.rank(), political.region(), political.seatId(), score, political.influence())), record.social(), record.relationships(), record.memory(), record.persona());
+        registry.upsert(updated);
+        sender.sendMessage("§aPromotion score forced to §e" + score);
     }
 
     private void handleDebugResolveKiller(CommandSender sender, String[] args) {

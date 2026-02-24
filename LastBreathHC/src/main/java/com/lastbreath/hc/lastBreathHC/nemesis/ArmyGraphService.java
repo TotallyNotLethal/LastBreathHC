@@ -112,6 +112,28 @@ public class ArmyGraphService {
         return edges;
     }
 
+    public synchronized void addRivalry(UUID left, UUID right) {
+        if (left == null || right == null) {
+            return;
+        }
+        addRivalPair(left, right);
+        dirty = true;
+    }
+
+    public synchronized void clearRelationship(UUID captainId) {
+        if (captainId == null) {
+            return;
+        }
+        bodyguardOf.remove(captainId);
+        bloodBrother.remove(captainId);
+        rivals.remove(captainId);
+        for (Set<UUID> links : rivals.values()) {
+            links.remove(captainId);
+        }
+        rivals.entrySet().removeIf(entry -> entry.getValue().isEmpty());
+        dirty = true;
+    }
+
     public synchronized boolean consumeDirty() {
         boolean current = dirty;
         dirty = false;

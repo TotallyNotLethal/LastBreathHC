@@ -752,7 +752,12 @@ public class CaptainCombatListener implements Listener {
         }
 
         CaptainRecord.Memory updatedMemory = new CaptainRecord.Memory(memory.lastDefeatCause(), memory.defeatSignature(), scars, history, memory.notablePlayers(), memory.callbackLinesSeed());
-        return new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), naming, traits, record.minionPack(), record.state(), record.telemetry(), record.political().orElse(null), record.social().orElse(null), record.relationships().orElse(null), updatedMemory, record.persona().orElse(null));
+        CaptainRecord updated = new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), naming, traits, record.minionPack(), record.state(), record.telemetry(), record.political().orElse(null), record.social().orElse(null), record.relationships().orElse(null), updatedMemory, record.persona().orElse(null));
+        updated = NemesisTelemetry.incrementCounter(updated, "returns", 1);
+        if ("SCAR".equals(selected)) {
+            updated = NemesisTelemetry.incrementCounter(updated, "scarTypes." + memory.defeatSignature().name().toLowerCase(Locale.ROOT), 1);
+        }
+        return updated;
     }
 
     private void maybeTauntDefyDeathReturn(Player victimPlayer, CaptainRecord promoted) {

@@ -1613,3 +1613,23 @@ nemesis:
         incompatibilities: []
         weakness: false
         immunity: true
+
+  loyalty:
+    enabled: true
+    betrayal:
+      enabled: true
+      baseChance: 0.08
+
+  dialogue:
+    enabled: true
+    cooldownMs: 6000
+    recentSuppression: 3
+
+  territoryPressure:
+    enabled: true
+    thresholds:
+      high: 100.0
+      low: -40.0
+
+  influenceItems:
+    enabled: true

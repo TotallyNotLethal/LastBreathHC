@@ -59,7 +59,9 @@ public class PromotionEvaluator {
                     political.promotionScore(),
                     political.influence()
             );
-            registry.upsert(withPolitical(record, updatedPolitical));
+            CaptainRecord updated = withPolitical(record, updatedPolitical);
+            updated = NemesisTelemetry.incrementCounter(updated, "promotions", 1);
+            registry.upsert(updated);
         }
     }
 
