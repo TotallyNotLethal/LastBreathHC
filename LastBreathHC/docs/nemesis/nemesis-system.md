@@ -1,6 +1,6 @@
 # Nemesis System Documentation
 
-This document explains how the LastBreathHC nemesis system works, what players/admins can do with it, and how **tokens** interact with the system.
+This document explains how the LastBreathHC nemesis system works today, what players/admins can do with it, and what is planned next.
 
 ## 1) What the Nemesis system does
 
@@ -85,7 +85,47 @@ Key controls:
 - Use `/nemesis debug` and subcommands for state inspection and killer attribution diagnostics.
 - Use `/nemesis clear confirm` cautiously: it clears all captain records and despawns minions.
 
-## 8) Relevant source files
+## 8) Planned roadmap (non-mission track)
+
+This project has an internal roadmap focused on deepening social/political continuity **without autonomous mission simulation**.
+
+### Phase 1 — Data model + persistence hardening
+- Add optional captain sections for: political, social, relationships, memory, persona.
+- Keep old saves loading cleanly with defaults.
+- Extend `/nemesis debug dump <id>` to include new structures.
+
+### Phase 2 — Army graph + ranks
+- Add rank model (`CAPTAIN`, `WARCHIEF`, `OVERLORD`).
+- Add persisted relationship edges (bodyguards, rivals, blood-brothers).
+- Add `/nemesis army` hierarchy readout.
+
+### Phase 3 — Scar and return continuity
+- Track defeat signatures (fire/projectile/melee/etc.).
+- On return, mutate identity/traits with anti-repeat guards.
+- Surface scar history in info output.
+
+### Phase 4 — Loyalty + betrayal dynamics
+- Loyalty/fear/ambition shifts from combat outcomes.
+- Betrayal triggers with readable, rate-limited announcements.
+- Revenge hooks for blood-brother relationships.
+
+### Phase 5 — Persona and dialogue engine
+- Persona taxonomy (archetypes/temperaments/quirks).
+- Contextual dialogue (openers, revenge callbacks, low-health taunts).
+- Repetition controls (cooldowns + recent-line suppression).
+
+### Phase 6 — Territory pressure + influence tools
+- Pressure model that rises/falls with player/captain outcomes.
+- Spawn/elite weighting from pressure thresholds.
+- Influence items (intel, bribe, provocation) with measurable effects.
+
+### Cross-cutting requirements
+- Telemetry counters for promotions, betrayals, returns, scar types, loyalty shifts, pressure changes.
+- `enabled` flags per subsystem in config.
+- Admin debug utilities (force promotion, clear relationships, reset pressure).
+- Safe fallbacks when optional sections are absent.
+
+## 9) Relevant source files
 
 Core nemesis runtime:
 - `src/main/java/com/lastbreath/hc/lastBreathHC/nemesis/CaptainSpawner.java`
@@ -93,6 +133,11 @@ Core nemesis runtime:
 - `src/main/java/com/lastbreath/hc/lastBreathHC/nemesis/CaptainStateMachine.java`
 - `src/main/java/com/lastbreath/hc/lastBreathHC/nemesis/NemesisUI.java`
 - `src/main/java/com/lastbreath/hc/lastBreathHC/nemesis/NemesisRewardService.java`
+
+Persistence + commands:
+- `src/main/java/com/lastbreath/hc/lastBreathHC/nemesis/CaptainRecord.java`
+- `src/main/java/com/lastbreath/hc/lastBreathHC/nemesis/CaptainSerializer.java`
+- `src/main/java/com/lastbreath/hc/lastBreathHC/commands/NemesisCommands.java`
 
 Token-related:
 - `src/main/java/com/lastbreath/hc/lastBreathHC/token/ReviveToken.java`
