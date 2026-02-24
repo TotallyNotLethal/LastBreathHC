@@ -2,6 +2,8 @@ package com.lastbreath.hc.lastBreathHC.nemesis;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -13,16 +15,18 @@ public class LoyaltyService implements Listener {
     private final CaptainRegistry registry;
     private final CaptainEntityBinder binder;
     private final ArmyGraphService graphService;
+    private final DialogueEngine dialogueEngine;
     private final boolean enabled;
     private final boolean betrayalEnabled;
     private final double betrayalBaseChance;
     private final StructureEventOrchestrator structureEventOrchestrator;
 
-    public LoyaltyService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, ArmyGraphService graphService, StructureEventOrchestrator structureEventOrchestrator) {
+    public LoyaltyService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, ArmyGraphService graphService, StructureEventOrchestrator structureEventOrchestrator, DialogueEngine dialogueEngine) {
         this.plugin = plugin;
         this.registry = registry;
         this.binder = binder;
         this.graphService = graphService;
+        this.dialogueEngine = dialogueEngine;
         this.enabled = plugin.getConfig().getBoolean("nemesis.loyalty.enabled", true);
         this.betrayalEnabled = plugin.getConfig().getBoolean("nemesis.loyalty.betrayal.enabled", true);
         this.betrayalBaseChance = Math.max(0.0, plugin.getConfig().getDouble("nemesis.loyalty.betrayal.baseChance", 0.08));
@@ -58,8 +62,20 @@ public class LoyaltyService implements Listener {
         graphService.addRivalry(attacker.identity().captainId(), victim.identity().captainId());
         CaptainRecord shifted = NemesisTelemetry.incrementCounter(attacker, "betrayals", 1);
         shifted = NemesisTelemetry.incrementCounter(shifted, "loyaltyShifts", 1);
+        shifted = NemesisTelemetry.incrementCounter(shifted, "captainVsCaptainFights", 1);
         registry.upsert(shifted);
+
+        if (aggressor instanceof Mob attackerMob && defender instanceof LivingEntity victimLiving) {
+            attackerMob.setTarget(victimLiving);
+        }
+        if (defender instanceof Mob victimMob && aggressor instanceof LivingEntity attackerLiving) {
+            victimMob.setTarget(attackerLiving);
+        }
+
         plugin.getServer().broadcastMessage("§4Nemesis betrayal: §c" + attacker.naming().displayName() + " §7turned on §c" + victim.naming().displayName());
+        if (aggressor instanceof LivingEntity attackerLiving) {
+            dialogueEngine.emitEventConversation("betrayal", attacker, victim, null, attackerLiving.getLocation());
+        }
         structureEventOrchestrator.onBetrayal(new CaptainBetrayalEvent(
                 attacker.identity().captainId(),
                 victim.identity().captainId(),

@@ -51,6 +51,7 @@ import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRewardService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRivalryDirector;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisUI;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisWarbandCoordinator;
 import com.lastbreath.hc.lastBreathHC.nemesis.AntiCheeseMonitor;
 import com.lastbreath.hc.lastBreathHC.nemesis.DialogueEngine;
 import com.lastbreath.hc.lastBreathHC.nemesis.InfluenceItemHandler;
@@ -204,6 +205,7 @@ public final class LastBreathHC extends JavaPlugin {
     private StructureEventOrchestrator structureEventOrchestrator;
     private CaptainHabitatService captainHabitatService;
     private StructureRaidService structureRaidService;
+    private NemesisWarbandCoordinator nemesisWarbandCoordinator;
 
 
     @Override
@@ -239,13 +241,13 @@ public final class LastBreathHC extends JavaPlugin {
         structureManager = new StructureManagerImpl(structurePlacementValidator, structureFootprintRepository);
         captainRegistry = new CaptainRegistry();
         captainHabitatService = new CaptainHabitatService(this, captainRegistry, structureFootprintRepository);
-        structureEventOrchestrator = new StructureEventOrchestrator(captainRegistry, structureManager, captainHabitatService);
         captainSerializer = new CaptainSerializer(this, new java.io.File(getDataFolder(), "nemesis-captains.yml"));
         captainRegistry.load(captainSerializer.load());
         armyGraphSerializer = new ArmyGraphSerializer(this, new java.io.File(getDataFolder(), "nemesis-army-graph.yml"));
         armyGraphService = new ArmyGraphService();
         armyGraphService.load(armyGraphSerializer.load());
         armyGraphService.seedFromCaptains(captainRegistry.getAll());
+        structureEventOrchestrator = new StructureEventOrchestrator(captainRegistry, structureManager, captainHabitatService, armyGraphService);
         armyGraphService.pruneMissingCaptains(captainRegistry.getAll().stream().map(record -> record.identity().captainId()).collect(java.util.stream.Collectors.toSet()));
         long captainFlushIntervalTicks = 20L * 60L * 3L;
         captainFlushTask = getServer().getScheduler().runTaskTimer(this, this::flushDirtyCaptains, captainFlushIntervalTicks, captainFlushIntervalTicks);
@@ -269,13 +271,15 @@ public final class LastBreathHC extends JavaPlugin {
         nemesisRivalryDirector.start();
         promotionEvaluator = new PromotionEvaluator(this, captainRegistry, structureEventOrchestrator);
         promotionEvaluator.start();
-        loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService, structureEventOrchestrator);
         dialogueEngine = new DialogueEngine(this);
+        loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService, structureEventOrchestrator, dialogueEngine);
+        nemesisWarbandCoordinator = new NemesisWarbandCoordinator(this, captainRegistry, captainEntityBinder, dialogueEngine);
+        nemesisWarbandCoordinator.start();
         territoryPressureService = new TerritoryPressureService(this, structureEventOrchestrator);
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         structureRaidService = new StructureRaidService(this, captainRegistry, structureFootprintRepository, territoryPressureService, structureEventOrchestrator, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
-        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, captainTraitRegistry, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator, captainHabitatService), this);
+        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, captainTraitRegistry, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator, captainHabitatService, armyGraphService, dialogueEngine), this);
         getServer().getPluginManager().registerEvents(captainSpawner, this);
         getServer().getPluginManager().registerEvents(minionController, this);
         getServer().getPluginManager().registerEvents(nemesisCaptainListGUI, this);
@@ -549,7 +553,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
-                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService, territoryPressureService, structureFootprintRepository, captainHabitatService));
+                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService, territoryPressureService, structureFootprintRepository, captainHabitatService, dialogueEngine));
                 }
         );
     }
@@ -671,6 +675,10 @@ public final class LastBreathHC extends JavaPlugin {
         }
         loyaltyService = null;
         dialogueEngine = null;
+        if (nemesisWarbandCoordinator != null) {
+            nemesisWarbandCoordinator.stop();
+            nemesisWarbandCoordinator = null;
+        }
         territoryPressureService = null;
         if (promotionEvaluator != null) {
             promotionEvaluator.stop();
