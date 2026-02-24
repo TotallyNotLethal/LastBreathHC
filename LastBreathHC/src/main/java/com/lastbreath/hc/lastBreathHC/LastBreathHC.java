@@ -51,6 +51,10 @@ import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRivalryDirector;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.AntiCheeseMonitor;
+import com.lastbreath.hc.lastBreathHC.nemesis.DialogueEngine;
+import com.lastbreath.hc.lastBreathHC.nemesis.InfluenceItemHandler;
+import com.lastbreath.hc.lastBreathHC.nemesis.LoyaltyService;
+import com.lastbreath.hc.lastBreathHC.nemesis.TerritoryPressureService;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
@@ -185,6 +189,9 @@ public final class LastBreathHC extends JavaPlugin {
     private NemesisRivalryDirector nemesisRivalryDirector;
     private AntiCheeseMonitor antiCheeseMonitor;
     private PromotionEvaluator promotionEvaluator;
+    private LoyaltyService loyaltyService;
+    private DialogueEngine dialogueEngine;
+    private TerritoryPressureService territoryPressureService;
 
 
     @Override
@@ -241,6 +248,9 @@ public final class LastBreathHC extends JavaPlugin {
         nemesisRivalryDirector.start();
         promotionEvaluator = new PromotionEvaluator(this, captainRegistry);
         promotionEvaluator.start();
+        loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService);
+        dialogueEngine = new DialogueEngine(this);
+        territoryPressureService = new TerritoryPressureService(this);
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
         getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator), this);
@@ -248,6 +258,8 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(minionController, this);
         getServer().getPluginManager().registerEvents(nemesisCaptainListGUI, this);
         getServer().getPluginManager().registerEvents(nemesisRewardService, this);
+        getServer().getPluginManager().registerEvents(loyaltyService, this);
+        getServer().getPluginManager().registerEvents(new InfluenceItemHandler(this, captainRegistry, captainEntityBinder, territoryPressureService, loyaltyService), this);
         getServer().getPluginManager().registerEvents(antiCheeseMonitor, this);
         dailyRewardManager = new DailyRewardManager(this);
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
@@ -514,7 +526,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
-                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService));
+                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService, territoryPressureService));
                 }
         );
     }
@@ -626,6 +638,9 @@ public final class LastBreathHC extends JavaPlugin {
             nemesisRivalryDirector.stop();
             nemesisRivalryDirector = null;
         }
+        loyaltyService = null;
+        dialogueEngine = null;
+        territoryPressureService = null;
         if (promotionEvaluator != null) {
             promotionEvaluator.stop();
             promotionEvaluator = null;
