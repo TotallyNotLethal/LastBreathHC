@@ -679,6 +679,35 @@ nemesis:
     thresholds:
       warchief: 35.0
       overlord: 75.0
+    gains:
+      playerKill:
+        promotionScore: 2.5
+        influence: 0.03
+      playerInteraction:
+        promotionScore: 0.6
+        influence: 0.01
+      captainSkirmish:
+        promotionScore: 0.9
+        influence: 0.015
+      combatTick:
+        promotionScore: 0.2
+        influence: 0.0
+      activeTick:
+        promotionScore: 0.1
+        influence: 0.0
+      captainVictory:
+        promotionScore: 4.0
+        influence: 0.05
+      minionDeath:
+        promotionScore: 0.35
+        influence: 0.0
+    guardrails:
+      minPromotionScore: 0.0
+      maxPromotionScore: 150.0
+      softDecayStart: 100.0
+      softDecayFactor: 0.15
+      minInfluence: 0.0
+      maxInfluence: 2.0
     rivalryTriggerChanceModifier: 1.0
   memory:
     enabled: true
