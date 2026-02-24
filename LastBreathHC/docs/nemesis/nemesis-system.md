@@ -145,3 +145,32 @@ Token-related:
 - `src/main/java/com/lastbreath/hc/lastBreathHC/token/ReviveTokenHelper.java`
 - `src/main/java/com/lastbreath/hc/lastBreathHC/gui/ReviveGUI.java`
 - `src/main/java/com/lastbreath/hc/lastBreathHC/gui/ReviveNameGUI.java`
+
+## 10) Warband structure building + dialogue (current behavior)
+
+The non-mission nemesis loop now coordinates **rank-based structure goals** and **player-selectable dialogue outcomes**:
+
+- `CAPTAIN` cohorts attempt to build **huts** (`nemesis-captain-hut`).
+- `WARCHIEF` cohorts attempt to build **small settlement areas** (`nemesis-warchief-settlement`).
+- `OVERLORD` cohorts attempt to build **strongholds** (`nemesis-overlord-stronghold`).
+
+When a structure trigger fires (promotion, milestone, betrayal, raid), the trigger captain and linked warband members (allies/bodyguard/blood-brother) attempt nearby coordinated placements so their bases grow in unison.
+
+### Warband movement cohesion
+
+`NemesisWarbandCoordinator` runs on a periodic tick and keeps region-matched captains near higher-ranked leaders. This creates visible "army travel together" behavior so settlements/strongholds are formed by groups instead of isolated captains.
+
+### Weighted dialogue choices
+
+A dedicated file, `src/main/resources/nemesis-dialogue.yml`, defines dialogue options under:
+
+- `choices.positive`
+- `choices.neutral`
+- `choices.negative`
+
+Each option includes:
+- `line` (chat text with `{captain}` and `{player}` placeholders),
+- `action` (`UNITY`, `FORTIFY`, `BETRAYAL`, `BLOOD_FEUD`, `AGGRESSION`, `STAND_DOWN`),
+- `weight` for weighted random selection.
+
+Players can force a specific dialogue tone with `/nemesis dialogue <captainId> <positive|neutral|negative>`. The selected line is broadcast to players in ~50m, and the resolved action updates nemesis telemetry and rivalry pressure hooks.

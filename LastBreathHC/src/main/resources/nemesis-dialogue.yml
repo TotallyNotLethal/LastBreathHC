@@ -1,0 +1,40 @@
+choices:
+  positive:
+    rally_1:
+      line: "Warband, with {player} we raise stronger walls tonight."
+      action: UNITY
+      weight: 3.5
+    fortify_1:
+      line: "Good. We fortify the huts and watchtowers together."
+      action: FORTIFY
+      weight: 2.0
+    stand_down_1:
+      line: "I will spare your people for now, {player}."
+      action: STAND_DOWN
+      weight: 1.2
+  neutral:
+    regroup_1:
+      line: "Keep your distance, {player}. We build and we march."
+      action: UNITY
+      weight: 2.5
+    pressure_1:
+      line: "You can watch us build, but don't test our patience."
+      action: AGGRESSION
+      weight: 1.4
+    oath_1:
+      line: "No feud today. We have a settlement to raise."
+      action: FORTIFY
+      weight: 1.8
+  negative:
+    betrayal_1:
+      line: "You speak weakness. Someone in this warband will bleed for it."
+      action: BETRAYAL
+      weight: 2.2
+    feud_1:
+      line: "Blood feud! Your name is carved into our hate, {player}."
+      action: BLOOD_FEUD
+      weight: 2.0
+    aggression_1:
+      line: "Enough talk. We strike first and build over the ashes."
+      action: AGGRESSION
+      weight: 2.8

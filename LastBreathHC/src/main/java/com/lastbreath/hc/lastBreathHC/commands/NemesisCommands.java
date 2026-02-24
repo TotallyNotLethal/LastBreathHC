@@ -9,9 +9,11 @@ import com.lastbreath.hc.lastBreathHC.nemesis.CaptainHabitatService;
 import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
 import com.lastbreath.hc.lastBreathHC.nemesis.Rank;
 import com.lastbreath.hc.lastBreathHC.nemesis.ArmyGraphService;
+import com.lastbreath.hc.lastBreathHC.nemesis.DialogueEngine;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisMobRules;
 import com.lastbreath.hc.lastBreathHC.nemesis.TerritoryPressureService;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisTelemetry;
 import com.lastbreath.hc.lastBreathHC.structures.StructureFootprintRepository;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -39,8 +41,9 @@ public class NemesisCommands implements BasicCommand {
     private final TerritoryPressureService territoryPressureService;
     private final StructureFootprintRepository structureFootprintRepository;
     private final CaptainHabitatService captainHabitatService;
+    private final DialogueEngine dialogueEngine;
 
-    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService, TerritoryPressureService territoryPressureService, StructureFootprintRepository structureFootprintRepository, CaptainHabitatService captainHabitatService) {
+    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService, TerritoryPressureService territoryPressureService, StructureFootprintRepository structureFootprintRepository, CaptainHabitatService captainHabitatService, DialogueEngine dialogueEngine) {
         this.registry = registry;
         this.spawner = spawner;
         this.captainListGUI = captainListGUI;
@@ -51,14 +54,18 @@ public class NemesisCommands implements BasicCommand {
         this.territoryPressureService = territoryPressureService;
         this.structureFootprintRepository = structureFootprintRepository;
         this.captainHabitatService = captainHabitatService;
+        this.dialogueEngine = dialogueEngine;
     }
 
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("list", "nearby", "info", "hunt", "army", "territory", "spawn", "retire", "clear", "debug");
+            return List.of("list", "nearby", "info", "hunt", "army", "dialogue", "territory", "spawn", "retire", "clear", "debug");
         }
         if (args.length == 2) {
+            if ("dialogue".equalsIgnoreCase(args[0])) {
+                return List.of("positive", "neutral", "negative");
+            }
             if ("debug".equalsIgnoreCase(args[0])) {
                 return List.of("resolvekiller", "dump", "active", "cleanupOrphans", "resetpressure", "clearrelationships", "forcepromotion", "habitat", "cleanuphabitat");
             }
@@ -73,7 +80,7 @@ public class NemesisCommands implements BasicCommand {
     public void execute(CommandSourceStack source, String[] args) {
         CommandSender sender = source.getSender();
         if (args.length == 0) {
-            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|territory|spawn|retire|clear|debug>");
+            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|dialogue|territory|spawn|retire|clear|debug>");
             return;
         }
 
@@ -84,13 +91,62 @@ public class NemesisCommands implements BasicCommand {
             case "info" -> handleInfo(sender, args);
             case "hunt" -> handleHunt(sender);
             case "army" -> handleArmy(sender);
+            case "dialogue" -> handleDialogue(sender, args);
             case "territory" -> handleTerritory(sender);
             case "spawn" -> handleSpawn(sender, args);
             case "retire" -> handleRetire(sender, args);
             case "clear" -> handleClear(sender, args);
             case "debug" -> handleDebug(sender, args);
-            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|territory|spawn|retire|clear|debug>");
+            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|dialogue|territory|spawn|retire|clear|debug>");
         }
+    }
+
+
+    private void handleDialogue(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cOnly players can choose dialogue options.");
+            return;
+        }
+        if (!sender.hasPermission("lastbreathhc.nemesis")) {
+            sender.sendMessage("§cNo permission.");
+            return;
+        }
+        if (args.length < 3) {
+            sender.sendMessage("§cUsage: /nemesis dialogue <captainId> <positive|neutral|negative>");
+            return;
+        }
+        CaptainRecord record = findRecord(args[1]);
+        if (record == null) {
+            sender.sendMessage("§cCaptain not found.");
+            return;
+        }
+        DialogueEngine.DialogueResolution resolution = dialogueEngine.resolveChoice(player, record, args[2]);
+        if (resolution == null) {
+            sender.sendMessage("§cInvalid tone. Use positive, neutral, or negative.");
+            return;
+        }
+        applyDialogueAction(record, resolution.actionType());
+        sender.sendMessage("§7Dialogue tone: §f" + resolution.tone().name().toLowerCase(Locale.ROOT) + " §7=> action §e" + resolution.actionType().name().toLowerCase(Locale.ROOT));
+    }
+
+    private void applyDialogueAction(CaptainRecord record, DialogueEngine.ActionType actionType) {
+        CaptainRecord updated = record;
+        switch (actionType) {
+            case BETRAYAL, BLOOD_FEUD, AGGRESSION -> {
+                UUID rivalId = registry.getAll().stream()
+                        .map(candidate -> candidate.identity().captainId())
+                        .filter(id -> !id.equals(record.identity().captainId()))
+                        .findAny()
+                        .orElse(null);
+                if (rivalId != null) {
+                    armyGraphService.addRivalry(record.identity().captainId(), rivalId);
+                }
+                updated = NemesisTelemetry.incrementCounter(updated, "dialogue.hostile", 1);
+            }
+            case UNITY, FORTIFY -> updated = NemesisTelemetry.incrementCounter(updated, "dialogue.unity", 1);
+            case STAND_DOWN -> updated = NemesisTelemetry.incrementCounter(updated, "dialogue.standDown", 1);
+        }
+        registry.upsert(updated);
     }
 
     private void handleTerritory(CommandSender sender) {

@@ -4,6 +4,7 @@ import com.lastbreath.hc.lastBreathHC.structures.SpawnContext;
 import com.lastbreath.hc.lastBreathHC.structures.StructureManager;
 import org.bukkit.Location;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,12 +13,14 @@ public final class StructureEventOrchestrator {
     private final CaptainRegistry registry;
     private final StructureManager structureManager;
     private final CaptainHabitatService captainHabitatService;
+    private final ArmyGraphService armyGraphService;
     private final Set<String> processedTriggerKeys = ConcurrentHashMap.newKeySet();
 
-    public StructureEventOrchestrator(CaptainRegistry registry, StructureManager structureManager, CaptainHabitatService captainHabitatService) {
+    public StructureEventOrchestrator(CaptainRegistry registry, StructureManager structureManager, CaptainHabitatService captainHabitatService, ArmyGraphService armyGraphService) {
         this.registry = registry;
         this.structureManager = structureManager;
         this.captainHabitatService = captainHabitatService;
+        this.armyGraphService = armyGraphService;
     }
 
 
@@ -41,7 +44,7 @@ public final class StructureEventOrchestrator {
             return;
         }
         applyTelemetry(event.captainId(), "structureTriggers.milestone");
-        spawnForCaptain(event.captainId(), "nemesis-milestone-template", event.key());
+        spawnForCaptainAndWarband(event.captainId(), "nemesis-milestone-template", event.key());
     }
 
     public void onRankChanged(CaptainRankChangedEvent event) {
@@ -50,7 +53,7 @@ public final class StructureEventOrchestrator {
         }
         applyTelemetry(event.captainId(), "structureTriggers.rankChange");
         structureManager.upgradeLatestStructureForOwner(event.captainId().toString(), event.currentRank().ordinal() + 1, event.occurredAtEpochMillis());
-        spawnForCaptain(event.captainId(), "nemesis-rank-" + event.currentRank().name().toLowerCase(), event.currentRank().name());
+        spawnForCaptainAndWarband(event.captainId(), rankTemplate(event.currentRank()), event.currentRank().name());
     }
 
 
@@ -75,12 +78,13 @@ public final class StructureEventOrchestrator {
                 event.occurredAtEpochMillis()
         ));
     }
+
     public void onBetrayal(CaptainBetrayalEvent event) {
         if (!markOnce("betrayal:" + event.attackerCaptainId() + ":" + event.victimCaptainId() + ":" + event.occurredAtEpochMillis())) {
             return;
         }
         applyTelemetry(event.attackerCaptainId(), "structureTriggers.betrayal");
-        spawnForCaptain(event.attackerCaptainId(), "nemesis-betrayal-template", event.reason());
+        spawnForCaptainAndWarband(event.attackerCaptainId(), "nemesis-betrayal-template", event.reason());
     }
 
     public void onRaidInteraction(PlayerRaidInteractionEvent event) {
@@ -95,19 +99,51 @@ public final class StructureEventOrchestrator {
             return;
         }
         applyTelemetry(candidate.identity().captainId(), "structureTriggers.raidInteraction");
-        spawnForCaptain(candidate.identity().captainId(), "nemesis-raid-" + event.targetType().name().toLowerCase(), event.targetType().name());
+        spawnForCaptainAndWarband(candidate.identity().captainId(), "nemesis-raid-" + event.targetType().name().toLowerCase(), event.targetType().name());
     }
 
-    private void spawnForCaptain(UUID captainId, String templateId, String region) {
-        CaptainRecord record = registry.getByCaptainUuid(captainId);
-        if (record == null) {
-            return;
+    private String rankTemplate(Rank rank) {
+        return switch (rank) {
+            case CAPTAIN -> "nemesis-captain-hut";
+            case WARCHIEF -> "nemesis-warchief-settlement";
+            case OVERLORD -> "nemesis-overlord-stronghold";
+        };
+    }
+
+    private void spawnForCaptainAndWarband(UUID captainId, String templateId, String region) {
+        int index = 0;
+        for (UUID memberId : warbandMembers(captainId)) {
+            CaptainRecord record = registry.getByCaptainUuid(memberId);
+            if (record == null) {
+                continue;
+            }
+            spawnSingle(record, templateId, region, index++);
         }
+    }
+
+    private Set<UUID> warbandMembers(UUID captainId) {
+        Set<UUID> ids = new LinkedHashSet<>();
+        ids.add(captainId);
+        CaptainRecord record = registry.getByCaptainUuid(captainId);
+        if (record != null && record.relationships().isPresent()) {
+            ids.addAll(record.relationships().get().allies());
+        }
+        ArmyGraphService.ArmyLinks links = armyGraphService.linksOf(captainId);
+        if (links.bodyguardOf() != null) {
+            ids.add(links.bodyguardOf());
+        }
+        if (links.bloodBrotherOf() != null) {
+            ids.add(links.bloodBrotherOf());
+        }
+        return ids;
+    }
+
+    private void spawnSingle(CaptainRecord record, String templateId, String region, int cohortIndex) {
         Location anchor = new Location(
                 org.bukkit.Bukkit.getWorld(record.origin().world()),
-                record.origin().spawnX(),
+                record.origin().spawnX() + (cohortIndex * 4.0),
                 record.origin().spawnY(),
-                record.origin().spawnZ()
+                record.origin().spawnZ() + ((cohortIndex % 2 == 0 ? 1 : -1) * 3.0)
         );
         if (anchor.getWorld() == null) {
             return;
@@ -115,7 +151,7 @@ public final class StructureEventOrchestrator {
         structureManager.spawnStructure(
                 templateId,
                 anchor,
-                new SpawnContext(captainId.toString(), region, System.currentTimeMillis())
+                new SpawnContext(record.identity().captainId().toString(), region, System.currentTimeMillis())
         ).ifPresent(footprint -> captainHabitatService.linkCaptainToStructure(record, footprint));
     }
 
