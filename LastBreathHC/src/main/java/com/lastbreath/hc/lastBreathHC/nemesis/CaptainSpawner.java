@@ -56,6 +56,7 @@ public class CaptainSpawner implements Listener {
     private final int randomOverworldProbeRadius;
     private final int randomOverworldMobPoolLimit;
     private final int randomOverworldActiveCap;
+    private final int minimumSpawnY;
     private final NamespacedKey worldBossTypeKey;
 
     private final Map<UUID, Long> playerSpawnInterest = new HashMap<>();
@@ -93,6 +94,7 @@ public class CaptainSpawner implements Listener {
         this.randomOverworldProbeRadius = Math.max(24, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.probeRadius", 80));
         this.randomOverworldMobPoolLimit = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.mobPoolLimit", 64));
         this.randomOverworldActiveCap = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.activeCap", 20));
+        this.minimumSpawnY = Math.max(plugin.getConfig().getInt("nemesis.spawn.location.minimumY", 63), 63);
         this.worldBossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
         this.encounterMilestoneThresholds = List.of(3, 5, 10, 20);
     }
@@ -450,8 +452,26 @@ public class CaptainSpawner implements Listener {
         }
 
         World world = location.getWorld();
+        if (world.getEnvironment() != World.Environment.NORMAL) {
+            return false;
+        }
         int y = location.getBlockY();
         if (y <= world.getMinHeight() || y >= world.getMaxHeight() - 1) {
+            return false;
+        }
+        if (y < minimumSpawnY) {
+            return false;
+        }
+
+        if (world.getHighestBlockYAt(location, HeightMap.MOTION_BLOCKING_NO_LEAVES) + 1 != y) {
+            return false;
+        }
+
+        if (location.getBlock().getLightFromSky() <= 0) {
+            return false;
+        }
+
+        if (location.clone().subtract(0, 1, 0).getBlock().isLiquid()) {
             return false;
         }
 
@@ -471,6 +491,9 @@ public class CaptainSpawner implements Listener {
 
     private boolean canSpawnInWorld(World world) {
         if (world == null) {
+            return false;
+        }
+        if (world.getEnvironment() != World.Environment.NORMAL) {
             return false;
         }
 

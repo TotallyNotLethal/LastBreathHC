@@ -754,6 +754,7 @@ nemesis:
       activeCap: 8
     location:
       nearbyRangeBlocks: 96
+      minimumY: 63
       minLight: 0
       maxLight: 12
       deniedBiomes:
