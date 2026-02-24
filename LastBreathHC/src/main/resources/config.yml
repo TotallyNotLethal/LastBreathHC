@@ -675,6 +675,10 @@ nemesis:
     defaultSeatId: ""
     defaultPromotionScore: 0.0
     defaultInfluence: 0.25
+    promotionTickPeriodTicks: 200
+    thresholds:
+      warchief: 35.0
+      overlord: 75.0
     rivalryTriggerChanceModifier: 1.0
   memory:
     enabled: true
