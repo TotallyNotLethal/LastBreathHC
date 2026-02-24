@@ -33,6 +33,7 @@ import com.lastbreath.hc.lastBreathHC.mobs.MobStackSignListener;
 import com.lastbreath.hc.lastBreathHC.mobs.AggressiveLogoutMobManager;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainCombatListener;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainEntityBinder;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainHabitatService;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainNameGenerator;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSerializer;
@@ -55,8 +56,14 @@ import com.lastbreath.hc.lastBreathHC.nemesis.DialogueEngine;
 import com.lastbreath.hc.lastBreathHC.nemesis.InfluenceItemHandler;
 import com.lastbreath.hc.lastBreathHC.nemesis.LoyaltyService;
 import com.lastbreath.hc.lastBreathHC.nemesis.TerritoryPressureService;
+import com.lastbreath.hc.lastBreathHC.nemesis.StructureEventOrchestrator;
+import com.lastbreath.hc.lastBreathHC.nemesis.StructureRaidService;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateListener;
 import com.lastbreath.hc.lastBreathHC.revive.ReviveStateManager;
+import com.lastbreath.hc.lastBreathHC.structures.StructureFootprintRepository;
+import com.lastbreath.hc.lastBreathHC.structures.StructureManager;
+import com.lastbreath.hc.lastBreathHC.structures.StructureManagerImpl;
+import com.lastbreath.hc.lastBreathHC.structures.StructurePlacementValidator;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerListener;
 import com.lastbreath.hc.lastBreathHC.spawners.SpawnerSpawnListener;
 import com.lastbreath.hc.lastBreathHC.spectate.AdminSpectateHotbarListener;
@@ -192,6 +199,11 @@ public final class LastBreathHC extends JavaPlugin {
     private LoyaltyService loyaltyService;
     private DialogueEngine dialogueEngine;
     private TerritoryPressureService territoryPressureService;
+    private StructureFootprintRepository structureFootprintRepository;
+    private StructureManager structureManager;
+    private StructureEventOrchestrator structureEventOrchestrator;
+    private CaptainHabitatService captainHabitatService;
+    private StructureRaidService structureRaidService;
 
 
     @Override
@@ -218,7 +230,16 @@ public final class LastBreathHC extends JavaPlugin {
                 fakePlayersSettings
         );
         fakePlayerService.startup();
+        structureFootprintRepository = new StructureFootprintRepository(this, new java.io.File(getDataFolder(), "nemesis-structures.yml"));
+        structureFootprintRepository.load();
+        StructurePlacementValidator structurePlacementValidator = new StructurePlacementValidator(
+                structureFootprintRepository,
+                new StructurePlacementValidator.NoOpProtectedRegionAdapter()
+        );
+        structureManager = new StructureManagerImpl(structurePlacementValidator, structureFootprintRepository);
         captainRegistry = new CaptainRegistry();
+        captainHabitatService = new CaptainHabitatService(this, captainRegistry, structureFootprintRepository);
+        structureEventOrchestrator = new StructureEventOrchestrator(captainRegistry, structureManager, captainHabitatService);
         captainSerializer = new CaptainSerializer(this, new java.io.File(getDataFolder(), "nemesis-captains.yml"));
         captainRegistry.load(captainSerializer.load());
         armyGraphSerializer = new ArmyGraphSerializer(this, new java.io.File(getDataFolder(), "nemesis-army-graph.yml"));
@@ -234,11 +255,11 @@ public final class LastBreathHC extends JavaPlugin {
         captainEntityBinder = new CaptainEntityBinder(this, captainRegistry);
         captainTraitService = new CaptainTraitService(captainEntityBinder, captainTraitRegistry);
         captainEntityBinder.setTraitService(captainTraitService);
-        nemesisProgressionService = new NemesisProgressionService(this, captainRegistry, captainEntityBinder, captainTraitRegistry);
+        nemesisProgressionService = new NemesisProgressionService(this, captainRegistry, captainEntityBinder, captainTraitRegistry, structureEventOrchestrator);
         nemesisProgressionService.start();
-        captainSpawner = new CaptainSpawner(this, captainRegistry, captainEntityBinder, new CaptainSpawner.NoOpProtectedRegionChecker(), captainNameGenerator);
+        captainSpawner = new CaptainSpawner(this, captainRegistry, captainEntityBinder, new CaptainSpawner.NoOpProtectedRegionChecker(), captainNameGenerator, structureEventOrchestrator);
         captainSpawner.start();
-        minionController = new MinionController(this, captainRegistry, captainEntityBinder, nemesisProgressionService);
+        minionController = new MinionController(this, captainRegistry, captainEntityBinder, nemesisProgressionService, captainHabitatService);
         minionController.start();
         nemesisUI = new NemesisUI(this, captainRegistry, captainEntityBinder);
         nemesisUI.start();
@@ -246,14 +267,15 @@ public final class LastBreathHC extends JavaPlugin {
         nemesisRewardService = new NemesisRewardService(this, captainEntityBinder, captainRegistry);
         nemesisRivalryDirector = new NemesisRivalryDirector(this, captainRegistry, captainEntityBinder);
         nemesisRivalryDirector.start();
-        promotionEvaluator = new PromotionEvaluator(this, captainRegistry);
+        promotionEvaluator = new PromotionEvaluator(this, captainRegistry, structureEventOrchestrator);
         promotionEvaluator.start();
-        loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService);
+        loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService, structureEventOrchestrator);
         dialogueEngine = new DialogueEngine(this);
-        territoryPressureService = new TerritoryPressureService(this);
+        territoryPressureService = new TerritoryPressureService(this, structureEventOrchestrator);
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
+        structureRaidService = new StructureRaidService(this, captainRegistry, structureFootprintRepository, territoryPressureService, structureEventOrchestrator, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
-        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, captainTraitRegistry, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator), this);
+        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, captainTraitRegistry, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator, captainHabitatService), this);
         getServer().getPluginManager().registerEvents(captainSpawner, this);
         getServer().getPluginManager().registerEvents(minionController, this);
         getServer().getPluginManager().registerEvents(nemesisCaptainListGUI, this);
@@ -261,6 +283,7 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(loyaltyService, this);
         getServer().getPluginManager().registerEvents(new InfluenceItemHandler(this, captainRegistry, captainEntityBinder, territoryPressureService, loyaltyService), this);
         getServer().getPluginManager().registerEvents(antiCheeseMonitor, this);
+        getServer().getPluginManager().registerEvents(structureRaidService, this);
         dailyRewardManager = new DailyRewardManager(this);
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
         customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");
@@ -526,7 +549,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("fake", new FakeCommand(this));
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
-                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService, territoryPressureService));
+                    event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService, territoryPressureService, structureFootprintRepository, captainHabitatService));
                 }
         );
     }
@@ -608,6 +631,14 @@ public final class LastBreathHC extends JavaPlugin {
             fakePlayerService.shutdown();
             fakePlayerService = null;
         }
+        if (structureFootprintRepository != null) {
+            structureFootprintRepository.saveIfDirty();
+            structureFootprintRepository = null;
+        }
+        structureManager = null;
+        structureEventOrchestrator = null;
+        captainHabitatService = null;
+        structureRaidService = null;
         flushDirtyCaptains();
         captainRegistry = null;
         captainSerializer = null;

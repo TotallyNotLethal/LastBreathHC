@@ -38,6 +38,8 @@ public class CaptainSpawner implements Listener {
     private final ProtectedRegionChecker protectedRegionChecker;
     private final CaptainStateMachine stateMachine;
     private final CaptainNameGenerator nameGenerator;
+    private final StructureEventOrchestrator structureEventOrchestrator;
+    private final List<Integer> encounterMilestoneThresholds;
 
     private final long movementCheckCooldownMs;
     private final double movementInterestChance;
@@ -66,13 +68,15 @@ public class CaptainSpawner implements Listener {
                           CaptainRegistry registry,
                           CaptainEntityBinder binder,
                           ProtectedRegionChecker protectedRegionChecker,
-                          CaptainNameGenerator nameGenerator) {
+                          CaptainNameGenerator nameGenerator,
+                          StructureEventOrchestrator structureEventOrchestrator) {
         this.plugin = plugin;
         this.registry = registry;
         this.binder = binder;
         this.protectedRegionChecker = protectedRegionChecker;
         this.stateMachine = new CaptainStateMachine();
         this.nameGenerator = nameGenerator;
+        this.structureEventOrchestrator = structureEventOrchestrator;
 
         this.movementCheckCooldownMs = Math.max(250L, plugin.getConfig().getLong("nemesis.spawn.interest.movementCheckCooldownMs", 2000L));
         this.movementInterestChance = clampChance(plugin.getConfig().getDouble("nemesis.spawn.interest.movementChance", 0.2));
@@ -90,6 +94,7 @@ public class CaptainSpawner implements Listener {
         this.randomOverworldMobPoolLimit = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.mobPoolLimit", 64));
         this.randomOverworldActiveCap = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.activeCap", 20));
         this.worldBossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
+        this.encounterMilestoneThresholds = List.of(3, 5, 10, 20);
     }
 
     public void start() {
@@ -506,9 +511,24 @@ public class CaptainSpawner implements Listener {
                 location.getBlock().getBiome().name()
         );
 
+        int previousEncounters = record.telemetry() == null ? 0 : record.telemetry().encounters();
+        int updatedEncounters = previousEncounters + 1;
         CaptainRecord.Telemetry telemetry = record.telemetry() == null
                 ? new CaptainRecord.Telemetry(now, now, 1, Map.of())
-                : new CaptainRecord.Telemetry(now, now, record.telemetry().encounters() + 1, record.telemetry().counters());
+                : new CaptainRecord.Telemetry(now, now, updatedEncounters, record.telemetry().counters());
+
+        for (int threshold : encounterMilestoneThresholds) {
+            if (previousEncounters < threshold && updatedEncounters >= threshold) {
+                structureEventOrchestrator.onCaptainMilestone(new CaptainMilestoneEvent(
+                        record.identity().captainId(),
+                        CaptainMilestoneEvent.MilestoneType.ENCOUNTERS_SURVIVED,
+                        "encounters:" + threshold,
+                        previousEncounters,
+                        updatedEncounters,
+                        now
+                ));
+            }
+        }
 
         return record.copyCore(
                 record.identity(),

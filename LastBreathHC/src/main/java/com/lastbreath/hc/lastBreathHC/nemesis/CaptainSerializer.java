@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class CaptainSerializer {
-    private static final int CURRENT_SCHEMA_VERSION = 2;
+    private static final int CURRENT_SCHEMA_VERSION = 3;
 
     private final LastBreathHC plugin;
     private final File file;
@@ -190,6 +190,7 @@ public class CaptainSerializer {
         CaptainRecord.Relationships relationships = parseRelationships(row);
         CaptainRecord.Memory memory = parseMemory(row);
         CaptainRecord.Persona persona = parsePersona(row);
+        CaptainRecord.Habitat habitat = parseHabitat(row);
 
         extrasByCaptainId.put(captainUuid, readExtras(row));
 
@@ -208,7 +209,8 @@ public class CaptainSerializer {
                 social,
                 relationships,
                 memory,
-                persona
+                persona,
+                habitat
         );
     }
 
@@ -298,6 +300,20 @@ public class CaptainSerializer {
         config.set(base + ".persona.temperament", persona.temperament());
         config.set(base + ".persona.quirkTags", persona.quirkTags());
         config.set(base + ".persona.voicePackId", persona.voicePackId());
+
+        if (record.habitat().isPresent()) {
+            CaptainRecord.Habitat habitat = record.habitat().get();
+            config.set(base + ".habitat.primaryStructureId", habitat.primaryStructureId());
+            config.set(base + ".habitat.settlementId", habitat.settlementId());
+            config.set(base + ".habitat.anchor.world", habitat.anchorWorld());
+            config.set(base + ".habitat.anchor.chunkX", habitat.anchorChunkX());
+            config.set(base + ".habitat.anchor.chunkZ", habitat.anchorChunkZ());
+            config.set(base + ".habitat.anchor.x", habitat.anchorX());
+            config.set(base + ".habitat.anchor.y", habitat.anchorY());
+            config.set(base + ".habitat.anchor.z", habitat.anchorZ());
+        } else {
+            config.set(base + ".habitat", null);
+        }
 
         Map<String, Object> extras = extrasByCaptainId.get(record.identity().captainId());
         if (extras == null || extras.isEmpty()) {
@@ -407,6 +423,24 @@ public class CaptainSerializer {
                 row.getStringList("memory.humiliations"),
                 parseUuidList(row.getStringList("memory.notablePlayers")),
                 row.getLong("memory.callbackLinesSeed", defaults.callbackLinesSeed())
+        );
+    }
+
+
+    private CaptainRecord.Habitat parseHabitat(ConfigurationSection row) {
+        String primaryStructureId = row.getString("habitat.primaryStructureId");
+        if (primaryStructureId == null || primaryStructureId.isBlank()) {
+            return null;
+        }
+        return new CaptainRecord.Habitat(
+                primaryStructureId,
+                row.getString("habitat.settlementId", ""),
+                row.getString("habitat.anchor.world", row.getString("origin.world", "world")),
+                row.getInt("habitat.anchor.chunkX", row.getInt("origin.chunkX", 0)),
+                row.getInt("habitat.anchor.chunkZ", row.getInt("origin.chunkZ", 0)),
+                row.getDouble("habitat.anchor.x", row.getDouble("origin.spawnX", 0.0)),
+                row.getDouble("habitat.anchor.y", row.getDouble("origin.spawnY", 0.0)),
+                row.getDouble("habitat.anchor.z", row.getDouble("origin.spawnZ", 0.0))
         );
     }
 
@@ -543,6 +577,7 @@ public class CaptainSerializer {
             switch (workingVersion) {
                 case 0 -> migrateV0ToV1(config);
                 case 1 -> migrateV1ToV2(config);
+                case 2 -> migrateV2ToV3(config);
                 default -> plugin.getLogger().warning("No explicit nemesis captain migration for schema version " + workingVersion + ".");
             }
             workingVersion++;
@@ -661,6 +696,24 @@ public class CaptainSerializer {
         }
     }
 
+
+    private void migrateV2ToV3(YamlConfiguration config) {
+        ConfigurationSection captains = config.getConfigurationSection("captains");
+        if (captains == null) {
+            return;
+        }
+        for (String captainId : captains.getKeys(false)) {
+            ConfigurationSection row = captains.getConfigurationSection(captainId);
+            if (row == null) {
+                continue;
+            }
+            if (row.contains("habitat.primaryStructureId")) {
+                continue;
+            }
+            // no-op compatibility migration; habitat is optional and defaults to empty.
+        }
+    }
+
     private Map<String, Object> readExtras(ConfigurationSection row) {
         Map<String, Object> extras = new HashMap<>();
         Set<String> knownPaths = knownPaths();
@@ -748,6 +801,14 @@ public class CaptainSerializer {
         known.add("persona.temperament");
         known.add("persona.quirkTags");
         known.add("persona.voicePackId");
+        known.add("habitat.primaryStructureId");
+        known.add("habitat.settlementId");
+        known.add("habitat.anchor.world");
+        known.add("habitat.anchor.chunkX");
+        known.add("habitat.anchor.chunkZ");
+        known.add("habitat.anchor.x");
+        known.add("habitat.anchor.y");
+        known.add("habitat.anchor.z");
         return known;
     }
 }

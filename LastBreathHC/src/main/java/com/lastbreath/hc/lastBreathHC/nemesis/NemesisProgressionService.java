@@ -36,12 +36,12 @@ public class NemesisProgressionService {
     private final long interactionAwardCooldownMs;
     private final long skirmishAwardCooldownMs;
 
-    public NemesisProgressionService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, CaptainTraitRegistry traitRegistry) {
+    public NemesisProgressionService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, CaptainTraitRegistry traitRegistry, StructureEventOrchestrator structureEventOrchestrator) {
         this.plugin = plugin;
         this.registry = registry;
         this.binder = binder;
         this.traitRegistry = traitRegistry;
-        this.politicalProgressionUpdater = new PoliticalProgressionUpdater(plugin, registry);
+        this.politicalProgressionUpdater = new PoliticalProgressionUpdater(plugin, registry, structureEventOrchestrator);
         this.xpPerKill = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerVictim", 25L));
         this.xpPerCombatTick = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerCombatTick", 2L));
         this.angerPerKill = Math.max(0.0, plugin.getConfig().getDouble("nemesis.progression.angerPerKill", 3.0));

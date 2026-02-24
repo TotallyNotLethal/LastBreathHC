@@ -47,6 +47,7 @@ public class CaptainCombatListener implements Listener {
     private final DeathOutcomeResolver deathOutcomeResolver;
     private final CaptainStateMachine stateMachine;
     private final CaptainNameGenerator nameGenerator;
+    private final CaptainHabitatService captainHabitatService;
 
     private final NamespacedKey captainUuidKey;
     private final NamespacedKey captainFlagKey;
@@ -71,7 +72,7 @@ public class CaptainCombatListener implements Listener {
     private final long defyDeathBonusXp;
     private final double defyDeathBonusRivalry;
 
-    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, CaptainTraitRegistry traitRegistry, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver, CaptainNameGenerator nameGenerator) {
+    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, CaptainTraitRegistry traitRegistry, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver, CaptainNameGenerator nameGenerator, CaptainHabitatService captainHabitatService) {
         this.plugin = plugin;
         this.captainRegistry = captainRegistry;
         this.killerResolver = killerResolver;
@@ -83,6 +84,7 @@ public class CaptainCombatListener implements Listener {
         this.deathOutcomeResolver = deathOutcomeResolver;
         this.stateMachine = new CaptainStateMachine();
         this.nameGenerator = nameGenerator;
+        this.captainHabitatService = captainHabitatService;
         this.captainUuidKey = new NamespacedKey(plugin, "nemesis_captain_uuid");
         this.captainFlagKey = new NamespacedKey(plugin, "nemesis_captain");
         this.worldBossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
@@ -412,7 +414,7 @@ public class CaptainCombatListener implements Listener {
         }
 
         CaptainRecord.State deadState = stateMachine.onKilled(System.currentTimeMillis());
-        captainRegistry.upsert(deadCaptain.copyCore(
+        CaptainRecord deadRecord = deadCaptain.copyCore(
                 deadCaptain.identity(),
                 deadCaptain.origin(),
                 deadCaptain.victims(),
@@ -423,7 +425,9 @@ public class CaptainCombatListener implements Listener {
                 deadCaptain.minionPack(),
                 deadState,
                 deadCaptain.telemetry()
-        ));
+        );
+        captainRegistry.upsert(deadRecord);
+        captainHabitatService.handlePermanentCaptainDeath(deadCaptain.identity().captainId());
 
         DamageSource damageSource = event.getDamageSource();
         if (damageSource == null || !(damageSource.getCausingEntity() instanceof LivingEntity killerEntity)) {
