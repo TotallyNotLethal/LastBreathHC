@@ -376,17 +376,31 @@ public class CaptainSpawner implements Listener {
     private Optional<CaptainRecord> selectCandidate(Player nearPlayer) {
         long now = System.currentTimeMillis();
         return registry.getAll().stream()
-                .filter(this::isAliveRecord)
+                .filter(record -> isSpawnEligibleRecord(record, now))
                 .filter(record -> isNearNemesisPlayer(record, nearPlayer))
-                .filter(record -> !isOnCooldown(record, now))
                 .max(Comparator.comparingDouble(this::hateScore));
     }
 
-    private boolean isAliveRecord(CaptainRecord record) {
+    private boolean isSpawnEligibleRecord(CaptainRecord record, long now) {
         if (record == null || record.state() == null) {
             return false;
         }
-        return record.state().state() == CaptainState.DORMANT;
+
+        CaptainState state = record.state().state();
+        if (state == CaptainState.DORMANT) {
+            return true;
+        }
+        if (state != CaptainState.COOLDOWN) {
+            return false;
+        }
+
+        if (now < record.state().cooldownUntilEpochMs()) {
+            return false;
+        }
+
+        CaptainRecord.State dormant = stateMachine.onCooldownElapsed(now);
+        registry.upsert(withState(record, dormant));
+        return true;
     }
 
     private boolean isNearNemesisPlayer(CaptainRecord record, Player nearPlayer) {
@@ -395,21 +409,6 @@ public class CaptainSpawner implements Listener {
             return false;
         }
         return nemesis.equals(nearPlayer.getUniqueId());
-    }
-
-    private boolean isOnCooldown(CaptainRecord record, long now) {
-        if (record.state() == null) {
-            return false;
-        }
-        if (record.state().state() != CaptainState.COOLDOWN) {
-            return false;
-        }
-        if (now >= record.state().cooldownUntilEpochMs()) {
-            CaptainRecord.State dormant = stateMachine.onCooldownElapsed(now);
-            registry.upsert(withState(record, dormant));
-            return false;
-        }
-        return true;
     }
 
     private double hateScore(CaptainRecord record) {
