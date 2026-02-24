@@ -49,7 +49,7 @@ public class CustomGuideBookListener implements Listener {
         if (player.getStatistic(Statistic.DEATHS) <= 0) {
             return;
         }
-        Location lastDeathLocation = player.getLastDeathLocation();
+        Location lastDeathLocation = safeLastDeathLocation(player);
         if (lastDeathLocation == null || lastDeathLocation.getWorld() == null) {
             return;
         }
@@ -65,6 +65,14 @@ public class CustomGuideBookListener implements Listener {
                         + ChatColor.GRAY + lastDeathLocation.getWorld().getName()
                         + ChatColor.DARK_GRAY + ")"
         );
+    }
+
+    private Location safeLastDeathLocation(Player player) {
+        try {
+            return player.getLastDeathLocation();
+        } catch (RuntimeException ex) {
+            return null;
+        }
     }
 
     private void teleportFirstJoinSpawn(Player player) {
