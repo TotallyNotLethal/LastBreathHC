@@ -21,7 +21,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class CaptainSerializer {
-    private static final int CURRENT_SCHEMA_VERSION = 1;
+    private static final int CURRENT_SCHEMA_VERSION = 2;
 
     private final LastBreathHC plugin;
     private final File file;
@@ -185,9 +185,31 @@ public class CaptainSerializer {
                 readCounters(row.getConfigurationSection("telemetry.counters"))
         );
 
+        CaptainRecord.Political political = parsePolitical(row);
+        CaptainRecord.Social social = parseSocial(row);
+        CaptainRecord.Relationships relationships = parseRelationships(row);
+        CaptainRecord.Memory memory = parseMemory(row);
+        CaptainRecord.Persona persona = parsePersona(row);
+
         extrasByCaptainId.put(captainUuid, readExtras(row));
 
-        return new CaptainRecord(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state, telemetry);
+        return new CaptainRecord(
+                identity,
+                origin,
+                victims,
+                nemesisScores,
+                progression,
+                naming,
+                traits,
+                minionPack,
+                state,
+                telemetry,
+                political,
+                social,
+                relationships,
+                memory,
+                persona
+        );
     }
 
     private void writeCaptain(YamlConfiguration config, String base, CaptainRecord record) {
@@ -243,6 +265,38 @@ public class CaptainSerializer {
         for (Map.Entry<String, Long> entry : record.telemetry().counters().entrySet()) {
             config.set(countersPath + "." + entry.getKey(), entry.getValue());
         }
+
+        CaptainRecord.Political political = record.political().orElseGet(this::defaultPolitical);
+        config.set(base + ".political.rank", political.rank());
+        config.set(base + ".political.region", political.region());
+        config.set(base + ".political.seatId", political.seatId());
+        config.set(base + ".political.promotionScore", political.promotionScore());
+        config.set(base + ".political.influence", political.influence());
+
+        CaptainRecord.Social social = record.social().orElseGet(this::defaultSocial);
+        config.set(base + ".social.loyalty", social.loyalty());
+        config.set(base + ".social.fear", social.fear());
+        config.set(base + ".social.ambition", social.ambition());
+        config.set(base + ".social.confidence", social.confidence());
+
+        CaptainRecord.Relationships relationships = record.relationships().orElseGet(this::defaultRelationships);
+        config.set(base + ".relationships.allies", stringifyUuidList(relationships.allies()));
+        config.set(base + ".relationships.rivals", stringifyUuidList(relationships.rivals()));
+        config.set(base + ".relationships.bodyguardOf", stringify(relationships.bodyguardOf()));
+        config.set(base + ".relationships.bloodBrotherOf", stringify(relationships.bloodBrotherOf()));
+
+        CaptainRecord.Memory memory = record.memory().orElseGet(this::defaultMemory);
+        config.set(base + ".memory.lastDefeatCause", memory.lastDefeatCause());
+        config.set(base + ".memory.scars", memory.scars());
+        config.set(base + ".memory.humiliations", memory.humiliations());
+        config.set(base + ".memory.notablePlayers", stringifyUuidList(memory.notablePlayers()));
+        config.set(base + ".memory.callbackLinesSeed", memory.callbackLinesSeed());
+
+        CaptainRecord.Persona persona = record.persona().orElseGet(this::defaultPersona);
+        config.set(base + ".persona.archetype", persona.archetype());
+        config.set(base + ".persona.temperament", persona.temperament());
+        config.set(base + ".persona.quirkTags", persona.quirkTags());
+        config.set(base + ".persona.voicePackId", persona.voicePackId());
 
         Map<String, Object> extras = extrasByCaptainId.get(record.identity().captainId());
         if (extras == null || extras.isEmpty()) {
@@ -310,6 +364,78 @@ public class CaptainSerializer {
             counters.put(key, section.getLong(key, 0L));
         }
         return counters;
+    }
+
+    private CaptainRecord.Political parsePolitical(ConfigurationSection row) {
+        CaptainRecord.Political defaults = defaultPolitical();
+        return new CaptainRecord.Political(
+                row.getString("political.rank", defaults.rank()),
+                row.getString("political.region", defaults.region()),
+                row.getString("political.seatId", defaults.seatId()),
+                row.getDouble("political.promotionScore", defaults.promotionScore()),
+                row.getDouble("political.influence", defaults.influence())
+        );
+    }
+
+    private CaptainRecord.Social parseSocial(ConfigurationSection row) {
+        CaptainRecord.Social defaults = defaultSocial();
+        return new CaptainRecord.Social(
+                row.getDouble("social.loyalty", defaults.loyalty()),
+                row.getDouble("social.fear", defaults.fear()),
+                row.getDouble("social.ambition", defaults.ambition()),
+                row.getDouble("social.confidence", defaults.confidence())
+        );
+    }
+
+    private CaptainRecord.Relationships parseRelationships(ConfigurationSection row) {
+        CaptainRecord.Relationships defaults = defaultRelationships();
+        return new CaptainRecord.Relationships(
+                parseUuidList(row.getStringList("relationships.allies")),
+                parseUuidList(row.getStringList("relationships.rivals")),
+                parseUuid(row.getString("relationships.bodyguardOf", stringify(defaults.bodyguardOf()))),
+                parseUuid(row.getString("relationships.bloodBrotherOf", stringify(defaults.bloodBrotherOf())))
+        );
+    }
+
+    private CaptainRecord.Memory parseMemory(ConfigurationSection row) {
+        CaptainRecord.Memory defaults = defaultMemory();
+        return new CaptainRecord.Memory(
+                row.getString("memory.lastDefeatCause", defaults.lastDefeatCause()),
+                row.getStringList("memory.scars"),
+                row.getStringList("memory.humiliations"),
+                parseUuidList(row.getStringList("memory.notablePlayers")),
+                row.getLong("memory.callbackLinesSeed", defaults.callbackLinesSeed())
+        );
+    }
+
+    private CaptainRecord.Persona parsePersona(ConfigurationSection row) {
+        CaptainRecord.Persona defaults = defaultPersona();
+        return new CaptainRecord.Persona(
+                row.getString("persona.archetype", defaults.archetype()),
+                row.getString("persona.temperament", defaults.temperament()),
+                row.getStringList("persona.quirkTags"),
+                row.getString("persona.voicePackId", defaults.voicePackId())
+        );
+    }
+
+    private CaptainRecord.Political defaultPolitical() {
+        return new CaptainRecord.Political("UNALIGNED", "UNKNOWN", "", 0.0, 0.0);
+    }
+
+    private CaptainRecord.Social defaultSocial() {
+        return new CaptainRecord.Social(0.0, 0.0, 0.0, 0.0);
+    }
+
+    private CaptainRecord.Relationships defaultRelationships() {
+        return new CaptainRecord.Relationships(List.of(), List.of(), null, null);
+    }
+
+    private CaptainRecord.Memory defaultMemory() {
+        return new CaptainRecord.Memory("", List.of(), List.of(), List.of(), 0L);
+    }
+
+    private CaptainRecord.Persona defaultPersona() {
+        return new CaptainRecord.Persona("UNSPECIFIED", "NEUTRAL", List.of(), "");
     }
 
     private UUID parseUuid(String raw) {
@@ -389,6 +515,7 @@ public class CaptainSerializer {
         while (workingVersion < CURRENT_SCHEMA_VERSION) {
             switch (workingVersion) {
                 case 0 -> migrateV0ToV1(config);
+                case 1 -> migrateV1ToV2(config);
                 default -> plugin.getLogger().warning("No explicit nemesis captain migration for schema version " + workingVersion + ".");
             }
             workingVersion++;
@@ -414,16 +541,118 @@ public class CaptainSerializer {
         }
     }
 
+    private void migrateV1ToV2(YamlConfiguration config) {
+        ConfigurationSection captains = config.getConfigurationSection("captains");
+        if (captains == null) {
+            return;
+        }
+
+        CaptainRecord.Political defaultPolitical = defaultPolitical();
+        CaptainRecord.Social defaultSocial = defaultSocial();
+        CaptainRecord.Memory defaultMemory = defaultMemory();
+        CaptainRecord.Persona defaultPersona = defaultPersona();
+
+        for (String captainId : captains.getKeys(false)) {
+            ConfigurationSection row = captains.getConfigurationSection(captainId);
+            if (row == null) {
+                continue;
+            }
+
+            if (!row.contains("political.rank")) {
+                row.set("political.rank", defaultPolitical.rank());
+            }
+            if (!row.contains("political.region")) {
+                row.set("political.region", defaultPolitical.region());
+            }
+            if (!row.contains("political.seatId")) {
+                row.set("political.seatId", defaultPolitical.seatId());
+            }
+            if (!row.contains("political.promotionScore")) {
+                row.set("political.promotionScore", defaultPolitical.promotionScore());
+            }
+            if (!row.contains("political.influence")) {
+                row.set("political.influence", defaultPolitical.influence());
+            }
+
+            if (!row.contains("social.loyalty")) {
+                row.set("social.loyalty", defaultSocial.loyalty());
+            }
+            if (!row.contains("social.fear")) {
+                row.set("social.fear", defaultSocial.fear());
+            }
+            if (!row.contains("social.ambition")) {
+                row.set("social.ambition", defaultSocial.ambition());
+            }
+            if (!row.contains("social.confidence")) {
+                row.set("social.confidence", defaultSocial.confidence());
+            }
+
+            if (!row.contains("relationships.allies")) {
+                row.set("relationships.allies", List.of());
+            }
+            if (!row.contains("relationships.rivals")) {
+                row.set("relationships.rivals", List.of());
+            }
+            if (!row.contains("relationships.bodyguardOf")) {
+                row.set("relationships.bodyguardOf", null);
+            }
+            if (!row.contains("relationships.bloodBrotherOf")) {
+                row.set("relationships.bloodBrotherOf", null);
+            }
+
+            if (!row.contains("memory.lastDefeatCause")) {
+                row.set("memory.lastDefeatCause", defaultMemory.lastDefeatCause());
+            }
+            if (!row.contains("memory.scars")) {
+                row.set("memory.scars", List.of());
+            }
+            if (!row.contains("memory.humiliations")) {
+                row.set("memory.humiliations", List.of());
+            }
+            if (!row.contains("memory.notablePlayers")) {
+                row.set("memory.notablePlayers", List.of());
+            }
+            if (!row.contains("memory.callbackLinesSeed")) {
+                row.set("memory.callbackLinesSeed", defaultMemory.callbackLinesSeed());
+            }
+
+            if (!row.contains("persona.archetype")) {
+                row.set("persona.archetype", defaultPersona.archetype());
+            }
+            if (!row.contains("persona.temperament")) {
+                row.set("persona.temperament", defaultPersona.temperament());
+            }
+            if (!row.contains("persona.quirkTags")) {
+                row.set("persona.quirkTags", List.of());
+            }
+            if (!row.contains("persona.voicePackId")) {
+                row.set("persona.voicePackId", defaultPersona.voicePackId());
+            }
+        }
+    }
+
     private Map<String, Object> readExtras(ConfigurationSection row) {
         Map<String, Object> extras = new HashMap<>();
         Set<String> knownPaths = knownPaths();
         for (Map.Entry<String, Object> entry : row.getValues(true).entrySet()) {
-            if (knownPaths.contains(entry.getKey()) || entry.getValue() instanceof ConfigurationSection) {
+            if (isKnownPath(entry.getKey(), knownPaths) || entry.getValue() instanceof ConfigurationSection) {
                 continue;
             }
             extras.put(entry.getKey(), entry.getValue());
         }
         return extras;
+    }
+
+    private boolean isKnownPath(String path, Set<String> knownPaths) {
+        if (knownPaths.contains(path)) {
+            return true;
+        }
+        for (String knownPath : knownPaths) {
+            if (path.startsWith(knownPath + ".")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Set<String> knownPaths() {
@@ -465,6 +694,29 @@ public class CaptainSerializer {
         known.add("telemetry.lastSeenAtEpochMillis");
         known.add("telemetry.lastUpdatedAtEpochMillis");
         known.add("telemetry.encounters");
+        known.add("telemetry.counters");
+        known.add("political.rank");
+        known.add("political.region");
+        known.add("political.seatId");
+        known.add("political.promotionScore");
+        known.add("political.influence");
+        known.add("social.loyalty");
+        known.add("social.fear");
+        known.add("social.ambition");
+        known.add("social.confidence");
+        known.add("relationships.allies");
+        known.add("relationships.rivals");
+        known.add("relationships.bodyguardOf");
+        known.add("relationships.bloodBrotherOf");
+        known.add("memory.lastDefeatCause");
+        known.add("memory.scars");
+        known.add("memory.humiliations");
+        known.add("memory.notablePlayers");
+        known.add("memory.callbackLinesSeed");
+        known.add("persona.archetype");
+        known.add("persona.temperament");
+        known.add("persona.quirkTags");
+        known.add("persona.voicePackId");
         return known;
     }
 }
