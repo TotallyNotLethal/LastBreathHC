@@ -549,7 +549,37 @@ public class CaptainCombatListener implements Listener {
         }
         CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(now, now, 1, counters);
 
-        return CaptainRecord.withDefaultSections(identity, origin, victims, scores, progression, naming, traits, minionPack, state, telemetry);
+        CaptainRecord.Political political = new CaptainRecord.Political(
+                plugin.getConfig().getString("nemesis.political.defaultRank", "UNALIGNED"),
+                plugin.getConfig().getString("nemesis.political.defaultRegion",
+                        plugin.getConfig().getString("nemesis.territory.defaultRegion", "UNKNOWN")),
+                plugin.getConfig().getString("nemesis.political.defaultSeatId", ""),
+                plugin.getConfig().getDouble("nemesis.political.defaultPromotionScore", 0.0),
+                plugin.getConfig().getDouble("nemesis.political.defaultInfluence", 0.0)
+        );
+        CaptainRecord.Social social = new CaptainRecord.Social(
+                plugin.getConfig().getDouble("nemesis.social.defaultLoyalty", 0.0),
+                plugin.getConfig().getDouble("nemesis.social.defaultFear", 0.0),
+                plugin.getConfig().getDouble("nemesis.social.defaultAmbition", 0.0),
+                plugin.getConfig().getDouble("nemesis.social.defaultConfidence", 0.0)
+        );
+        CaptainRecord.Relationships relationships = new CaptainRecord.Relationships(List.of(), List.of(), null, null);
+        CaptainRecord.Memory memory = new CaptainRecord.Memory(
+                plugin.getConfig().getString("nemesis.memory.defaultLastDefeatCause", ""),
+                List.of(),
+                List.of(),
+                List.of(),
+                plugin.getConfig().getLong("nemesis.memory.defaultCallbackLinesSeed", 0L)
+        );
+        CaptainRecord.Persona persona = new CaptainRecord.Persona(
+                plugin.getConfig().getString("nemesis.persona.defaultArchetype", "UNSPECIFIED"),
+                plugin.getConfig().getString("nemesis.persona.defaultTemperament", "NEUTRAL"),
+                List.of(),
+                plugin.getConfig().getString("nemesis.persona.defaultVoicePackId", "")
+        );
+
+        return new CaptainRecord(identity, origin, victims, scores, progression, naming, traits, minionPack, state, telemetry,
+                political, social, relationships, memory, persona);
     }
 
     private void stampCaptainPdc(Entity entity, UUID captainUuid) {

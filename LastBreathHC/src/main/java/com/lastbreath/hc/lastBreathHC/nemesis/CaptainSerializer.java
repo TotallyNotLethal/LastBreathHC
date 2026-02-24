@@ -419,11 +419,24 @@ public class CaptainSerializer {
     }
 
     private CaptainRecord.Political defaultPolitical() {
-        return new CaptainRecord.Political("UNALIGNED", "UNKNOWN", "", 0.0, 0.0);
+        String defaultRegion = plugin.getConfig().getString("nemesis.political.defaultRegion",
+                plugin.getConfig().getString("nemesis.territory.defaultRegion", "UNKNOWN"));
+        return new CaptainRecord.Political(
+                plugin.getConfig().getString("nemesis.political.defaultRank", "UNALIGNED"),
+                defaultRegion,
+                plugin.getConfig().getString("nemesis.political.defaultSeatId", ""),
+                plugin.getConfig().getDouble("nemesis.political.defaultPromotionScore", 0.0),
+                plugin.getConfig().getDouble("nemesis.political.defaultInfluence", 0.0)
+        );
     }
 
     private CaptainRecord.Social defaultSocial() {
-        return new CaptainRecord.Social(0.0, 0.0, 0.0, 0.0);
+        return new CaptainRecord.Social(
+                plugin.getConfig().getDouble("nemesis.social.defaultLoyalty", 0.0),
+                plugin.getConfig().getDouble("nemesis.social.defaultFear", 0.0),
+                plugin.getConfig().getDouble("nemesis.social.defaultAmbition", 0.0),
+                plugin.getConfig().getDouble("nemesis.social.defaultConfidence", 0.0)
+        );
     }
 
     private CaptainRecord.Relationships defaultRelationships() {
@@ -431,11 +444,22 @@ public class CaptainSerializer {
     }
 
     private CaptainRecord.Memory defaultMemory() {
-        return new CaptainRecord.Memory("", List.of(), List.of(), List.of(), 0L);
+        return new CaptainRecord.Memory(
+                plugin.getConfig().getString("nemesis.memory.defaultLastDefeatCause", ""),
+                List.of(),
+                List.of(),
+                List.of(),
+                plugin.getConfig().getLong("nemesis.memory.defaultCallbackLinesSeed", 0L)
+        );
     }
 
     private CaptainRecord.Persona defaultPersona() {
-        return new CaptainRecord.Persona("UNSPECIFIED", "NEUTRAL", List.of(), "");
+        return new CaptainRecord.Persona(
+                plugin.getConfig().getString("nemesis.persona.defaultArchetype", "UNSPECIFIED"),
+                plugin.getConfig().getString("nemesis.persona.defaultTemperament", "NEUTRAL"),
+                List.of(),
+                plugin.getConfig().getString("nemesis.persona.defaultVoicePackId", "")
+        );
     }
 
     private UUID parseUuid(String raw) {

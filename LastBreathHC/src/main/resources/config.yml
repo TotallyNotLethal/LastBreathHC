@@ -661,6 +661,39 @@ nemesis:
     tickPeriodTicks: 200
     triggerChancePerTick: 0.03
     maxDistance: 96.0
+  social:
+    enabled: true
+    defaultLoyalty: 0.45
+    defaultFear: 0.2
+    defaultAmbition: 0.35
+    defaultConfidence: 0.4
+    rivalryTriggerChanceModifier: 1.0
+  political:
+    enabled: true
+    defaultRank: CAPTAIN
+    defaultRegion: overworld
+    defaultSeatId: ""
+    defaultPromotionScore: 0.0
+    defaultInfluence: 0.25
+    rivalryTriggerChanceModifier: 1.0
+  memory:
+    enabled: true
+    defaultLastDefeatCause: ""
+    defaultCallbackLinesSeed: 0
+    scarRepeatWindow: 3
+  persona:
+    enabled: true
+    defaultArchetype: UNSPECIFIED
+    defaultTemperament: NEUTRAL
+    defaultVoicePackId: default
+    tauntCooldownMs: 10000
+  territory:
+    enabled: true
+    defaultRegion: overworld
+    baselinePressure: 0.25
+    pressurePerActiveCaptain: 0.05
+    pressureDecayPerTick: 0.01
+    rivalryReasonWeight: 1.0
   spawn:
     director:
       minTickDelay: 40

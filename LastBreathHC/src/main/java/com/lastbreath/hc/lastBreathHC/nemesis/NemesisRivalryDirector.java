@@ -18,6 +18,10 @@ public class NemesisRivalryDirector {
     private final long tickPeriod;
     private final double triggerChance;
     private final double maxDistance;
+    private final boolean socialEnabled;
+    private final boolean politicalEnabled;
+    private final boolean territoryEnabled;
+    private final double territoryReasonWeight;
     private BukkitTask task;
 
     public NemesisRivalryDirector(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder) {
@@ -25,7 +29,14 @@ public class NemesisRivalryDirector {
         this.registry = registry;
         this.binder = binder;
         this.tickPeriod = Math.max(40L, plugin.getConfig().getLong("nemesis.rivalries.tickPeriodTicks", 200L));
-        this.triggerChance = clampChance(plugin.getConfig().getDouble("nemesis.rivalries.triggerChancePerTick", 0.08));
+        this.socialEnabled = plugin.getConfig().getBoolean("nemesis.social.enabled", true);
+        this.politicalEnabled = plugin.getConfig().getBoolean("nemesis.political.enabled", true);
+        this.territoryEnabled = plugin.getConfig().getBoolean("nemesis.territory.enabled", true);
+        double socialModifier = plugin.getConfig().getDouble("nemesis.social.rivalryTriggerChanceModifier", 1.0);
+        double politicalModifier = plugin.getConfig().getDouble("nemesis.political.rivalryTriggerChanceModifier", 1.0);
+        this.territoryReasonWeight = Math.max(0.0, plugin.getConfig().getDouble("nemesis.territory.rivalryReasonWeight", 1.0));
+        double combinedModifier = (socialEnabled ? socialModifier : 1.0) * (politicalEnabled ? politicalModifier : 1.0);
+        this.triggerChance = clampChance(plugin.getConfig().getDouble("nemesis.rivalries.triggerChancePerTick", 0.08) * combinedModifier);
         this.maxDistance = Math.max(24.0, plugin.getConfig().getDouble("nemesis.rivalries.maxDistance", 96.0));
     }
 
@@ -42,6 +53,9 @@ public class NemesisRivalryDirector {
     }
 
     private void tick() {
+        if (!socialEnabled && !politicalEnabled && !territoryEnabled) {
+            return;
+        }
         if (Math.random() > triggerChance) {
             return;
         }
@@ -85,13 +99,24 @@ public class NemesisRivalryDirector {
         firstMob.setTarget(second);
         secondMob.setTarget(first);
 
-        String[] reasons = {
-                "blood battle",
-                "revenge for a blood brother",
-                "captain raid",
-                "territory challenge"
-        };
-        String reason = reasons[ThreadLocalRandom.current().nextInt(reasons.length)];
+        List<String> reasons = new ArrayList<>();
+        if (socialEnabled) {
+            reasons.add("blood battle");
+            reasons.add("revenge for a blood brother");
+        }
+        if (politicalEnabled) {
+            reasons.add("captain raid");
+        }
+        if (territoryEnabled) {
+            reasons.add("territory challenge");
+            if (territoryReasonWeight >= 1.5) {
+                reasons.add("territory challenge");
+            }
+        }
+        if (reasons.isEmpty()) {
+            reasons.add("captain raid");
+        }
+        String reason = reasons.get(ThreadLocalRandom.current().nextInt(reasons.size()));
         String firstName = firstRecord.naming() == null ? "Nemesis Captain" : firstRecord.naming().displayName();
         String secondName = secondRecord.naming() == null ? "Nemesis Captain" : secondRecord.naming().displayName();
         Bukkit.broadcastMessage("§4⚔ §cNemesis rivalry ignites: §6" + firstName + " §7vs §6" + secondName + " §8(" + reason + ")");
