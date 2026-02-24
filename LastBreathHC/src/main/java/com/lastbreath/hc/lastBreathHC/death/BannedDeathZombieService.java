@@ -58,6 +58,7 @@ public class BannedDeathZombieService implements Listener {
     private final HeadTrackingLogger headTrackingLogger;
     private final NamespacedKey remnantOwnerKey;
     private final Map<UUID, LocalDate> lastSpawnDateByPlayer = new HashMap<>();
+    private final Map<UUID, UUID> activeRemnantByOwner = new HashMap<>();
     private final Map<ChunkRef, Long> chunkLastLoadedAtMs = new HashMap<>();
     private final Map<UUID, HeadChunkSnapshot> headChunkSnapshots = new HashMap<>();
     private BukkitTask task;
@@ -112,6 +113,11 @@ public class BannedDeathZombieService implements Listener {
             return;
         }
 
+        UUID trackedRemnantId = activeRemnantByOwner.get(ownerUuid);
+        if (trackedRemnantId != null && trackedRemnantId.equals(zombie.getUniqueId())) {
+            activeRemnantByOwner.remove(ownerUuid);
+        }
+
         ItemStack ownerHead = createOwnedHead(Bukkit.getOfflinePlayer(ownerUuid));
         event.getDrops().removeIf(this::isStoredPlayerHead);
         event.getDrops().add(ownerHead);
@@ -120,11 +126,17 @@ public class BannedDeathZombieService implements Listener {
     @EventHandler
     public void onChunkLoad(ChunkLoadEvent event) {
         chunkLastLoadedAtMs.put(ChunkRef.from(event.getChunk()), System.currentTimeMillis());
+        for (Entity entity : event.getChunk().getEntities()) {
+            if (entity instanceof Zombie zombie) {
+                indexOwnedRemnant(zombie);
+            }
+        }
     }
 
     private void runSweep() {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         Set<UUID> protectedHeadOwners = resolveProtectedHeadOwners();
+        rebuildActiveRemnantIndexFromLoadedWorlds();
 
         for (BanEntry<?> entry : Bukkit.getBanList(BanList.Type.NAME).getBanEntries()) {
             String playerName = entry.getTarget();
@@ -142,15 +154,19 @@ public class BannedDeathZombieService implements Listener {
                 continue;
             }
 
-            if (today.equals(lastSpawnDateByPlayer.get(playerId))) {
-                continue;
-            }
-
             if (protectedHeadOwners.contains(playerId)) {
                 continue;
             }
 
             if (headTrackingLogger.hasPlacedHead(playerId)) {
+                continue;
+            }
+
+            if (hasActiveRemnant(playerId)) {
+                continue;
+            }
+
+            if (today.equals(lastSpawnDateByPlayer.get(playerId))) {
                 continue;
             }
 
@@ -194,6 +210,71 @@ public class BannedDeathZombieService implements Listener {
 
         if (ownerUuid != null) {
             zombie.getPersistentDataContainer().set(remnantOwnerKey, PersistentDataType.STRING, ownerUuid.toString());
+            activeRemnantByOwner.put(ownerUuid, zombie.getUniqueId());
+        }
+    }
+
+    private void rebuildActiveRemnantIndexFromLoadedWorlds() {
+        activeRemnantByOwner.clear();
+        for (World world : Bukkit.getWorlds()) {
+            for (Entity entity : world.getEntities()) {
+                if (entity instanceof Zombie zombie) {
+                    indexOwnedRemnant(zombie);
+                }
+            }
+        }
+    }
+
+    private boolean hasActiveRemnant(UUID ownerUuid) {
+        UUID remnantEntityId = activeRemnantByOwner.get(ownerUuid);
+        if (remnantEntityId == null) {
+            return false;
+        }
+
+        Entity tracked = Bukkit.getEntity(remnantEntityId);
+        if (!(tracked instanceof Zombie zombie) || !zombie.isValid() || zombie.isDead()) {
+            activeRemnantByOwner.remove(ownerUuid);
+            return false;
+        }
+
+        if (!zombie.getScoreboardTags().contains(REMNANT_TAG)) {
+            activeRemnantByOwner.remove(ownerUuid);
+            return false;
+        }
+
+        UUID remnantOwner = getRemnantOwner(zombie);
+        if (!ownerUuid.equals(remnantOwner)) {
+            activeRemnantByOwner.remove(ownerUuid);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void indexOwnedRemnant(Zombie zombie) {
+        if (!zombie.isValid() || zombie.isDead()) {
+            return;
+        }
+        if (!zombie.getScoreboardTags().contains(REMNANT_TAG)) {
+            return;
+        }
+
+        UUID ownerUuid = getRemnantOwner(zombie);
+        if (ownerUuid != null) {
+            activeRemnantByOwner.put(ownerUuid, zombie.getUniqueId());
+        }
+    }
+
+    private UUID getRemnantOwner(Zombie zombie) {
+        String ownerUuidRaw = zombie.getPersistentDataContainer().get(remnantOwnerKey, PersistentDataType.STRING);
+        if (ownerUuidRaw == null || ownerUuidRaw.isBlank()) {
+            return null;
+        }
+
+        try {
+            return UUID.fromString(ownerUuidRaw);
+        } catch (IllegalArgumentException ex) {
+            return null;
         }
     }
 
