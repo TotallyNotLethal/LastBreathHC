@@ -88,3 +88,22 @@ npcConversations:
     oto_1:
       line: "{listener}, our strongholds will lock this region in iron."
       weight: 1.9
+
+eventConversations:
+  betrayal:
+    betrayal_1:
+      line: "{listener}, your oath is dust. I claim your warband now."
+      weight: 2.4
+    betrayal_2:
+      line: "No more brothers, {listener}. Only rivals."
+      weight: 1.6
+  blood_brother_avenge:
+    avenge_1:
+      line: "{listener}, you killed {fallen}. I take your head for it!"
+      weight: 2.8
+    avenge_2:
+      line: "For {fallen}! Your blood pays this debt, {listener}."
+      weight: 2.1
+    avenge_3:
+      line: "You ended {fallen}; now I end you."
+      weight: 1.7

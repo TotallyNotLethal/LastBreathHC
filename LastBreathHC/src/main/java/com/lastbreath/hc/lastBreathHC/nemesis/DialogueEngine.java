@@ -44,6 +44,7 @@ public class DialogueEngine {
     private final Map<UUID, Deque<String>> perPlayerRecent = new ConcurrentHashMap<>();
     private final Map<Tone, List<DialogueOption>> choiceOptions = new EnumMap<>(Tone.class);
     private final Map<String, List<NpcDialogueLine>> npcConversationOptions = new HashMap<>();
+    private final Map<String, List<NpcDialogueLine>> eventConversationOptions = new HashMap<>();
     private final Map<String, Long> npcConversationCooldowns = new ConcurrentHashMap<>();
 
     public DialogueEngine(LastBreathHC plugin) {
@@ -130,6 +131,27 @@ public class DialogueEngine {
         return true;
     }
 
+    public boolean emitEventConversation(String key, CaptainRecord speaker, CaptainRecord listener, String fallenName, Location location) {
+        if (!enabled || key == null || speaker == null || location == null || speaker.naming() == null) {
+            return false;
+        }
+        List<NpcDialogueLine> options = eventConversationOptions.getOrDefault(key.toLowerCase(Locale.ROOT), List.of());
+        if (options.isEmpty()) {
+            return false;
+        }
+        NpcDialogueLine chosen = weightedNpc(options);
+        if (chosen == null || chosen.line() == null || chosen.line().isBlank()) {
+            return false;
+        }
+
+        String rendered = chosen.line()
+                .replace("{speaker}", speaker.naming().displayName())
+                .replace("{listener}", listener != null && listener.naming() != null ? listener.naming().displayName() : "their foe")
+                .replace("{fallen}", fallenName == null || fallenName.isBlank() ? "their blood brother" : fallenName);
+        broadcastToNearby(location, "§8[§4Warband§8] §c" + speaker.naming().displayName() + "§7: " + rendered);
+        return true;
+    }
+
     public double audienceRangeMeters() {
         return audienceRangeMeters;
     }
@@ -188,6 +210,7 @@ public class DialogueEngine {
     private void loadDialogueChoices() {
         choiceOptions.clear();
         npcConversationOptions.clear();
+        eventConversationOptions.clear();
         for (Tone tone : Tone.values()) {
             choiceOptions.put(tone, new ArrayList<>());
         }
@@ -222,28 +245,33 @@ public class DialogueEngine {
             }
         }
 
-        ConfigurationSection conversations = yaml.getConfigurationSection("npcConversations");
-        if (conversations != null) {
-            for (String channel : conversations.getKeys(false)) {
-                ConfigurationSection channelSection = conversations.getConfigurationSection(channel);
-                if (channelSection == null) {
+        loadNpcSection(yaml.getConfigurationSection("npcConversations"), npcConversationOptions);
+        loadNpcSection(yaml.getConfigurationSection("eventConversations"), eventConversationOptions);
+    }
+
+    private void loadNpcSection(ConfigurationSection section, Map<String, List<NpcDialogueLine>> sink) {
+        if (section == null) {
+            return;
+        }
+        for (String channel : section.getKeys(false)) {
+            ConfigurationSection channelSection = section.getConfigurationSection(channel);
+            if (channelSection == null) {
+                continue;
+            }
+            List<NpcDialogueLine> lines = new ArrayList<>();
+            for (String key : channelSection.getKeys(false)) {
+                ConfigurationSection option = channelSection.getConfigurationSection(key);
+                if (option == null) {
                     continue;
                 }
-                List<NpcDialogueLine> lines = new ArrayList<>();
-                for (String key : channelSection.getKeys(false)) {
-                    ConfigurationSection option = channelSection.getConfigurationSection(key);
-                    if (option == null) {
-                        continue;
-                    }
-                    String line = option.getString("line", "").trim();
-                    double weight = Math.max(0.0, option.getDouble("weight", 1.0));
-                    if (!line.isBlank()) {
-                        lines.add(new NpcDialogueLine(line, weight));
-                    }
+                String line = option.getString("line", "").trim();
+                double weight = Math.max(0.0, option.getDouble("weight", 1.0));
+                if (!line.isBlank()) {
+                    lines.add(new NpcDialogueLine(line, weight));
                 }
-                if (!lines.isEmpty()) {
-                    npcConversationOptions.put(channel.toLowerCase(Locale.ROOT), lines);
-                }
+            }
+            if (!lines.isEmpty()) {
+                sink.put(channel.toLowerCase(Locale.ROOT), lines);
             }
         }
     }

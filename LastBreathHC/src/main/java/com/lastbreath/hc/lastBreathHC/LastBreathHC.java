@@ -271,15 +271,15 @@ public final class LastBreathHC extends JavaPlugin {
         nemesisRivalryDirector.start();
         promotionEvaluator = new PromotionEvaluator(this, captainRegistry, structureEventOrchestrator);
         promotionEvaluator.start();
-        loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService, structureEventOrchestrator);
         dialogueEngine = new DialogueEngine(this);
+        loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService, structureEventOrchestrator, dialogueEngine);
         nemesisWarbandCoordinator = new NemesisWarbandCoordinator(this, captainRegistry, captainEntityBinder, dialogueEngine);
         nemesisWarbandCoordinator.start();
         territoryPressureService = new TerritoryPressureService(this, structureEventOrchestrator);
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         structureRaidService = new StructureRaidService(this, captainRegistry, structureFootprintRepository, territoryPressureService, structureEventOrchestrator, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
-        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, captainTraitRegistry, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator, captainHabitatService), this);
+        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, captainTraitRegistry, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator, captainHabitatService, armyGraphService, dialogueEngine), this);
         getServer().getPluginManager().registerEvents(captainSpawner, this);
         getServer().getPluginManager().registerEvents(minionController, this);
         getServer().getPluginManager().registerEvents(nemesisCaptainListGUI, this);

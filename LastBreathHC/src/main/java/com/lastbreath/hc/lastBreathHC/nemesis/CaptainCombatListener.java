@@ -48,6 +48,8 @@ public class CaptainCombatListener implements Listener {
     private final CaptainStateMachine stateMachine;
     private final CaptainNameGenerator nameGenerator;
     private final CaptainHabitatService captainHabitatService;
+    private final ArmyGraphService armyGraphService;
+    private final DialogueEngine dialogueEngine;
 
     private final NamespacedKey captainUuidKey;
     private final NamespacedKey captainFlagKey;
@@ -72,7 +74,7 @@ public class CaptainCombatListener implements Listener {
     private final long defyDeathBonusXp;
     private final double defyDeathBonusRivalry;
 
-    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, CaptainTraitRegistry traitRegistry, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver, CaptainNameGenerator nameGenerator, CaptainHabitatService captainHabitatService) {
+    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, CaptainTraitRegistry traitRegistry, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver, CaptainNameGenerator nameGenerator, CaptainHabitatService captainHabitatService, ArmyGraphService armyGraphService, DialogueEngine dialogueEngine) {
         this.plugin = plugin;
         this.captainRegistry = captainRegistry;
         this.killerResolver = killerResolver;
@@ -85,6 +87,8 @@ public class CaptainCombatListener implements Listener {
         this.stateMachine = new CaptainStateMachine();
         this.nameGenerator = nameGenerator;
         this.captainHabitatService = captainHabitatService;
+        this.armyGraphService = armyGraphService;
+        this.dialogueEngine = dialogueEngine;
         this.captainUuidKey = new NamespacedKey(plugin, "nemesis_captain_uuid");
         this.captainFlagKey = new NamespacedKey(plugin, "nemesis_captain");
         this.worldBossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
@@ -445,6 +449,48 @@ public class CaptainCombatListener implements Listener {
         String winnerName = updatedWinner.naming() == null ? "Nemesis Captain" : updatedWinner.naming().displayName();
         String loserName = deadCaptain.naming() == null ? "Nemesis Captain" : deadCaptain.naming().displayName();
         plugin.getServer().broadcastMessage("§4☠ §6" + winnerName + " §7slays rival captain §c" + loserName + "§7.");
+
+        triggerBloodBrotherRevenge(deadCaptain, updatedWinner, deadCaptainEntity.getLocation());
+    }
+
+
+    private void triggerBloodBrotherRevenge(CaptainRecord fallenCaptain, CaptainRecord killerCaptain, Location location) {
+        if (fallenCaptain == null || killerCaptain == null || fallenCaptain.identity() == null || killerCaptain.identity() == null) {
+            return;
+        }
+        UUID avengerId = armyGraphService.linksOf(fallenCaptain.identity().captainId()).bloodBrotherOf();
+        if (avengerId == null || avengerId.equals(killerCaptain.identity().captainId())) {
+            return;
+        }
+        CaptainRecord avenger = captainRegistry.getByCaptainUuid(avengerId);
+        if (avenger == null || avenger.identity() == null) {
+            return;
+        }
+
+        LivingEntity avengerEntity = captainEntityBinder.resolveLiveKillerEntity(avenger);
+        LivingEntity killerEntity = captainEntityBinder.resolveLiveKillerEntity(killerCaptain);
+        if (!(avengerEntity instanceof Mob avengerMob) || killerEntity == null || !avengerEntity.isValid() || !killerEntity.isValid()) {
+            return;
+        }
+        if (!avengerEntity.getWorld().equals(killerEntity.getWorld())) {
+            return;
+        }
+
+        armyGraphService.addRivalry(avengerId, killerCaptain.identity().captainId());
+        CaptainRecord updatedAvenger = NemesisTelemetry.incrementCounter(avenger, "bloodBrotherAvenges", 1);
+        updatedAvenger = NemesisTelemetry.incrementCounter(updatedAvenger, "captainVsCaptainFights", 1);
+        captainRegistry.upsert(updatedAvenger);
+
+        avengerMob.setTarget(killerEntity);
+        if (killerEntity instanceof Mob killerMob) {
+            killerMob.setTarget(avengerEntity);
+        }
+
+        String avengerName = updatedAvenger.naming() == null ? "Nemesis Captain" : updatedAvenger.naming().displayName();
+        String fallenName = fallenCaptain.naming() == null ? "Nemesis Captain" : fallenCaptain.naming().displayName();
+        String killerName = killerCaptain.naming() == null ? "Nemesis Captain" : killerCaptain.naming().displayName();
+        plugin.getServer().broadcastMessage("§4⚔ §cBlood-brother vengeance: §6" + avengerName + " §7hunts §c" + killerName + " §7for §6" + fallenName + "§7.");
+        dialogueEngine.emitEventConversation("blood_brother_avenge", updatedAvenger, killerCaptain, fallenName, location);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
