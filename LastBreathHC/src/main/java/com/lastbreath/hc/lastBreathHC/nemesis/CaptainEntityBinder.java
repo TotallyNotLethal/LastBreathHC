@@ -19,8 +19,11 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Locale;
+import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -36,6 +39,7 @@ public class CaptainEntityBinder {
     private final double baseHealth;
     private final double healthPerLevel;
     private final double damagePerLevel;
+    private final NavigableMap<Integer, Integer> minTierByLevel = new TreeMap<>();
 
     public CaptainEntityBinder(LastBreathHC plugin, CaptainRegistry captainRegistry) {
         this.plugin = plugin;
@@ -45,6 +49,7 @@ public class CaptainEntityBinder {
         this.baseHealth = Math.max(1.0, plugin.getConfig().getDouble("nemesis.scaling.baseHealth", 30.0));
         this.healthPerLevel = Math.max(0.0, plugin.getConfig().getDouble("nemesis.scaling.healthPerLevel", 5.0));
         this.damagePerLevel = Math.max(0.0, plugin.getConfig().getDouble("nemesis.scaling.damagePerLevel", 1.0));
+        loadMinTierByLevelConfig();
     }
 
     public Optional<LivingEntity> spawnOrBind(CaptainRecord record) {
@@ -86,7 +91,7 @@ public class CaptainEntityBinder {
         if (live == null) {
             return false;
         }
-        bind(live, record);
+        bind(live, record, true);
         return true;
     }
 
@@ -110,6 +115,10 @@ public class CaptainEntityBinder {
     }
 
     public void bind(LivingEntity entity, CaptainRecord record) {
+        bind(entity, record, false);
+    }
+
+    private void bind(LivingEntity entity, CaptainRecord record, boolean preserveRuntimeState) {
         if (entity == null || record == null || record.identity() == null || record.identity().captainId() == null) {
             return;
         }
@@ -121,7 +130,7 @@ public class CaptainEntityBinder {
         entity.customName(net.kyori.adventure.text.Component.text(customName));
         entity.setCustomNameVisible(true);
 
-        applyAttributes(entity, record);
+        applyAttributes(entity, record, preserveRuntimeState);
         applyEquipmentRolls(entity, record);
         applyTraitHooks(entity, record);
         if (traitService != null) {
@@ -129,15 +138,16 @@ public class CaptainEntityBinder {
         }
     }
 
-    private void applyAttributes(LivingEntity entity, CaptainRecord record) {
+    private void applyAttributes(LivingEntity entity, CaptainRecord record, boolean preserveRuntimeState) {
         int level = Math.max(1, record.progression() == null ? 1 : record.progression().level());
         double tierMultiplier = tierMultiplier(record.progression() == null ? "COMMON" : record.progression().tier());
 
         double targetHealth = Math.max(1.0, (baseHealth + (level - 1) * healthPerLevel) * tierMultiplier);
         AttributeInstance maxHealthAttribute = entity.getAttribute(Attribute.MAX_HEALTH);
         if (maxHealthAttribute != null) {
+            double currentHealth = Math.max(0.0, entity.getHealth());
             maxHealthAttribute.setBaseValue(targetHealth);
-            entity.setHealth(Math.min(targetHealth, targetHealth));
+            entity.setHealth(preserveRuntimeState ? Math.min(currentHealth, targetHealth) : targetHealth);
         }
 
         AttributeInstance attackDamageAttribute = entity.getAttribute(Attribute.ATTACK_DAMAGE);
@@ -278,9 +288,14 @@ public class CaptainEntityBinder {
 
     private int rollTierForLevel(int level, int tierCount) {
         int targetTier = Math.min(tierCount - 1, Math.max(0, (level - 1) / 4));
+        int minTierFloor = resolveMinTierFloor(level, tierCount);
         int[] weights = new int[tierCount];
         int totalWeight = 0;
         for (int tier = 0; tier < tierCount; tier++) {
+            if (tier < minTierFloor) {
+                weights[tier] = 0;
+                continue;
+            }
             int distance = Math.abs(tier - targetTier);
             int weight = switch (distance) {
                 case 0 -> 55;
@@ -295,12 +310,46 @@ public class CaptainEntityBinder {
 
         int roll = ThreadLocalRandom.current().nextInt(totalWeight);
         for (int tier = 0; tier < tierCount; tier++) {
+            if (weights[tier] <= 0) {
+                continue;
+            }
             roll -= weights[tier];
             if (roll < 0) {
                 return tier;
             }
         }
-        return targetTier;
+        return Math.max(minTierFloor, targetTier);
+    }
+
+    private void loadMinTierByLevelConfig() {
+        minTierByLevel.clear();
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("nemesis.equipment.minTierByLevel");
+        if (section == null) {
+            return;
+        }
+
+        for (String key : section.getKeys(false)) {
+            try {
+                int levelFloor = Integer.parseInt(key);
+                int tierFloor = Math.max(0, section.getInt(key, 0));
+                minTierByLevel.put(levelFloor, tierFloor);
+            } catch (NumberFormatException ignored) {
+                // Ignore malformed config key.
+            }
+        }
+    }
+
+    private int resolveMinTierFloor(int level, int tierCount) {
+        if (minTierByLevel.isEmpty()) {
+            return 0;
+        }
+
+        Map.Entry<Integer, Integer> floorEntry = minTierByLevel.floorEntry(Math.max(1, level));
+        if (floorEntry == null) {
+            return 0;
+        }
+
+        return Math.min(tierCount - 1, Math.max(0, floorEntry.getValue()));
     }
 
     private void applyTraitHooks(LivingEntity entity, CaptainRecord record) {

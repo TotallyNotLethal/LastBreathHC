@@ -266,7 +266,10 @@ public class NemesisProgressionService {
                     s.brutality() + (level - oldLevel) * perLevelStat,
                     s.cunning() + (level - oldLevel) * perLevelStat
             );
-            registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), ns, new CaptainRecord.Progression(level, xp, record.progression().tier()), record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry()));
+            CaptainRecord.Progression updatedProgression = new CaptainRecord.Progression(level, xp, record.progression().tier());
+            CaptainRecord leveledRecord = record.copyCore(record.identity(), record.origin(), record.victims(), ns, updatedProgression, record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry());
+            CaptainRecord persisted = registry.upsert(leveledRecord);
+            binder.tryUpgradeInPlace(persisted);
             return new CaptainRecord.Progression(level, xp, record.progression().tier());
         }
         return new CaptainRecord.Progression(level, xp, record.progression().tier());
