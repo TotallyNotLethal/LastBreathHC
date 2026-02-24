@@ -155,7 +155,7 @@ public record CaptainRecord(
     public record Relationships(List<UUID> allies, List<UUID> rivals, UUID bodyguardOf, UUID bloodBrotherOf) {
     }
 
-    public record Memory(String lastDefeatCause, List<String> scars, List<String> humiliations, List<UUID> notablePlayers,
+    public record Memory(String lastDefeatCause, DefeatSignature defeatSignature, List<String> scars, List<String> humiliations, List<UUID> notablePlayers,
                          long callbackLinesSeed) {
     }
 

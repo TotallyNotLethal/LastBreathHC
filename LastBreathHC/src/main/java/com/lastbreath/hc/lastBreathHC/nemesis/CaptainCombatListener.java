@@ -140,7 +140,7 @@ public class CaptainCombatListener implements Listener {
                 .filter(living -> living.getLocation().distanceSquared(player.getLocation()) <= 48.0 * 48.0)
                 .toList();
         for (LivingEntity mob : nearbyAggressive) {
-            if (createCaptainFromEntity(mob, player.getUniqueId(), player, true)) {
+            if (createCaptainFromEntity(new KillerResolver.ResolvedKiller(mob.getUniqueId(), mob, KillerResolver.SourceType.DIRECT, null, DefeatSignature.ENVIRONMENT, java.time.Instant.now()), player.getUniqueId(), player, true)) {
                 return;
             }
         }
@@ -161,19 +161,20 @@ public class CaptainCombatListener implements Listener {
 
         boolean promoted;
         if (deathOutcome == DeathOutcomeResolver.DeathOutcome.DEATH_SOFT) {
-            promoted = createHighRankingCaptainFromDefyDeath(resolvedKiller.entity(), victim.getUniqueId(), victim, true);
+            promoted = createHighRankingCaptainFromDefyDeath(resolvedKiller, victim.getUniqueId(), victim, true);
             if (!promoted) {
                 plugin.getLogger().info("[Nemesis] Defy-death promotion skipped for " + victim.getName() + " due to anti-abuse constraints.");
             }
             return;
         }
 
-        createCaptainFromEntity(resolvedKiller.entity(), victim.getUniqueId(), victim, true);
+        createCaptainFromEntity(resolvedKiller, victim.getUniqueId(), victim, true);
     }
 
-    private boolean createHighRankingCaptainFromDefyDeath(LivingEntity killer, UUID victimUuid, Player victimPlayer, boolean enforcePlayerEventRadiusCap) {
+    private boolean createHighRankingCaptainFromDefyDeath(KillerResolver.ResolvedKiller resolvedKiller, UUID victimUuid, Player victimPlayer, boolean enforcePlayerEventRadiusCap) {
+        LivingEntity killer = resolvedKiller == null ? null : resolvedKiller.entity();
         if (!defyDeathPromotionEnabled) {
-            return createCaptainFromEntity(killer, victimUuid, victimPlayer, enforcePlayerEventRadiusCap);
+            return createCaptainFromEntity(resolvedKiller, victimUuid, victimPlayer, enforcePlayerEventRadiusCap);
         }
 
         if (!isEligibleKiller(killer)) {
@@ -188,7 +189,8 @@ public class CaptainCombatListener implements Listener {
         if (captainUuid != null) {
             CaptainRecord existing = captainRegistry.getByCaptainUuid(captainUuid);
             if (existing != null) {
-                CaptainRecord promoted = promoteExistingCaptainFromDefyDeath(existing, victimUuid);
+                CaptainRecord promoted = promoteExistingCaptainFromDefyDeath(existing, victimUuid, resolvedKiller);
+                maybeTauntDefyDeathReturn(victimPlayer, promoted);
                 captainRegistry.upsert(promoted);
                 captainEntityBinder.tryUpgradeInPlace(promoted);
                 return true;
@@ -200,7 +202,8 @@ public class CaptainCombatListener implements Listener {
             entityToCaptainId.put(killer.getUniqueId(), nearbyMatch.identity().captainId());
             stampCaptainPdc(killer, nearbyMatch.identity().captainId());
             captainEntityBinder.bind(killer, nearbyMatch);
-            CaptainRecord promoted = promoteExistingCaptainFromDefyDeath(nearbyMatch, victimUuid);
+            CaptainRecord promoted = promoteExistingCaptainFromDefyDeath(nearbyMatch, victimUuid, resolvedKiller);
+            maybeTauntDefyDeathReturn(victimPlayer, promoted);
             captainRegistry.upsert(promoted);
             captainEntityBinder.tryUpgradeInPlace(promoted);
             return true;
@@ -210,7 +213,7 @@ public class CaptainCombatListener implements Listener {
             return false;
         }
 
-        CaptainRecord created = createCaptainRecord(killer, victimUuid, true);
+        CaptainRecord created = createCaptainRecord(killer, victimUuid, true, resolvedKiller);
         entityToCaptainId.put(killer.getUniqueId(), created.identity().captainId());
         stampCaptainPdc(killer, created.identity().captainId());
         captainEntityBinder.bind(killer, created);
@@ -219,7 +222,8 @@ public class CaptainCombatListener implements Listener {
         return true;
     }
 
-    private boolean createCaptainFromEntity(LivingEntity killer, UUID victimUuid, Player victimPlayer, boolean enforcePlayerEventRadiusCap) {
+    private boolean createCaptainFromEntity(KillerResolver.ResolvedKiller resolvedKiller, UUID victimUuid, Player victimPlayer, boolean enforcePlayerEventRadiusCap) {
+        LivingEntity killer = resolvedKiller == null ? null : resolvedKiller.entity();
         if (!isEligibleKiller(killer)) {
             return false;
         }
@@ -232,7 +236,7 @@ public class CaptainCombatListener implements Listener {
         if (captainUuid != null) {
             CaptainRecord existing = captainRegistry.getByCaptainUuid(captainUuid);
             if (existing != null) {
-                updateExistingCaptain(existing, victimUuid, victimPlayer);
+                updateExistingCaptain(existing, victimUuid, victimPlayer, resolvedKiller);
                 return true;
             }
         }
@@ -242,7 +246,7 @@ public class CaptainCombatListener implements Listener {
             entityToCaptainId.put(killer.getUniqueId(), nearbyMatch.identity().captainId());
             stampCaptainPdc(killer, nearbyMatch.identity().captainId());
             captainEntityBinder.bind(killer, nearbyMatch);
-            updateExistingCaptain(nearbyMatch, victimUuid, victimPlayer);
+            updateExistingCaptain(nearbyMatch, victimUuid, victimPlayer, resolvedKiller);
             return true;
         }
 
@@ -250,7 +254,7 @@ public class CaptainCombatListener implements Listener {
             return false;
         }
 
-        CaptainRecord created = createCaptainRecord(killer, victimUuid, false);
+        CaptainRecord created = createCaptainRecord(killer, victimUuid, false, resolvedKiller);
         entityToCaptainId.put(killer.getUniqueId(), created.identity().captainId());
         stampCaptainPdc(killer, created.identity().captainId());
         captainEntityBinder.bind(killer, created);
@@ -274,8 +278,9 @@ public class CaptainCombatListener implements Listener {
         return nearbyCount > playerEventRadiusCap;
     }
 
-    private void updateExistingCaptain(CaptainRecord existing, UUID victimUuid, Player victimPlayer) {
+    private void updateExistingCaptain(CaptainRecord existing, UUID victimUuid, Player victimPlayer, KillerResolver.ResolvedKiller resolvedKiller) {
         CaptainRecord updated = progressionService.onPlayerKill(existing, victimUuid);
+        updated = withDefeatMemory(updated, resolvedKiller);
         captainRegistry.upsert(updated);
         captainEntityBinder.tryUpgradeInPlace(updated);
         Player nemesis = victimPlayer.getServer().getPlayer(updated.identity().nemesisOf());
@@ -503,7 +508,7 @@ public class CaptainCombatListener implements Listener {
         }
     }
 
-    private CaptainRecord createCaptainRecord(LivingEntity killer, UUID victimUuid, boolean elevatedDefyDeath) {
+    private CaptainRecord createCaptainRecord(LivingEntity killer, UUID victimUuid, boolean elevatedDefyDeath, KillerResolver.ResolvedKiller resolvedKiller) {
         long now = System.currentTimeMillis();
         UUID captainId = UUID.randomUUID();
         Location location = killer.getLocation();
@@ -564,8 +569,13 @@ public class CaptainCombatListener implements Listener {
                 plugin.getConfig().getDouble("nemesis.social.defaultConfidence", 0.0)
         );
         CaptainRecord.Relationships relationships = new CaptainRecord.Relationships(List.of(), List.of(), null, null);
+        String defaultCause = plugin.getConfig().getString("nemesis.memory.defaultLastDefeatCause", "");
+        DefeatSignature defaultSignature = DefeatSignature.fromString(plugin.getConfig().getString("nemesis.memory.defaultDefeatSignature", "ENVIRONMENT"), DefeatSignature.ENVIRONMENT);
+        String defeatCause = resolvedKiller == null || resolvedKiller.damageCause() == null ? defaultCause : resolvedKiller.damageCause().name();
+        DefeatSignature defeatSignature = resolvedKiller == null ? defaultSignature : resolvedKiller.defeatSignature();
         CaptainRecord.Memory memory = new CaptainRecord.Memory(
-                plugin.getConfig().getString("nemesis.memory.defaultLastDefeatCause", ""),
+                defeatCause,
+                defeatSignature,
                 List.of(),
                 List.of(),
                 List.of(),
@@ -615,7 +625,7 @@ public class CaptainCombatListener implements Listener {
         return Math.min(raw, 1.0);
     }
 
-    private CaptainRecord promoteExistingCaptainFromDefyDeath(CaptainRecord existing, UUID victimUuid) {
+    private CaptainRecord promoteExistingCaptainFromDefyDeath(CaptainRecord existing, UUID victimUuid, KillerResolver.ResolvedKiller resolvedKiller) {
         long now = System.currentTimeMillis();
         List<UUID> victims = new ArrayList<>(existing.victims().playerVictims());
         if (!victims.contains(victimUuid)) {
@@ -648,7 +658,7 @@ public class CaptainCombatListener implements Listener {
                 counters
         );
 
-        return existing.copyCore(
+        CaptainRecord promoted = existing.copyCore(
                 existing.identity(),
                 existing.origin(),
                 updatedVictims,
@@ -660,6 +670,102 @@ public class CaptainCombatListener implements Listener {
                 existing.state(),
                 telemetry
         );
+        return applyDefyDeathMutation(withDefeatMemory(promoted, resolvedKiller), resolvedKiller);
+    }
+
+    private CaptainRecord withDefeatMemory(CaptainRecord record, KillerResolver.ResolvedKiller resolvedKiller) {
+        CaptainRecord.Memory previous = record.memory().orElseGet(() -> new CaptainRecord.Memory("", DefeatSignature.ENVIRONMENT, List.of(), List.of(), List.of(), 0L));
+        String cause = resolvedKiller == null || resolvedKiller.damageCause() == null ? previous.lastDefeatCause() : resolvedKiller.damageCause().name();
+        DefeatSignature signature = resolvedKiller == null ? previous.defeatSignature() : resolvedKiller.defeatSignature();
+        CaptainRecord.Memory memory = new CaptainRecord.Memory(cause, signature, previous.scars(), previous.humiliations(), previous.notablePlayers(), previous.callbackLinesSeed());
+        return new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry(), record.political().orElse(null), record.social().orElse(null), record.relationships().orElse(null), memory, record.persona().orElse(null));
+    }
+
+    private CaptainRecord applyDefyDeathMutation(CaptainRecord record, KillerResolver.ResolvedKiller resolvedKiller) {
+        CaptainRecord.Memory memory = record.memory().orElseGet(() -> new CaptainRecord.Memory("", DefeatSignature.ENVIRONMENT, List.of(), List.of(), List.of(), 0L));
+        int repeatWindow = Math.max(1, plugin.getConfig().getInt("nemesis.memory.scarRepeatWindow", 3));
+        List<String> history = new ArrayList<>(memory.humiliations());
+        List<String> recent = history.subList(Math.max(0, history.size() - repeatWindow), history.size());
+
+        List<String> paths = new ArrayList<>(List.of("SCAR", "TRAIT", "EPITHET", "RETURN_LINE"));
+        paths.removeIf(path -> recent.contains("mutation:" + path));
+        if (paths.isEmpty()) {
+            paths = new ArrayList<>(List.of("SCAR", "TRAIT", "EPITHET", "RETURN_LINE"));
+        }
+
+        int index = Math.floorMod((int) (record.identity().captainId().getLeastSignificantBits() + history.size()), paths.size());
+        String selected = paths.get(index);
+        history.add("mutation:" + selected);
+
+        List<String> scars = new ArrayList<>(memory.scars());
+        CaptainRecord.Traits traits = record.traits();
+        CaptainRecord.Naming naming = record.naming();
+
+        if ("SCAR".equals(selected)) {
+            String scar = switch (memory.defeatSignature()) {
+                case FIRE -> "charred hide";
+                case EXPLOSION -> "blast-rent armor";
+                case PROJECTILE -> "arrow-pierced jaw";
+                case MELEE -> "split brow";
+                case FALL -> "cracked spine";
+                case MAGIC -> "hex-burned skin";
+                case ENVIRONMENT -> "withered scars";
+            };
+            if (!scars.contains(scar)) {
+                scars.add(scar);
+            }
+        } else if ("TRAIT".equals(selected)) {
+            List<String> weaknesses = new ArrayList<>(traits.weaknesses());
+            List<String> immunities = new ArrayList<>(traits.immunities());
+            List<String> behavior = new ArrayList<>(traits.traits());
+            String mappedWeakness = switch (memory.defeatSignature()) {
+                case FIRE -> "weakness_fire_vulnerable";
+                case PROJECTILE -> "weakness_fragile";
+                case MAGIC -> "weakness_holy_water";
+                case FALL, EXPLOSION, MELEE, ENVIRONMENT -> "weakness_slow_recovery";
+            };
+            String mappedImmunity = switch (memory.defeatSignature()) {
+                case FIRE -> "immunity_fireproof";
+                case PROJECTILE -> "immunity_projectile_guard";
+                default -> "immunity_knockback";
+            };
+            String behaviorTrait = "personality_predator";
+            if (!weaknesses.contains(mappedWeakness)) {
+                weaknesses.add(mappedWeakness);
+            } else if (!immunities.contains(mappedImmunity)) {
+                immunities.add(mappedImmunity);
+            } else if (!behavior.contains(behaviorTrait)) {
+                behavior.add(behaviorTrait);
+            }
+            traits = new CaptainRecord.Traits(behavior, weaknesses, immunities);
+        } else if ("EPITHET".equals(selected)) {
+            String epithet = switch (memory.defeatSignature()) {
+                case FIRE -> "the Cinder-Returned";
+                case EXPLOSION -> "the Blastborn";
+                case PROJECTILE -> "the Arrow-Bitten";
+                case MELEE -> "the Split-Brow";
+                case FALL -> "the Stone-Broken";
+                case MAGIC -> "the Hex-Scarred";
+                case ENVIRONMENT -> "the Gravebound";
+            };
+            naming = new CaptainRecord.Naming(naming.displayName(), epithet, naming.title(), naming.aliasSeed());
+        }
+
+        CaptainRecord.Memory updatedMemory = new CaptainRecord.Memory(memory.lastDefeatCause(), memory.defeatSignature(), scars, history, memory.notablePlayers(), memory.callbackLinesSeed());
+        return new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), naming, traits, record.minionPack(), record.state(), record.telemetry(), record.political().orElse(null), record.social().orElse(null), record.relationships().orElse(null), updatedMemory, record.persona().orElse(null));
+    }
+
+    private void maybeTauntDefyDeathReturn(Player victimPlayer, CaptainRecord promoted) {
+        if (victimPlayer == null || promoted == null) {
+            return;
+        }
+        Player nemesis = victimPlayer.getServer().getPlayer(promoted.identity().nemesisOf());
+        if (nemesis == null) {
+            return;
+        }
+        CaptainRecord.Memory memory = promoted.memory().orElse(null);
+        String cause = memory == null || memory.lastDefeatCause().isBlank() ? "death itself" : memory.lastDefeatCause().toLowerCase(Locale.ROOT).replace('_', ' ');
+        nemesisUI.taunt(nemesis, promoted, "I crawled back from " + cause + ".");
     }
 
     private String bumpTier(String currentTier, String minimumTier) {

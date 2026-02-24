@@ -683,6 +683,7 @@ nemesis:
   memory:
     enabled: true
     defaultLastDefeatCause: ""
+    defaultDefeatSignature: ENVIRONMENT
     defaultCallbackLinesSeed: 0
     scarRepeatWindow: 3
   persona:
