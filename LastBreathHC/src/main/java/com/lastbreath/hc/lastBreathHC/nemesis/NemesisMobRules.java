@@ -50,6 +50,9 @@ public final class NemesisMobRules {
                 || entity.getScoreboardTags().contains(WorldBossConstants.WORLD_BOSS_MINION_TAG)) {
             return true;
         }
+        if (entity.customName() != null) {
+            return true;
+        }
         return worldBossTypeKey != null && entity.getPersistentDataContainer().has(worldBossTypeKey, PersistentDataType.STRING);
     }
 
