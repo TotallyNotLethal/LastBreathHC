@@ -287,6 +287,7 @@ public class CaptainSerializer {
 
         CaptainRecord.Memory memory = record.memory().orElseGet(this::defaultMemory);
         config.set(base + ".memory.lastDefeatCause", memory.lastDefeatCause());
+        config.set(base + ".memory.defeatSignature", memory.defeatSignature().name());
         config.set(base + ".memory.scars", memory.scars());
         config.set(base + ".memory.humiliations", memory.humiliations());
         config.set(base + ".memory.notablePlayers", stringifyUuidList(memory.notablePlayers()));
@@ -401,6 +402,7 @@ public class CaptainSerializer {
         CaptainRecord.Memory defaults = defaultMemory();
         return new CaptainRecord.Memory(
                 row.getString("memory.lastDefeatCause", defaults.lastDefeatCause()),
+                DefeatSignature.fromString(row.getString("memory.defeatSignature"), defaults.defeatSignature()),
                 row.getStringList("memory.scars"),
                 row.getStringList("memory.humiliations"),
                 parseUuidList(row.getStringList("memory.notablePlayers")),
@@ -446,6 +448,7 @@ public class CaptainSerializer {
     private CaptainRecord.Memory defaultMemory() {
         return new CaptainRecord.Memory(
                 plugin.getConfig().getString("nemesis.memory.defaultLastDefeatCause", ""),
+                DefeatSignature.fromString(plugin.getConfig().getString("nemesis.memory.defaultDefeatSignature", "ENVIRONMENT"), DefeatSignature.ENVIRONMENT),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -627,6 +630,9 @@ public class CaptainSerializer {
             if (!row.contains("memory.lastDefeatCause")) {
                 row.set("memory.lastDefeatCause", defaultMemory.lastDefeatCause());
             }
+            if (!row.contains("memory.defeatSignature")) {
+                row.set("memory.defeatSignature", defaultMemory.defeatSignature().name());
+            }
             if (!row.contains("memory.scars")) {
                 row.set("memory.scars", List.of());
             }
@@ -733,6 +739,7 @@ public class CaptainSerializer {
         known.add("relationships.bodyguardOf");
         known.add("relationships.bloodBrotherOf");
         known.add("memory.lastDefeatCause");
+        known.add("memory.defeatSignature");
         known.add("memory.scars");
         known.add("memory.humiliations");
         known.add("memory.notablePlayers");

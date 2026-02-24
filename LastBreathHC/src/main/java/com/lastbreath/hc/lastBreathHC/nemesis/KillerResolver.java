@@ -108,6 +108,7 @@ public class KillerResolver implements Listener {
                     directAttribution.damager(),
                     directAttribution.sourceType(),
                     directAttribution.damageCause(),
+                    directAttribution.defeatSignature(),
                     directAttribution.timestamp()
             );
         }
@@ -122,7 +123,7 @@ public class KillerResolver implements Listener {
             return null;
         }
 
-        return new ResolvedKiller(best.damager().getUniqueId(), best.damager(), best.sourceType(), best.damageCause(), best.timestamp());
+        return new ResolvedKiller(best.damager().getUniqueId(), best.damager(), best.sourceType(), best.damageCause(), best.defeatSignature(), best.timestamp());
     }
 
     private AttributionSnapshot toSnapshot(DamageAttribution attribution) {
@@ -186,7 +187,7 @@ public class KillerResolver implements Listener {
             return null;
         }
 
-        return new DamageAttribution(livingEntity, sourceType, damageCause, Instant.now());
+        return new DamageAttribution(livingEntity, sourceType, damageCause, DefeatSignature.fromDamage(damageCause, sourceType), Instant.now());
     }
 
     private void recordAttribution(Player player, DamageAttribution attribution) {
@@ -256,9 +257,9 @@ public class KillerResolver implements Listener {
         };
     }
 
-    private record DamageAttribution(LivingEntity damager, SourceType sourceType, EntityDamageEvent.DamageCause damageCause, Instant timestamp) {
+    private record DamageAttribution(LivingEntity damager, SourceType sourceType, EntityDamageEvent.DamageCause damageCause, DefeatSignature defeatSignature, Instant timestamp) {
         private DamageAttribution withSourceType(SourceType newSourceType) {
-            return new DamageAttribution(damager, newSourceType, damageCause, Instant.now());
+            return new DamageAttribution(damager, newSourceType, damageCause, DefeatSignature.fromDamage(damageCause, newSourceType), Instant.now());
         }
     }
 
@@ -268,7 +269,7 @@ public class KillerResolver implements Listener {
     public record ResolutionDebugSnapshot(ResolvedKiller resolvedKiller, List<AttributionSnapshot> attributionChain) {
     }
 
-    public record ResolvedKiller(UUID entityUuid, LivingEntity entity, SourceType sourceType, EntityDamageEvent.DamageCause damageCause, Instant timestamp) {
+    public record ResolvedKiller(UUID entityUuid, LivingEntity entity, SourceType sourceType, EntityDamageEvent.DamageCause damageCause, DefeatSignature defeatSignature, Instant timestamp) {
     }
 
     public record AttributionTimeouts(Duration projectile, Duration knockback, Duration ambient) {
