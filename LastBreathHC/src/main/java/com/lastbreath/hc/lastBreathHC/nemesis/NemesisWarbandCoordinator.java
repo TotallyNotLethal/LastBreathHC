@@ -14,12 +14,18 @@ public final class NemesisWarbandCoordinator {
     private final LastBreathHC plugin;
     private final CaptainRegistry registry;
     private final CaptainEntityBinder binder;
+    private final DialogueEngine dialogueEngine;
+    private final double conversationRangeMeters;
+    private final double conversationChancePerPair;
     private BukkitTask task;
 
-    public NemesisWarbandCoordinator(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder) {
+    public NemesisWarbandCoordinator(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, DialogueEngine dialogueEngine) {
         this.plugin = plugin;
         this.registry = registry;
         this.binder = binder;
+        this.dialogueEngine = dialogueEngine;
+        this.conversationRangeMeters = Math.max(4.0, plugin.getConfig().getDouble("nemesis.warband.conversationRangeMeters", 18.0));
+        this.conversationChancePerPair = Math.max(0.0, Math.min(1.0, plugin.getConfig().getDouble("nemesis.warband.conversationChancePerPair", 0.2)));
     }
 
     public void start() {
@@ -67,8 +73,19 @@ public final class NemesisWarbandCoordinator {
                     Location followOffset = leader.getLocation().clone().add((Math.random() - 0.5) * 5.0, 0.0, (Math.random() - 0.5) * 5.0);
                     mob.getPathfinder().moveTo(followOffset);
                 }
+                maybeRunConversation(leaderRecord, memberRecord, leader.getLocation(), distanceSq);
             }
         }
+    }
+
+    private void maybeRunConversation(CaptainRecord leaderRecord, CaptainRecord memberRecord, Location origin, double distanceSq) {
+        if (Math.random() > conversationChancePerPair) {
+            return;
+        }
+        if (distanceSq > conversationRangeMeters * conversationRangeMeters) {
+            return;
+        }
+        dialogueEngine.emitNpcConversation(leaderRecord, memberRecord, origin);
     }
 
     private LivingEntity resolve(CaptainRecord record) {

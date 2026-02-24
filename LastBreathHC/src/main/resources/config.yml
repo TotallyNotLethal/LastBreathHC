@@ -1659,9 +1659,12 @@ nemesis:
     cooldownMs: 6000
     recentSuppression: 3
     audienceRangeMeters: 50.0
+    npcConversationCooldownMs: 15000
 
   warband:
     tickPeriodTicks: 40
+    conversationRangeMeters: 18.0
+    conversationChancePerPair: 0.2
 
   territoryPressure:
     enabled: true

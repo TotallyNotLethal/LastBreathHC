@@ -273,7 +273,7 @@ public final class LastBreathHC extends JavaPlugin {
         promotionEvaluator.start();
         loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService, structureEventOrchestrator);
         dialogueEngine = new DialogueEngine(this);
-        nemesisWarbandCoordinator = new NemesisWarbandCoordinator(this, captainRegistry, captainEntityBinder);
+        nemesisWarbandCoordinator = new NemesisWarbandCoordinator(this, captainRegistry, captainEntityBinder, dialogueEngine);
         nemesisWarbandCoordinator.start();
         territoryPressureService = new TerritoryPressureService(this, structureEventOrchestrator);
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);

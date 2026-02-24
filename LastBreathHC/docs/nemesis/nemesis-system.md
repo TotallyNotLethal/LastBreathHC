@@ -174,3 +174,5 @@ Each option includes:
 - `weight` for weighted random selection.
 
 Players can force a specific dialogue tone with `/nemesis dialogue <captainId> <positive|neutral|negative>`. The selected line is broadcast to players in ~50m, and the resolved action updates nemesis telemetry and rivalry pressure hooks.
+
+Warband members now also speak to each other (captain↔captain, captain↔warchief, captain↔overlord, warchief↔warchief, warchief↔overlord, overlord↔overlord) using weighted `npcConversations` entries from the same dialogue file, with nearby player-visible broadcasts.
