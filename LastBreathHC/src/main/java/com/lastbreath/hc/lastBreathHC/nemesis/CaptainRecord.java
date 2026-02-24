@@ -80,8 +80,40 @@ public record CaptainRecord(
             State state,
             Telemetry telemetry
     ) {
-        return new CaptainRecord(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state,
+        return withDefaultSections(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state,
                 telemetry);
+    }
+
+    public static CaptainRecord withDefaultSections(
+            Identity identity,
+            Origin origin,
+            Victims victims,
+            NemesisScores nemesisScores,
+            Progression progression,
+            Naming naming,
+            Traits traits,
+            MinionPack minionPack,
+            State state,
+            Telemetry telemetry
+    ) {
+        return new CaptainRecord(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state,
+                telemetry, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+    public CaptainRecord copyCore(
+            Identity identity,
+            Origin origin,
+            Victims victims,
+            NemesisScores nemesisScores,
+            Progression progression,
+            Naming naming,
+            Traits traits,
+            MinionPack minionPack,
+            State state,
+            Telemetry telemetry
+    ) {
+        return new CaptainRecord(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state,
+                telemetry, political, social, relationships, memory, persona);
     }
 
     public record Identity(UUID captainId, UUID nemesisOf, long createdAtEpochMillis) {

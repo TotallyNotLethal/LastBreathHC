@@ -58,7 +58,7 @@ public class NemesisRewardService implements Listener {
         Map<String, Long> counters = new HashMap<>(record.telemetry().counters());
         counters.put("rewardsGranted", counters.getOrDefault("rewardsGranted", 0L) + 1L);
         CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(now, now, record.telemetry().encounters(), counters);
-        registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), record.state(), telemetry));
+        registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), record.state(), telemetry));
     }
 
     private ItemStack buildNemesisToken() {

@@ -432,7 +432,7 @@ public class CaptainEntityBinder {
                 null
         );
 
-        captainRegistry.upsert(new CaptainRecord(
+        captainRegistry.upsert(record.copyCore(
                 record.identity(),
                 record.origin(),
                 record.victims(),

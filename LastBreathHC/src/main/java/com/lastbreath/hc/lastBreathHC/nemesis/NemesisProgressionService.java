@@ -78,7 +78,7 @@ public class NemesisProgressionService {
         }
         CaptainRecord.Victims updatedVictims = new CaptainRecord.Victims(victims, record.victims().totalVictimCount() + 1, now);
         CaptainRecord.Telemetry telemetry = withCounter(record, "playerKills", 1L, now);
-        CaptainRecord updated = new CaptainRecord(record.identity(), record.origin(), updatedVictims, scores, progression, record.naming(), record.traits(), record.minionPack(), record.state(), telemetry);
+        CaptainRecord updated = record.copyCore(record.identity(), record.origin(), updatedVictims, scores, progression, record.naming(), record.traits(), record.minionPack(), record.state(), telemetry);
         combatTrackedAt.put(record.identity().captainId(), now);
         return updated;
     }
@@ -92,7 +92,7 @@ public class NemesisProgressionService {
         CaptainRecord.Progression progression = applyXp(record, xpPerPlayerInteraction);
         CaptainRecord.Telemetry telemetry = withCounter(record, "playerInteractions", 1L, now);
         CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
-        registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
+        registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
         combatTrackedAt.put(record.identity().captainId(), now);
     }
 
@@ -105,7 +105,7 @@ public class NemesisProgressionService {
         CaptainRecord.Progression progression = applyXp(record, xpPerCaptainSkirmish);
         CaptainRecord.Telemetry telemetry = withCounter(record, "captainSkirmishes", 1L, now);
         CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
-        registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
+        registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
         combatTrackedAt.put(record.identity().captainId(), now);
     }
 
@@ -123,7 +123,7 @@ public class NemesisProgressionService {
                 record.nemesisScores().cunning()
         );
         CaptainRecord.Telemetry telemetry = withCounter(record, "minionDeaths", 1L, now);
-        registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), scores, progression, record.naming(), record.traits(), record.minionPack(), record.state(), telemetry));
+        registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), scores, progression, record.naming(), record.traits(), record.minionPack(), record.state(), telemetry));
     }
 
     public void onCaptainDamaged(LivingEntity captain, CaptainRecord record, EntityDamageByEntityEvent event) {
@@ -152,7 +152,7 @@ public class NemesisProgressionService {
         CaptainRecord.State state = stateMachine.onEscapeOrDespawn(now, cooldownUntil);
         CaptainRecord.Telemetry telemetry = withCounter(record, "escapes", 1L, now);
 
-        registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), traits, record.minionPack(), state, telemetry));
+        registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), traits, record.minionPack(), state, telemetry));
         captain.getWorld().spawnParticle(Particle.SMOKE, captain.getLocation(), 50, 0.6, 0.6, 0.6, 0.02);
         captain.remove();
     }
@@ -171,7 +171,7 @@ public class NemesisProgressionService {
             CaptainRecord.Progression progression = applyXp(record, xpPerCombatTick);
             CaptainRecord.Telemetry telemetry = withCounter(record, "combatTicks", 1L, now);
             CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
-            registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
+            registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
         }
 
         if (xpPerActiveTick <= 0L) {
@@ -184,7 +184,7 @@ public class NemesisProgressionService {
             CaptainRecord.Progression progression = applyXp(record, xpPerActiveTick);
             CaptainRecord.Telemetry telemetry = withCounter(record, "activeTicks", 1L, now);
             CaptainRecord.Traits evolvedTraits = maybeGrantProgressionStrength(record, progression.level());
-            registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
+            registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), progression, maybeUnlockTrait(record, progression.level()), evolvedTraits, record.minionPack(), record.state(), telemetry));
         }
     }
 
@@ -214,7 +214,7 @@ public class NemesisProgressionService {
         );
         CaptainRecord.Traits boostedTraits = maybeGrantProgressionStrength(winner, progression.level());
         CaptainRecord.Telemetry telemetry = withCounter(winner, "captainVictories", 1L, now);
-        return new CaptainRecord(winner.identity(), winner.origin(), updatedVictims, updatedScores, progression, maybeUnlockTrait(winner, progression.level()), boostedTraits, winner.minionPack(), winner.state(), telemetry);
+        return winner.copyCore(winner.identity(), winner.origin(), updatedVictims, updatedScores, progression, maybeUnlockTrait(winner, progression.level()), boostedTraits, winner.minionPack(), winner.state(), telemetry);
     }
 
     private CaptainRecord.Traits maybeGrantProgressionStrength(CaptainRecord record, int level) {
@@ -259,7 +259,7 @@ public class NemesisProgressionService {
                     s.brutality() + (level - oldLevel) * perLevelStat,
                     s.cunning() + (level - oldLevel) * perLevelStat
             );
-            registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), ns, new CaptainRecord.Progression(level, xp, record.progression().tier()), record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry()));
+            registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), ns, new CaptainRecord.Progression(level, xp, record.progression().tier()), record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry()));
             return new CaptainRecord.Progression(level, xp, record.progression().tier());
         }
         return new CaptainRecord.Progression(level, xp, record.progression().tier());

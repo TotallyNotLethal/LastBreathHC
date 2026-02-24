@@ -226,7 +226,7 @@ public class MinionController implements Listener {
         CaptainRecord record = captainRegistry.getByCaptainUuid(captainId);
         if (record != null) {
             CaptainRecord.State deadState = stateMachine.onKilled(System.currentTimeMillis());
-            captainRegistry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), deadState, record.telemetry()));
+            captainRegistry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), deadState, record.telemetry()));
         }
         Set<UUID> minions = new HashSet<>(captainToMinions.getOrDefault(captainId, Set.of()));
         if (minions.isEmpty()) {

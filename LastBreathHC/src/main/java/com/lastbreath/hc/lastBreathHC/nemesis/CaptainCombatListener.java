@@ -405,7 +405,7 @@ public class CaptainCombatListener implements Listener {
         }
 
         CaptainRecord.State deadState = stateMachine.onKilled(System.currentTimeMillis());
-        captainRegistry.upsert(new CaptainRecord(
+        captainRegistry.upsert(deadCaptain.copyCore(
                 deadCaptain.identity(),
                 deadCaptain.origin(),
                 deadCaptain.victims(),
@@ -549,7 +549,7 @@ public class CaptainCombatListener implements Listener {
         }
         CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(now, now, 1, counters);
 
-        return new CaptainRecord(identity, origin, victims, scores, progression, naming, traits, minionPack, state, telemetry);
+        return CaptainRecord.withDefaultSections(identity, origin, victims, scores, progression, naming, traits, minionPack, state, telemetry);
     }
 
     private void stampCaptainPdc(Entity entity, UUID captainUuid) {
@@ -618,7 +618,7 @@ public class CaptainCombatListener implements Listener {
                 counters
         );
 
-        return new CaptainRecord(
+        return existing.copyCore(
                 existing.identity(),
                 existing.origin(),
                 updatedVictims,

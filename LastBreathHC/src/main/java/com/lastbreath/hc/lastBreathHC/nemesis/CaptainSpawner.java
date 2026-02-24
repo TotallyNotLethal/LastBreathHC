@@ -320,7 +320,7 @@ public class CaptainSpawner implements Listener {
         counters.put("spawns", 1L);
         counters.put("wildPromotions", 1L);
         CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(now, now, 1, counters);
-        CaptainRecord created = new CaptainRecord(identity, origin, victims, scores, progression, naming, traits, minionPack, state, telemetry);
+        CaptainRecord created = CaptainRecord.withDefaultSections(identity, origin, victims, scores, progression, naming, traits, minionPack, state, telemetry);
 
         mob.getPersistentDataContainer().set(binder.getCaptainIdKey(), org.bukkit.persistence.PersistentDataType.STRING, captainId.toString());
         binder.bind(mob, created);
@@ -364,7 +364,7 @@ public class CaptainSpawner implements Listener {
             entity.remove();
         }
         CaptainRecord.State retired = stateMachine.onRetire(System.currentTimeMillis());
-        registry.upsert(new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), retired, record.telemetry()));
+        registry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), retired, record.telemetry()));
         return true;
     }
 
@@ -511,7 +511,7 @@ public class CaptainSpawner implements Listener {
                 ? new CaptainRecord.Telemetry(now, now, 1, Map.of())
                 : new CaptainRecord.Telemetry(now, now, record.telemetry().encounters() + 1, record.telemetry().counters());
 
-        return new CaptainRecord(
+        return record.copyCore(
                 record.identity(),
                 updatedOrigin,
                 record.victims(),
@@ -526,7 +526,7 @@ public class CaptainSpawner implements Listener {
     }
 
     private CaptainRecord withState(CaptainRecord record, CaptainRecord.State state) {
-        return new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), state, record.telemetry());
+        return record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), state, record.telemetry());
     }
 
     private CaptainRecord withRuntimeEntity(CaptainRecord record, UUID runtimeEntityUuid) {
