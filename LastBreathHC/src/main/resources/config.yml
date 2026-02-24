@@ -639,6 +639,11 @@ nemesis:
       legendary: 2.0
   equipment:
     rollChance: 0.15
+    minTierByLevel:
+      "1": 0
+      "8": 1
+      "16": 2
+      "24": 3
   rewards:
     playerCooldownMs: 120000
     bonusChance: 0.1
