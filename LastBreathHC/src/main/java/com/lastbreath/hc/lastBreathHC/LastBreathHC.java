@@ -234,7 +234,7 @@ public final class LastBreathHC extends JavaPlugin {
         captainEntityBinder = new CaptainEntityBinder(this, captainRegistry);
         captainTraitService = new CaptainTraitService(captainEntityBinder, captainTraitRegistry);
         captainEntityBinder.setTraitService(captainTraitService);
-        nemesisProgressionService = new NemesisProgressionService(this, captainRegistry, captainEntityBinder);
+        nemesisProgressionService = new NemesisProgressionService(this, captainRegistry, captainEntityBinder, captainTraitRegistry);
         nemesisProgressionService.start();
         captainSpawner = new CaptainSpawner(this, captainRegistry, captainEntityBinder, new CaptainSpawner.NoOpProtectedRegionChecker(), captainNameGenerator);
         captainSpawner.start();
@@ -253,7 +253,7 @@ public final class LastBreathHC extends JavaPlugin {
         territoryPressureService = new TerritoryPressureService(this);
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
-        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator), this);
+        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, captainTraitRegistry, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator), this);
         getServer().getPluginManager().registerEvents(captainSpawner, this);
         getServer().getPluginManager().registerEvents(minionController, this);
         getServer().getPluginManager().registerEvents(nemesisCaptainListGUI, this);

@@ -41,6 +41,7 @@ public class CaptainCombatListener implements Listener {
     private final KillerResolver killerResolver;
     private final CaptainEntityBinder captainEntityBinder;
     private final CaptainTraitService traitService;
+    private final CaptainTraitRegistry traitRegistry;
     private final NemesisUI nemesisUI;
     private final NemesisProgressionService progressionService;
     private final DeathOutcomeResolver deathOutcomeResolver;
@@ -70,12 +71,13 @@ public class CaptainCombatListener implements Listener {
     private final long defyDeathBonusXp;
     private final double defyDeathBonusRivalry;
 
-    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver, CaptainNameGenerator nameGenerator) {
+    public CaptainCombatListener(LastBreathHC plugin, CaptainRegistry captainRegistry, KillerResolver killerResolver, CaptainEntityBinder captainEntityBinder, CaptainTraitService traitService, CaptainTraitRegistry traitRegistry, NemesisUI nemesisUI, NemesisProgressionService progressionService, DeathOutcomeResolver deathOutcomeResolver, CaptainNameGenerator nameGenerator) {
         this.plugin = plugin;
         this.captainRegistry = captainRegistry;
         this.killerResolver = killerResolver;
         this.captainEntityBinder = captainEntityBinder;
         this.traitService = traitService;
+        this.traitRegistry = traitRegistry;
         this.nemesisUI = nemesisUI;
         this.progressionService = progressionService;
         this.deathOutcomeResolver = deathOutcomeResolver;
@@ -715,9 +717,6 @@ public class CaptainCombatListener implements Listener {
                 scars.add(scar);
             }
         } else if ("TRAIT".equals(selected)) {
-            List<String> weaknesses = new ArrayList<>(traits.weaknesses());
-            List<String> immunities = new ArrayList<>(traits.immunities());
-            List<String> behavior = new ArrayList<>(traits.traits());
             String mappedWeakness = switch (memory.defeatSignature()) {
                 case FIRE -> "weakness_fire_vulnerable";
                 case PROJECTILE -> "weakness_fragile";
@@ -730,14 +729,18 @@ public class CaptainCombatListener implements Listener {
                 default -> "immunity_knockback";
             };
             String behaviorTrait = "personality_predator";
-            if (!weaknesses.contains(mappedWeakness)) {
-                weaknesses.add(mappedWeakness);
-            } else if (!immunities.contains(mappedImmunity)) {
-                immunities.add(mappedImmunity);
-            } else if (!behavior.contains(behaviorTrait)) {
-                behavior.add(behaviorTrait);
+
+            CaptainRecord.Traits withWeakness = traitRegistry.mergeTrait(traits, mappedWeakness, false);
+            if (!withWeakness.equals(traits)) {
+                traits = withWeakness;
+            } else {
+                CaptainRecord.Traits withImmunity = traitRegistry.mergeTrait(traits, mappedImmunity, true);
+                if (!withImmunity.equals(traits)) {
+                    traits = withImmunity;
+                } else {
+                    traits = traitRegistry.mergeTrait(traits, behaviorTrait, true);
+                }
             }
-            traits = new CaptainRecord.Traits(behavior, weaknesses, immunities);
         } else if ("EPITHET".equals(selected)) {
             String epithet = switch (memory.defeatSignature()) {
                 case FIRE -> "the Cinder-Returned";

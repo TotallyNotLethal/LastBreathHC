@@ -5,6 +5,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.LivingEntity;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -190,6 +191,69 @@ public class CaptainTraitRegistry {
         }
         TraitConfig cfg = traits.get(id.toLowerCase(Locale.ROOT));
         return cfg == null ? prettyName(id) : cfg.displayName();
+    }
+
+    public CaptainRecord.Traits mergeTrait(CaptainRecord.Traits current, String candidateId, boolean preferCandidate) {
+        List<String> mergedTraits = normalizeTraitIds(current == null ? List.of() : current.traits());
+        List<String> mergedWeaknesses = normalizeTraitIds(current == null ? List.of() : current.weaknesses());
+        List<String> mergedImmunities = normalizeTraitIds(current == null ? List.of() : current.immunities());
+
+        if (candidateId == null || candidateId.isBlank()) {
+            return new CaptainRecord.Traits(mergedTraits, mergedWeaknesses, mergedImmunities);
+        }
+
+        String normalizedCandidate = candidateId.toLowerCase(Locale.ROOT);
+        TraitConfig candidate = traits.get(normalizedCandidate);
+        if (candidate == null || containsTrait(mergedTraits, mergedWeaknesses, mergedImmunities, normalizedCandidate)) {
+            return new CaptainRecord.Traits(mergedTraits, mergedWeaknesses, mergedImmunities);
+        }
+
+        List<String> selected = new ArrayList<>();
+        selected.addAll(mergedTraits);
+        selected.addAll(mergedWeaknesses);
+        selected.addAll(mergedImmunities);
+
+        List<String> conflicts = new ArrayList<>();
+        for (String selectedId : selected) {
+            if (areIncompatible(normalizedCandidate, selectedId)) {
+                conflicts.add(selectedId);
+            }
+        }
+
+        if (!conflicts.isEmpty()) {
+            if (!preferCandidate) {
+                return new CaptainRecord.Traits(mergedTraits, mergedWeaknesses, mergedImmunities);
+            }
+            mergedTraits.removeIf(conflicts::contains);
+            mergedWeaknesses.removeIf(conflicts::contains);
+            mergedImmunities.removeIf(conflicts::contains);
+        }
+
+        if (candidate.weakness()) {
+            mergedWeaknesses.add(normalizedCandidate);
+        } else if (candidate.immunity()) {
+            mergedImmunities.add(normalizedCandidate);
+        } else {
+            mergedTraits.add(normalizedCandidate);
+        }
+        return new CaptainRecord.Traits(mergedTraits, mergedWeaknesses, mergedImmunities);
+    }
+
+    private List<String> normalizeTraitIds(List<String> values) {
+        return new ArrayList<>(new LinkedHashSet<>(normalize(values)));
+    }
+
+    private boolean containsTrait(List<String> traitsList, List<String> weaknessList, List<String> immunityList, String candidate) {
+        return traitsList.contains(candidate) || weaknessList.contains(candidate) || immunityList.contains(candidate);
+    }
+
+    private boolean areIncompatible(String first, String second) {
+        TraitConfig firstCfg = traits.get(first);
+        if (firstCfg != null && firstCfg.incompatibilities().contains(second)) {
+            return true;
+        }
+        TraitConfig secondCfg = traits.get(second);
+        return secondCfg != null && secondCfg.incompatibilities().contains(first);
     }
 
     private void registerDefaults() {

@@ -19,6 +19,7 @@ public class NemesisProgressionService {
     private final LastBreathHC plugin;
     private final CaptainRegistry registry;
     private final CaptainEntityBinder binder;
+    private final CaptainTraitRegistry traitRegistry;
     private final Map<UUID, Long> combatTrackedAt = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastPlayerInteractionAward = new ConcurrentHashMap<>();
     private final Map<UUID, Long> lastCaptainSkirmishAward = new ConcurrentHashMap<>();
@@ -34,10 +35,11 @@ public class NemesisProgressionService {
     private final long interactionAwardCooldownMs;
     private final long skirmishAwardCooldownMs;
 
-    public NemesisProgressionService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder) {
+    public NemesisProgressionService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, CaptainTraitRegistry traitRegistry) {
         this.plugin = plugin;
         this.registry = registry;
         this.binder = binder;
+        this.traitRegistry = traitRegistry;
         this.xpPerKill = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerVictim", 25L));
         this.xpPerCombatTick = Math.max(1L, plugin.getConfig().getLong("nemesis.progression.xpPerCombatTick", 2L));
         this.angerPerKill = Math.max(0.0, plugin.getConfig().getDouble("nemesis.progression.angerPerKill", 3.0));
@@ -223,18 +225,14 @@ public class NemesisProgressionService {
             return record.traits();
         }
 
-        List<String> strengths = new ArrayList<>(record.traits().traits());
-        List<String> immunities = new ArrayList<>(record.traits().immunities());
-        if (!strengths.contains("strength_vicious_combo")) {
-            strengths.add("strength_vicious_combo");
-        } else if (!strengths.contains("strength_warlord_presence")) {
-            strengths.add("strength_warlord_presence");
-        } else if (!immunities.contains("immunity_fireproof")) {
-            immunities.add("immunity_fireproof");
-        } else if (!immunities.contains("immunity_projectile_guard")) {
-            immunities.add("immunity_projectile_guard");
+        CaptainRecord.Traits current = record.traits();
+        for (String candidate : List.of("strength_vicious_combo", "strength_warlord_presence", "immunity_fireproof", "immunity_projectile_guard")) {
+            CaptainRecord.Traits merged = traitRegistry.mergeTrait(current, candidate, true);
+            if (!merged.equals(current)) {
+                return merged;
+            }
         }
-        return new CaptainRecord.Traits(strengths, record.traits().weaknesses(), immunities);
+        return current;
     }
 
     private boolean isEligibleTimedAward(Map<UUID, Long> tracker, UUID captainId, long now, long cooldownMs) {
