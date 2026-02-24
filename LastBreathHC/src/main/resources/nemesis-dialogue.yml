@@ -107,3 +107,18 @@ eventConversations:
     avenge_3:
       line: "You ended {fallen}; now I end you."
       weight: 1.7
+
+  warband_feud:
+    feud_1:
+      line: "{speaker} and {listener}, settle it in the pit, then return to the line."
+      weight: 2.0
+    feud_2:
+      line: "Steel first, grudges second. {listener}, you feud for the army now."
+      weight: 1.5
+  fight_pit:
+    pit_1:
+      line: "Fight pit at dusk. {listener}, entertain the ranks and sharpen their rage."
+      weight: 2.1
+    pit_2:
+      line: "No idle hands—pit duel now, then back to the warpath."
+      weight: 1.7
