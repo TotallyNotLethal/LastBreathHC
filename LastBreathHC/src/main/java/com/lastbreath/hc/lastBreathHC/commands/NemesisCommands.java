@@ -18,6 +18,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class NemesisCommands implements BasicCommand {
@@ -262,6 +263,21 @@ public class NemesisCommands implements BasicCommand {
         sender.sendMessage("§7Scores: §f" + (record.nemesisScores() == null ? "none" : "threat=" + record.nemesisScores().threat() + " rivalry=" + record.nemesisScores().rivalry() + " brutality=" + record.nemesisScores().brutality()));
         sender.sendMessage("§7Victims: §f" + (record.victims() == null ? "none" : record.victims().totalVictimCount() + " recent=" + record.victims().playerVictims().size()));
         sender.sendMessage("§7Counters: §f" + (record.telemetry() == null ? "{}" : record.telemetry().counters()));
+        sender.sendMessage("§7Political: §f" + formatSection(record.political()));
+        sender.sendMessage("§7Social: §f" + formatSection(record.social()));
+        sender.sendMessage("§7Relationships: §f" + formatSection(record.relationships()));
+        sender.sendMessage("§7Memory: §f" + formatSection(record.memory()));
+        sender.sendMessage("§7Persona: §f" + formatSection(record.persona()));
+    }
+
+    private String formatSection(Optional<?> section) {
+        if (section == null) {
+            return "none (null optional)";
+        }
+        if (section.isEmpty()) {
+            return "default/none";
+        }
+        return section.get().toString();
     }
 
     private void handleDebugActive(CommandSender sender) {
