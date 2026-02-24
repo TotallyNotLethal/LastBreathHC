@@ -46,7 +46,7 @@ public final class StructurePlacementValidator {
             }
         }
 
-        return ValidationResult.allowed();
+        return ValidationResult.accepted();
     }
 
     private boolean isLikelyPlayerBuilt(Block block) {
@@ -108,7 +108,7 @@ public final class StructurePlacementValidator {
     }
 
     public record ValidationResult(boolean allowed, String reason) {
-        public static ValidationResult allowed() {
+        public static ValidationResult accepted() {
             return new ValidationResult(true, "");
         }
 
