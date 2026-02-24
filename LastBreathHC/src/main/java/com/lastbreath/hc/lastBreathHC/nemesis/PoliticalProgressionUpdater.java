@@ -18,8 +18,9 @@ public class PoliticalProgressionUpdater {
     private final double maxInfluence;
     private final double softDecayStart;
     private final double softDecayFactor;
+    private final StructureEventOrchestrator structureEventOrchestrator;
 
-    public PoliticalProgressionUpdater(LastBreathHC plugin, CaptainRegistry registry) {
+    public PoliticalProgressionUpdater(LastBreathHC plugin, CaptainRegistry registry, StructureEventOrchestrator structureEventOrchestrator) {
         this.plugin = plugin;
         this.registry = registry;
         this.defaultRank = Rank.from(plugin.getConfig().getString("nemesis.political.defaultRank", Rank.CAPTAIN.name()), Rank.CAPTAIN);
@@ -35,6 +36,7 @@ public class PoliticalProgressionUpdater {
                 plugin.getConfig().getDouble("nemesis.political.guardrails.maxInfluence", 2.0));
         this.softDecayStart = plugin.getConfig().getDouble("nemesis.political.guardrails.softDecayStart", 100.0);
         this.softDecayFactor = clampFraction(plugin.getConfig().getDouble("nemesis.political.guardrails.softDecayFactor", 0.15));
+        this.structureEventOrchestrator = structureEventOrchestrator;
     }
 
     public CaptainRecord applyAndPersist(CaptainRecord record, PoliticalGainSource source) {
@@ -60,6 +62,7 @@ public class PoliticalProgressionUpdater {
                 clampedScore,
                 clampedInfluence
         );
+        maybeEmitScoreMilestones(record.identity().captainId(), current.promotionScore(), clampedScore);
         return withPolitical(record, updatedPolitical);
     }
 
@@ -73,6 +76,27 @@ public class PoliticalProgressionUpdater {
         );
     }
 
+
+    private void maybeEmitScoreMilestones(java.util.UUID captainId, double previousScore, double updatedScore) {
+        if (previousScore < 35.0 && updatedScore >= 35.0) {
+            structureEventOrchestrator.onPromotion(new CaptainPromotionEvent(
+                    captainId,
+                    previousScore,
+                    updatedScore,
+                    35.0,
+                    System.currentTimeMillis()
+            ));
+        }
+        if (previousScore < 75.0 && updatedScore >= 75.0) {
+            structureEventOrchestrator.onPromotion(new CaptainPromotionEvent(
+                    captainId,
+                    previousScore,
+                    updatedScore,
+                    75.0,
+                    System.currentTimeMillis()
+            ));
+        }
+    }
     private CaptainRecord withPolitical(CaptainRecord record, CaptainRecord.Political political) {
         return new CaptainRecord(
                 record.identity(),

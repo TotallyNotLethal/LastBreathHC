@@ -12,15 +12,17 @@ public class PromotionEvaluator {
     private final long tickPeriod;
     private final double warchiefThreshold;
     private final double overlordThreshold;
+    private final StructureEventOrchestrator structureEventOrchestrator;
 
     private BukkitTask task;
 
-    public PromotionEvaluator(LastBreathHC plugin, CaptainRegistry registry) {
+    public PromotionEvaluator(LastBreathHC plugin, CaptainRegistry registry, StructureEventOrchestrator structureEventOrchestrator) {
         this.plugin = plugin;
         this.registry = registry;
         this.tickPeriod = Math.max(40L, plugin.getConfig().getLong("nemesis.political.promotionTickPeriodTicks", 200L));
         this.warchiefThreshold = plugin.getConfig().getDouble("nemesis.political.thresholds.warchief", 35.0);
         this.overlordThreshold = plugin.getConfig().getDouble("nemesis.political.thresholds.overlord", 75.0);
+        this.structureEventOrchestrator = structureEventOrchestrator;
     }
 
     public void start() {
@@ -62,6 +64,12 @@ public class PromotionEvaluator {
             CaptainRecord updated = withPolitical(record, updatedPolitical);
             updated = NemesisTelemetry.incrementCounter(updated, "promotions", 1);
             registry.upsert(updated);
+            structureEventOrchestrator.onRankChanged(new CaptainRankChangedEvent(
+                    record.identity().captainId(),
+                    currentRank,
+                    targetRank,
+                    System.currentTimeMillis()
+            ));
         }
     }
 

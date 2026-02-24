@@ -5,12 +5,14 @@ import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainTraitRegistry;
 import com.lastbreath.hc.lastBreathHC.nemesis.KillerResolver;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainHabitatService;
 import com.lastbreath.hc.lastBreathHC.nemesis.MinionController;
 import com.lastbreath.hc.lastBreathHC.nemesis.Rank;
 import com.lastbreath.hc.lastBreathHC.nemesis.ArmyGraphService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisMobRules;
 import com.lastbreath.hc.lastBreathHC.nemesis.TerritoryPressureService;
+import com.lastbreath.hc.lastBreathHC.structures.StructureFootprintRepository;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import org.bukkit.Bukkit;
@@ -35,8 +37,10 @@ public class NemesisCommands implements BasicCommand {
     private final CaptainTraitRegistry traitRegistry;
     private final ArmyGraphService armyGraphService;
     private final TerritoryPressureService territoryPressureService;
+    private final StructureFootprintRepository structureFootprintRepository;
+    private final CaptainHabitatService captainHabitatService;
 
-    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService, TerritoryPressureService territoryPressureService) {
+    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService, TerritoryPressureService territoryPressureService, StructureFootprintRepository structureFootprintRepository, CaptainHabitatService captainHabitatService) {
         this.registry = registry;
         this.spawner = spawner;
         this.captainListGUI = captainListGUI;
@@ -45,6 +49,8 @@ public class NemesisCommands implements BasicCommand {
         this.traitRegistry = traitRegistry;
         this.armyGraphService = armyGraphService;
         this.territoryPressureService = territoryPressureService;
+        this.structureFootprintRepository = structureFootprintRepository;
+        this.captainHabitatService = captainHabitatService;
     }
 
     @Override
@@ -54,7 +60,7 @@ public class NemesisCommands implements BasicCommand {
         }
         if (args.length == 2) {
             if ("debug".equalsIgnoreCase(args[0])) {
-                return List.of("resolvekiller", "dump", "active", "cleanupOrphans", "resetpressure", "clearrelationships", "forcepromotion");
+                return List.of("resolvekiller", "dump", "active", "cleanupOrphans", "resetpressure", "clearrelationships", "forcepromotion", "habitat", "cleanuphabitat");
             }
             if ("clear".equalsIgnoreCase(args[0])) {
                 return List.of("confirm");
@@ -274,7 +280,7 @@ public class NemesisCommands implements BasicCommand {
             long totalEscapes = registry.getAll().stream().mapToLong(r -> r.telemetry().counters().getOrDefault("escapes", 0L)).sum();
             long totalMinionDeaths = registry.getAll().stream().mapToLong(r -> r.telemetry().counters().getOrDefault("minionDeaths", 0L)).sum();
             sender.sendMessage("§6Nemesis Debug: §e" + spawner.debugSummary() + " §7kills=" + totalKills + " escapes=" + totalEscapes + " minionDeaths=" + totalMinionDeaths);
-            sender.sendMessage("§7Subcommands: resolvekiller, dump, active, cleanupOrphans, resetPressure, clearRelationships, forcePromotion");
+            sender.sendMessage("§7Subcommands: resolvekiller, dump, active, cleanupOrphans, resetPressure, clearRelationships, forcePromotion, habitat, cleanupHabitat");
             return;
         }
 
@@ -287,7 +293,9 @@ public class NemesisCommands implements BasicCommand {
             case "resetpressure" -> handleDebugResetPressure(sender);
             case "clearrelationships" -> handleDebugClearRelationships(sender, args);
             case "forcepromotion" -> handleDebugForcePromotion(sender, args);
-            default -> sender.sendMessage("§cUsage: /nemesis debug <resolvekiller|dump|active|cleanupOrphans|resetPressure|clearRelationships|forcePromotion>");
+            case "habitat" -> handleDebugHabitat(sender, args);
+            case "cleanuphabitat" -> handleDebugCleanupHabitat(sender, args);
+            default -> sender.sendMessage("§cUsage: /nemesis debug <resolvekiller|dump|active|cleanupOrphans|resetPressure|clearRelationships|forcePromotion|habitat|cleanupHabitat>");
         }
     }
 
@@ -332,7 +340,7 @@ public class NemesisCommands implements BasicCommand {
             return;
         }
         CaptainRecord.Political political = record.political().orElse(new CaptainRecord.Political(Rank.CAPTAIN.name(), "overworld", "", 0.0, 0.0));
-        CaptainRecord updated = new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry(), Optional.of(new CaptainRecord.Political(political.rank(), political.region(), political.seatId(), score, political.influence())), record.social(), record.relationships(), record.memory(), record.persona());
+        CaptainRecord updated = new CaptainRecord(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry(), Optional.of(new CaptainRecord.Political(political.rank(), political.region(), political.seatId(), score, political.influence())), record.social(), record.relationships(), record.memory(), record.persona(), record.habitat());
         registry.upsert(updated);
         sender.sendMessage("§aPromotion score forced to §e" + score);
     }
@@ -420,6 +428,38 @@ public class NemesisCommands implements BasicCommand {
         sender.sendMessage("§aOrphan cleanup completed. Removed entities: §e" + removed);
     }
 
+
+
+    private void handleDebugHabitat(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage("§cUsage: /nemesis debug habitat <id>");
+            return;
+        }
+        CaptainRecord record = findRecord(args[2]);
+        if (record == null) {
+            sender.sendMessage("§cCaptain not found.");
+            return;
+        }
+        sender.sendMessage("§6Habitat linkage for §e" + record.naming().displayName());
+        sender.sendMessage("§7Habitat: §f" + formatSection(record.habitat()));
+        long owned = structureFootprintRepository.findByOwner(record.identity().captainId().toString()).count();
+        sender.sendMessage("§7Owned footprints: §e" + owned);
+    }
+
+    private void handleDebugCleanupHabitat(CommandSender sender, String[] args) {
+        if (args.length >= 3) {
+            CaptainRecord record = findRecord(args[2]);
+            if (record == null) {
+                sender.sendMessage("§cCaptain not found.");
+                return;
+            }
+            CaptainHabitatService.DeathCleanupResult result = captainHabitatService.handlePermanentCaptainDeath(record.identity().captainId());
+            sender.sendMessage("§aCleanup complete for captain. owned=" + result.ownedCount() + " decayed=" + result.decayedCount() + " abandoned=" + result.abandonedCount() + " behavior=" + result.behavior());
+            return;
+        }
+        int count = captainHabitatService.cleanupMissingCaptainLinks();
+        sender.sendMessage("§aHabitat cleanup completed. Reassigned orphan structures: §e" + count);
+    }
 
     private String localize(List<String> ids) {
         if (ids == null || ids.isEmpty()) {

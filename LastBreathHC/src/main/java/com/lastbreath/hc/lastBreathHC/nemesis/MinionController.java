@@ -36,6 +36,7 @@ public class MinionController implements Listener {
     private final NemesisProgressionService progressionService;
     private final NamespacedKey captainIdKey;
     private final CaptainStateMachine stateMachine = new CaptainStateMachine();
+    private final CaptainHabitatService captainHabitatService;
 
     private final Map<UUID, Set<UUID>> captainToMinions = new ConcurrentHashMap<>();
     private final Map<UUID, Long> nextRespawnAt = new ConcurrentHashMap<>();
@@ -48,11 +49,12 @@ public class MinionController implements Listener {
     private final long minionXpPerDeath;
     private final double minionAngerPerDeath;
 
-    public MinionController(LastBreathHC plugin, CaptainRegistry captainRegistry, CaptainEntityBinder captainEntityBinder, NemesisProgressionService progressionService) {
+    public MinionController(LastBreathHC plugin, CaptainRegistry captainRegistry, CaptainEntityBinder captainEntityBinder, NemesisProgressionService progressionService, CaptainHabitatService captainHabitatService) {
         this.plugin = plugin;
         this.captainRegistry = captainRegistry;
         this.captainEntityBinder = captainEntityBinder;
         this.progressionService = progressionService;
+        this.captainHabitatService = captainHabitatService;
         this.captainIdKey = captainEntityBinder.getCaptainIdKey();
         this.respawnCooldownMs = Math.max(500L, plugin.getConfig().getLong("nemesis.minions.respawnCooldownMs", 5000L));
         this.leashDistance = Math.max(4.0, plugin.getConfig().getDouble("nemesis.minions.leashDistance", 24.0));
@@ -227,6 +229,7 @@ public class MinionController implements Listener {
         if (record != null) {
             CaptainRecord.State deadState = stateMachine.onKilled(System.currentTimeMillis());
             captainRegistry.upsert(record.copyCore(record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(), record.naming(), record.traits(), record.minionPack(), deadState, record.telemetry()));
+            captainHabitatService.handlePermanentCaptainDeath(captainId);
         }
         Set<UUID> minions = new HashSet<>(captainToMinions.getOrDefault(captainId, Set.of()));
         if (minions.isEmpty()) {

@@ -16,8 +16,9 @@ public class LoyaltyService implements Listener {
     private final boolean enabled;
     private final boolean betrayalEnabled;
     private final double betrayalBaseChance;
+    private final StructureEventOrchestrator structureEventOrchestrator;
 
-    public LoyaltyService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, ArmyGraphService graphService) {
+    public LoyaltyService(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, ArmyGraphService graphService, StructureEventOrchestrator structureEventOrchestrator) {
         this.plugin = plugin;
         this.registry = registry;
         this.binder = binder;
@@ -25,6 +26,7 @@ public class LoyaltyService implements Listener {
         this.enabled = plugin.getConfig().getBoolean("nemesis.loyalty.enabled", true);
         this.betrayalEnabled = plugin.getConfig().getBoolean("nemesis.loyalty.betrayal.enabled", true);
         this.betrayalBaseChance = Math.max(0.0, plugin.getConfig().getDouble("nemesis.loyalty.betrayal.baseChance", 0.08));
+        this.structureEventOrchestrator = structureEventOrchestrator;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -58,6 +60,12 @@ public class LoyaltyService implements Listener {
         shifted = NemesisTelemetry.incrementCounter(shifted, "loyaltyShifts", 1);
         registry.upsert(shifted);
         plugin.getServer().broadcastMessage("§4Nemesis betrayal: §c" + attacker.naming().displayName() + " §7turned on §c" + victim.naming().displayName());
+        structureEventOrchestrator.onBetrayal(new CaptainBetrayalEvent(
+                attacker.identity().captainId(),
+                victim.identity().captainId(),
+                "captain_betrayal",
+                System.currentTimeMillis()
+        ));
         return true;
     }
 }

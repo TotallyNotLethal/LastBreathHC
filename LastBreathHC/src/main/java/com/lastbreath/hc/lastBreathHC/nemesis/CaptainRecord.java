@@ -20,7 +20,8 @@ public record CaptainRecord(
         Optional<Social> social,
         Optional<Relationships> relationships,
         Optional<Memory> memory,
-        Optional<Persona> persona
+        Optional<Persona> persona,
+        Optional<Habitat> habitat
 ) {
     public CaptainRecord {
         political = optionalOrEmpty(political);
@@ -28,6 +29,7 @@ public record CaptainRecord(
         relationships = optionalOrEmpty(relationships);
         memory = optionalOrEmpty(memory);
         persona = optionalOrEmpty(persona);
+        habitat = optionalOrEmpty(habitat);
     }
 
     public CaptainRecord(
@@ -43,7 +45,7 @@ public record CaptainRecord(
             Telemetry telemetry
     ) {
         this(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state, telemetry,
-                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     public CaptainRecord(
@@ -65,7 +67,29 @@ public record CaptainRecord(
     ) {
         this(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state, telemetry,
                 Optional.ofNullable(political), Optional.ofNullable(social), Optional.ofNullable(relationships),
-                Optional.ofNullable(memory), Optional.ofNullable(persona));
+                Optional.ofNullable(memory), Optional.ofNullable(persona), Optional.empty());
+    }
+
+
+    public CaptainRecord(
+            Identity identity,
+            Origin origin,
+            Victims victims,
+            NemesisScores nemesisScores,
+            Progression progression,
+            Naming naming,
+            Traits traits,
+            MinionPack minionPack,
+            State state,
+            Telemetry telemetry,
+            Optional<Political> political,
+            Optional<Social> social,
+            Optional<Relationships> relationships,
+            Optional<Memory> memory,
+            Optional<Persona> persona
+    ) {
+        this(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state, telemetry,
+                political, social, relationships, memory, persona, Optional.empty());
     }
 
     public static CaptainRecord withOptionalSections(
@@ -97,7 +121,7 @@ public record CaptainRecord(
             Telemetry telemetry
     ) {
         return new CaptainRecord(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state,
-                telemetry, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+                telemetry, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     public CaptainRecord copyCore(
@@ -113,7 +137,7 @@ public record CaptainRecord(
             Telemetry telemetry
     ) {
         return new CaptainRecord(identity, origin, victims, nemesisScores, progression, naming, traits, minionPack, state,
-                telemetry, political, social, relationships, memory, persona);
+                telemetry, political, social, relationships, memory, persona, habitat);
     }
 
     public record Identity(UUID captainId, UUID nemesisOf, long createdAtEpochMillis) {
@@ -160,6 +184,9 @@ public record CaptainRecord(
     }
 
     public record Persona(String archetype, String temperament, List<String> quirkTags, String voicePackId) {
+    }
+
+    public record Habitat(String primaryStructureId, String settlementId, String anchorWorld, int anchorChunkX, int anchorChunkZ, double anchorX, double anchorY, double anchorZ) {
     }
 
     private static <T> Optional<T> optionalOrEmpty(Optional<T> value) {
