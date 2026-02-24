@@ -1666,6 +1666,10 @@ nemesis:
     tickPeriodTicks: 40
     conversationRangeMeters: 18.0
     conversationChancePerPair: 0.2
+    regroupDistanceMeters: 10.0
+    leashDistanceMeters: 40.0
+    feudBroadcastCooldownMs: 45000
+    fightPitBroadcastCooldownMs: 60000
 
   territoryPressure:
     enabled: true

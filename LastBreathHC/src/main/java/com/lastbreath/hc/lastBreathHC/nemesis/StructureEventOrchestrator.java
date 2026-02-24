@@ -4,9 +4,13 @@ import com.lastbreath.hc.lastBreathHC.structures.SpawnContext;
 import com.lastbreath.hc.lastBreathHC.structures.StructureManager;
 import org.bukkit.Location;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class StructureEventOrchestrator {
@@ -54,6 +58,9 @@ public final class StructureEventOrchestrator {
         applyTelemetry(event.captainId(), "structureTriggers.rankChange");
         structureManager.upgradeLatestStructureForOwner(event.captainId().toString(), event.currentRank().ordinal() + 1, event.occurredAtEpochMillis());
         spawnForCaptainAndWarband(event.captainId(), rankTemplate(event.currentRank()), event.currentRank().name());
+        if (event.currentRank() == Rank.OVERLORD) {
+            foldCaptainsIntoOverlordArmy(event.captainId());
+        }
     }
 
 
@@ -100,6 +107,106 @@ public final class StructureEventOrchestrator {
         }
         applyTelemetry(candidate.identity().captainId(), "structureTriggers.raidInteraction");
         spawnForCaptainAndWarband(candidate.identity().captainId(), "nemesis-raid-" + event.targetType().name().toLowerCase(), event.targetType().name());
+    }
+
+    private void foldCaptainsIntoOverlordArmy(UUID overlordId) {
+        CaptainRecord overlord = registry.getByCaptainUuid(overlordId);
+        if (overlord == null || overlord.political().isEmpty()) {
+            return;
+        }
+
+        CaptainRecord.Political overlordPolitical = overlord.political().get();
+        String armySeatId = overlord.identity().captainId().toString();
+        List<CaptainRecord> updatedRecords = new ArrayList<>();
+
+        for (CaptainRecord candidate : registry.getAll()) {
+            if (candidate == null || candidate.identity() == null) {
+                continue;
+            }
+            if (candidate.identity().captainId().equals(overlord.identity().captainId())) {
+                updatedRecords.add(ensureArmyMetadata(candidate, overlordPolitical.region(), armySeatId, null));
+                continue;
+            }
+
+            Location rallyPoint = buildRallyPoint(overlord, updatedRecords.size());
+            updatedRecords.add(ensureArmyMetadata(candidate, overlordPolitical.region(), armySeatId, rallyPoint));
+        }
+
+        for (CaptainRecord updated : updatedRecords) {
+            registry.upsert(updated);
+        }
+    }
+
+    private CaptainRecord ensureArmyMetadata(CaptainRecord record, String region, String armySeatId, Location rallyPoint) {
+        CaptainRecord.Political political = record.political().orElse(new CaptainRecord.Political(Rank.CAPTAIN.name(), region, armySeatId, 0.0, 0.25));
+        CaptainRecord.Political updatedPolitical = new CaptainRecord.Political(
+                political.rank(),
+                region,
+                armySeatId,
+                political.promotionScore(),
+                political.influence()
+        );
+
+        List<UUID> allies = new ArrayList<>(record.relationships().map(CaptainRecord.Relationships::allies).orElse(List.of()));
+        UUID overlordId = UUID.fromString(armySeatId);
+        if (!record.identity().captainId().equals(overlordId) && !allies.contains(overlordId)) {
+            allies.add(overlordId);
+        }
+        CaptainRecord.Relationships existing = record.relationships().orElse(new CaptainRecord.Relationships(List.of(), List.of(), null, null));
+        CaptainRecord.Relationships updatedRelationships = new CaptainRecord.Relationships(
+                allies,
+                existing.rivals(),
+                record.identity().captainId().equals(overlordId) ? existing.bodyguardOf() : overlordId,
+                existing.bloodBrotherOf()
+        );
+
+        CaptainRecord.Origin origin = record.origin();
+        if (rallyPoint != null && rallyPoint.getWorld() != null) {
+            origin = new CaptainRecord.Origin(
+                    rallyPoint.getWorld().getName(),
+                    rallyPoint.getChunk().getX(),
+                    rallyPoint.getChunk().getZ(),
+                    rallyPoint.getX(),
+                    rallyPoint.getY(),
+                    rallyPoint.getZ(),
+                    rallyPoint.getBlock().getBiome().name()
+            );
+        }
+
+        return new CaptainRecord(
+                record.identity(),
+                origin,
+                record.victims(),
+                record.nemesisScores(),
+                record.progression(),
+                record.naming(),
+                record.traits(),
+                record.minionPack(),
+                record.state(),
+                record.telemetry(),
+                Optional.of(updatedPolitical),
+                record.social(),
+                Optional.of(updatedRelationships),
+                record.memory(),
+                record.persona(),
+                record.habitat()
+        );
+    }
+
+    private Location buildRallyPoint(CaptainRecord overlord, int index) {
+        if (overlord.origin() == null) {
+            return null;
+        }
+        org.bukkit.World world = org.bukkit.Bukkit.getWorld(overlord.origin().world());
+        if (world == null) {
+            return null;
+        }
+        double offsetX = (index % 6) * 3.0 + ThreadLocalRandom.current().nextDouble(-1.0, 1.0);
+        double offsetZ = (index / 6) * 3.0 + ThreadLocalRandom.current().nextDouble(-1.0, 1.0);
+        return new Location(world,
+                overlord.origin().spawnX() + offsetX,
+                overlord.origin().spawnY(),
+                overlord.origin().spawnZ() + offsetZ);
     }
 
     private String rankTemplate(Rank rank) {
