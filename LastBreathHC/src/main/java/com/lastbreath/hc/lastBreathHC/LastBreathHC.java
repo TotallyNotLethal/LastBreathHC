@@ -36,6 +36,8 @@ import com.lastbreath.hc.lastBreathHC.nemesis.CaptainEntityBinder;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainHabitatService;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainNameGenerator;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRegistry;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisTelemetry;
+import com.lastbreath.hc.lastBreathHC.nemesis.CaptainRecord;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSerializer;
 import com.lastbreath.hc.lastBreathHC.nemesis.CaptainSpawner;
 import com.lastbreath.hc.lastBreathHC.nemesis.ArmyGraphSerializer;
@@ -276,6 +278,37 @@ public final class LastBreathHC extends JavaPlugin {
         nemesisWarbandCoordinator = new NemesisWarbandCoordinator(this, captainRegistry, captainEntityBinder, dialogueEngine);
         nemesisWarbandCoordinator.start();
         territoryPressureService = new TerritoryPressureService(this, structureEventOrchestrator);
+        dialogueEngine.setActionHook((actionType, speaker, listener, channelKey, location) -> {
+            if (actionType == null || speaker == null || speaker.identity() == null) {
+                return;
+            }
+
+            CaptainRecord updated = speaker;
+            switch (actionType) {
+                case BETRAYAL, BLOOD_FEUD, AGGRESSION -> {
+                    if (listener != null && listener.identity() != null) {
+                        armyGraphService.addRivalry(speaker.identity().captainId(), listener.identity().captainId());
+                    }
+                    updated = NemesisTelemetry.incrementCounter(updated, "dialogue.hostile", 1);
+                }
+                case UNITY, FORTIFY -> updated = NemesisTelemetry.incrementCounter(updated, "dialogue.unity", 1);
+                case STAND_DOWN -> updated = NemesisTelemetry.incrementCounter(updated, "dialogue.standDown", 1);
+            }
+
+            if (territoryPressureService != null && territoryPressureService.enabled()) {
+                String region = updated.political().map(CaptainRecord.Political::region).orElse("");
+                if (region != null && !region.isBlank()) {
+                    double delta = switch (actionType) {
+                        case BETRAYAL, BLOOD_FEUD, AGGRESSION -> 3.0;
+                        case UNITY, FORTIFY -> 1.5;
+                        case STAND_DOWN -> -1.0;
+                    };
+                    territoryPressureService.applyChange(region, "dialogue." + channelKey, delta);
+                }
+            }
+
+            captainRegistry.upsert(updated);
+        });
         antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
         structureRaidService = new StructureRaidService(this, captainRegistry, structureFootprintRepository, territoryPressureService, structureEventOrchestrator, captainEntityBinder);
         getServer().getPluginManager().registerEvents(killerResolver, this);
