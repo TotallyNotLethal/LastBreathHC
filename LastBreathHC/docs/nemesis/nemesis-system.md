@@ -83,7 +83,7 @@ Key controls:
 - Use `/nemesis nearby` for a GUI view of nearby captains.
 - Use `/nemesis info <id|name>` to inspect level/traits.
 - Use `/nemesis debug` and subcommands for state inspection and killer attribution diagnostics.
-- Use `/nemesis clear confirm` cautiously: it clears all captain records and despawns minions.
+- Use `/nemesis clear confirm` cautiously: it clears all captain records, despawns minions, removes persisted nemesis structures, and clears habitat links.
 
 ## 8) Planned roadmap (non-mission track)
 
