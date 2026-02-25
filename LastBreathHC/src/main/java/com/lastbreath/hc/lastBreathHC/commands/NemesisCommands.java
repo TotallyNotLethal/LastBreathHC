@@ -125,11 +125,11 @@ public class NemesisCommands implements BasicCommand {
             sender.sendMessage("§cInvalid tone. Use positive, neutral, or negative.");
             return;
         }
-        applyDialogueAction(record, resolution.actionType());
+        applyDialogueOutcome(record, resolution.actionType());
         sender.sendMessage("§7Dialogue tone: §f" + resolution.tone().name().toLowerCase(Locale.ROOT) + " §7=> action §e" + resolution.actionType().name().toLowerCase(Locale.ROOT));
     }
 
-    private void applyDialogueAction(CaptainRecord record, DialogueEngine.ActionType actionType) {
+    private void applyDialogueOutcome(CaptainRecord record, DialogueEngine.ActionType actionType) {
         CaptainRecord updated = record;
         switch (actionType) {
             case BETRAYAL, BLOOD_FEUD, AGGRESSION -> {
