@@ -272,6 +272,24 @@ public class MinionController implements Listener {
         return cleanupOrphans();
     }
 
+    public int spawnMinionsNow(UUID captainId) {
+        if (captainId == null) {
+            return 0;
+        }
+        CaptainRecord record = captainRegistry.getByCaptainUuid(captainId);
+        if (!isActiveCaptain(record)) {
+            return 0;
+        }
+        LivingEntity captain = resolveCaptainEntity(record);
+        if (captain == null || !captain.isValid()) {
+            return 0;
+        }
+        Set<UUID> minionIds = captainToMinions.computeIfAbsent(captainId, ignored -> ConcurrentHashMap.newKeySet());
+        int before = minionIds.size();
+        maintainMinionCap(record, captain, minionIds);
+        return Math.max(0, minionIds.size() - before);
+    }
+
     public int despawnAllMinions() {
         Set<UUID> removedEntityIds = new HashSet<>();
         int removed = 0;

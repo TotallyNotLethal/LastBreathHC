@@ -361,6 +361,88 @@ public class CaptainSpawner implements Listener {
         return true;
     }
 
+    public CaptainRecord spawnAdminCaptain(UUID captainId,
+                                           UUID nemesisOf,
+                                           Location location,
+                                           CaptainRecord.Political political,
+                                           CaptainRecord.Relationships relationships,
+                                           String titleToken) {
+        if (captainId == null || location == null || location.getWorld() == null || political == null) {
+            return null;
+        }
+        long now = System.currentTimeMillis();
+
+        CaptainRecord.Identity identity = new CaptainRecord.Identity(captainId, nemesisOf, now);
+        CaptainRecord.Origin origin = new CaptainRecord.Origin(
+                location.getWorld().getName(),
+                location.getChunk().getX(),
+                location.getChunk().getZ(),
+                location.getX(),
+                location.getY(),
+                location.getZ(),
+                location.getBlock().getBiome().name()
+        );
+        CaptainRecord.Victims victims = new CaptainRecord.Victims(List.of(), 0, 0L);
+        CaptainRecord.NemesisScores scores = new CaptainRecord.NemesisScores(2.0, 0.4, 1.2, 1.0);
+        Rank rank = Rank.from(political.rank(), Rank.CAPTAIN);
+        int level = switch (rank) {
+            case OVERLORD -> 8;
+            case WARCHIEF -> 5;
+            case CAPTAIN -> 3;
+        };
+        CaptainRecord.Progression progression = new CaptainRecord.Progression(level, level * 80L, "RARE");
+        CaptainRecord.Traits traits = new CaptainRecord.Traits(List.of("raider", "strength_brutal_strikes"), List.of(), List.of());
+        String token = captainId.toString().substring(0, 4).toUpperCase(Locale.ROOT);
+        String title = titleToken == null || titleToken.isBlank() ? "Warband" : titleToken;
+        CaptainRecord.Naming naming = new CaptainRecord.Naming(title + " " + token, "the Besieger", rank.name(), token);
+        int minionCount = Math.max(1, plugin.getConfig().getInt("nemesis.minions.defaultCount", 2));
+        CaptainRecord.MinionPack minionPack = new CaptainRecord.MinionPack(
+                "default",
+                minionCount,
+                plugin.getConfig().getStringList("nemesis.minions.defaultArchetypes"),
+                plugin.getConfig().getDouble("nemesis.minions.reinforcementChance", 0.0)
+        );
+
+        CaptainRecord.State createdState = stateMachine.onCreate(now);
+        CaptainRecord.State spawnedState = stateMachine.onSpawn(now);
+        CaptainRecord.State state = new CaptainRecord.State(spawnedState.state(), createdState.cooldownUntilEpochMs(), now, null);
+        Map<String, Long> counters = new HashMap<>();
+        counters.put("spawns", 1L);
+        counters.put("adminSpawns", 1L);
+        CaptainRecord.Telemetry telemetry = new CaptainRecord.Telemetry(now, now, 1, counters);
+        CaptainRecord.Social social = new CaptainRecord.Social(0.75, 0.55, 0.6, 0.65);
+
+        CaptainRecord template = new CaptainRecord(
+                identity,
+                origin,
+                victims,
+                scores,
+                progression,
+                naming,
+                traits,
+                minionPack,
+                state,
+                telemetry,
+                Optional.of(political),
+                Optional.of(social),
+                Optional.ofNullable(relationships),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty()
+        );
+
+        Optional<LivingEntity> bound = binder.spawnOrBind(template);
+        if (bound.isEmpty()) {
+            return null;
+        }
+
+        CaptainRecord persisted = withRuntimeEntity(template, bound.get().getUniqueId());
+        registry.upsert(persisted);
+        markSpawnInWorld(bound.get().getWorld());
+        return persisted;
+    }
+
+
     public boolean retireCaptain(UUID captainId) {
         CaptainRecord record = registry.getByCaptainUuid(captainId);
         if (record == null || record.state() == null || record.state().state() != CaptainState.ACTIVE) {
