@@ -14,6 +14,7 @@ import com.lastbreath.hc.lastBreathHC.nemesis.NemesisCaptainListGUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisMobRules;
 import com.lastbreath.hc.lastBreathHC.nemesis.TerritoryPressureService;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisTelemetry;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisAdminWarbandService;
 import com.lastbreath.hc.lastBreathHC.structures.StructureFootprintRepository;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -42,8 +43,9 @@ public class NemesisCommands implements BasicCommand {
     private final StructureFootprintRepository structureFootprintRepository;
     private final CaptainHabitatService captainHabitatService;
     private final DialogueEngine dialogueEngine;
+    private final NemesisAdminWarbandService nemesisAdminWarbandService;
 
-    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService, TerritoryPressureService territoryPressureService, StructureFootprintRepository structureFootprintRepository, CaptainHabitatService captainHabitatService, DialogueEngine dialogueEngine) {
+    public NemesisCommands(CaptainRegistry registry, CaptainSpawner spawner, NemesisCaptainListGUI captainListGUI, KillerResolver killerResolver, MinionController minionController, CaptainTraitRegistry traitRegistry, ArmyGraphService armyGraphService, TerritoryPressureService territoryPressureService, StructureFootprintRepository structureFootprintRepository, CaptainHabitatService captainHabitatService, DialogueEngine dialogueEngine, NemesisAdminWarbandService nemesisAdminWarbandService) {
         this.registry = registry;
         this.spawner = spawner;
         this.captainListGUI = captainListGUI;
@@ -55,12 +57,13 @@ public class NemesisCommands implements BasicCommand {
         this.structureFootprintRepository = structureFootprintRepository;
         this.captainHabitatService = captainHabitatService;
         this.dialogueEngine = dialogueEngine;
+        this.nemesisAdminWarbandService = nemesisAdminWarbandService;
     }
 
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
         if (args.length == 1) {
-            return List.of("list", "nearby", "info", "hunt", "army", "dialogue", "territory", "spawn", "retire", "clear", "debug");
+            return List.of("list", "nearby", "info", "hunt", "army", "dialogue", "territory", "spawn", "spawnarmy", "retire", "clear", "debug");
         }
         if (args.length == 2) {
             if ("dialogue".equalsIgnoreCase(args[0])) {
@@ -72,6 +75,9 @@ public class NemesisCommands implements BasicCommand {
             if ("clear".equalsIgnoreCase(args[0])) {
                 return List.of("confirm");
             }
+            if ("army".equalsIgnoreCase(args[0])) {
+                return List.of("spawn");
+            }
         }
         return List.of();
     }
@@ -80,7 +86,7 @@ public class NemesisCommands implements BasicCommand {
     public void execute(CommandSourceStack source, String[] args) {
         CommandSender sender = source.getSender();
         if (args.length == 0) {
-            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|dialogue|territory|spawn|retire|clear|debug>");
+            sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|dialogue|territory|spawn|spawnarmy|retire|clear|debug>");
             return;
         }
 
@@ -90,14 +96,15 @@ public class NemesisCommands implements BasicCommand {
             case "nearby" -> handleNearby(sender);
             case "info" -> handleInfo(sender, args);
             case "hunt" -> handleHunt(sender);
-            case "army" -> handleArmy(sender);
+            case "army" -> handleArmy(sender, args);
             case "dialogue" -> handleDialogue(sender, args);
             case "territory" -> handleTerritory(sender);
             case "spawn" -> handleSpawn(sender, args);
+            case "spawnarmy" -> handleSpawnArmy(sender);
             case "retire" -> handleRetire(sender, args);
             case "clear" -> handleClear(sender, args);
             case "debug" -> handleDebug(sender, args);
-            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|dialogue|territory|spawn|retire|clear|debug>");
+            default -> sender.sendMessage("§cUsage: /nemesis <list|nearby|info|hunt|army|dialogue|territory|spawn|spawnarmy|retire|clear|debug>");
         }
     }
 
@@ -168,7 +175,11 @@ public class NemesisCommands implements BasicCommand {
                 sender.sendMessage("§7- §f" + entry.getKey() + ": §e" + String.format(Locale.US, "%.1f", entry.getValue())));
     }
 
-    private void handleArmy(CommandSender sender) {
+    private void handleArmy(CommandSender sender, String[] args) {
+        if (args.length >= 2 && "spawn".equalsIgnoreCase(args[1])) {
+            handleSpawnArmy(sender);
+            return;
+        }
         if (!sender.hasPermission("lastbreathhc.nemesis")) {
             sender.sendMessage("§cNo permission.");
             return;
@@ -269,6 +280,26 @@ public class NemesisCommands implements BasicCommand {
         }
         boolean triggered = spawner.triggerHunt(player, 1.0, "command_hunt");
         sender.sendMessage(triggered ? "§aYour nemesis hunt has begun." : "§eNo nemesis could be spawned right now.");
+    }
+
+    private void handleSpawnArmy(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cOnly players can run /nemesis spawnarmy.");
+            return;
+        }
+        if (!sender.hasPermission("lastbreathhc.nemesis.admin")) {
+            sender.sendMessage("§cNo permission.");
+            return;
+        }
+        NemesisAdminWarbandService.WarbandSpawnResult result = nemesisAdminWarbandService.spawnArmyAt(player, player.getLocation());
+        if (!result.success()) {
+            sender.sendMessage("§c" + result.message());
+            return;
+        }
+        sender.sendMessage("§aWarband deployed. Captains: §e" + result.captains().size()
+                + " §aMinions: §e" + result.minionsCreated()
+                + " §aStructures: §e" + result.structuresTriggered());
+        sender.sendMessage("§7Region: §f" + result.region() + " §7SeatId: §f" + result.seatId());
     }
 
     private void handleSpawn(CommandSender sender, String[] args) {

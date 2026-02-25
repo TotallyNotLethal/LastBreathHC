@@ -109,6 +109,17 @@ public final class StructureEventOrchestrator {
         spawnForCaptainAndWarband(candidate.identity().captainId(), "nemesis-raid-" + event.targetType().name().toLowerCase(), event.targetType().name());
     }
 
+    public int spawnFortificationWave(UUID captainId, String reason) {
+        if (captainId == null) {
+            return 0;
+        }
+        String templateId = "nemesis-admin-fortification";
+        if (reason != null && reason.toLowerCase().contains("betray")) {
+            templateId = "nemesis-betrayal-template";
+        }
+        return spawnForCaptainAndWarband(captainId, templateId, reason == null ? "admin" : reason);
+    }
+
     private void foldCaptainsIntoOverlordArmy(UUID overlordId) {
         CaptainRecord overlord = registry.getByCaptainUuid(overlordId);
         if (overlord == null || overlord.political().isEmpty()) {
@@ -217,15 +228,19 @@ public final class StructureEventOrchestrator {
         };
     }
 
-    private void spawnForCaptainAndWarband(UUID captainId, String templateId, String region) {
+    private int spawnForCaptainAndWarband(UUID captainId, String templateId, String region) {
         int index = 0;
+        int spawned = 0;
         for (UUID memberId : warbandMembers(captainId)) {
             CaptainRecord record = registry.getByCaptainUuid(memberId);
             if (record == null) {
                 continue;
             }
-            spawnSingle(record, templateId, region, index++);
+            if (spawnSingle(record, templateId, region, index++)) {
+                spawned++;
+            }
         }
+        return spawned;
     }
 
     private Set<UUID> warbandMembers(UUID captainId) {
@@ -245,7 +260,7 @@ public final class StructureEventOrchestrator {
         return ids;
     }
 
-    private void spawnSingle(CaptainRecord record, String templateId, String region, int cohortIndex) {
+    private boolean spawnSingle(CaptainRecord record, String templateId, String region, int cohortIndex) {
         Location anchor = new Location(
                 org.bukkit.Bukkit.getWorld(record.origin().world()),
                 record.origin().spawnX() + (cohortIndex * 4.0),
@@ -253,13 +268,16 @@ public final class StructureEventOrchestrator {
                 record.origin().spawnZ() + ((cohortIndex % 2 == 0 ? 1 : -1) * 3.0)
         );
         if (anchor.getWorld() == null) {
-            return;
+            return false;
         }
-        structureManager.spawnStructure(
+        return structureManager.spawnStructure(
                 templateId,
                 anchor,
                 new SpawnContext(record.identity().captainId().toString(), region, System.currentTimeMillis())
-        ).ifPresent(footprint -> captainHabitatService.linkCaptainToStructure(record, footprint));
+        ).map(footprint -> {
+            captainHabitatService.linkCaptainToStructure(record, footprint);
+            return true;
+        }).orElse(false);
     }
 
     private boolean markOnce(String key) {

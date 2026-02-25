@@ -120,6 +120,22 @@ public class ArmyGraphService {
         dirty = true;
     }
 
+    public synchronized void setBodyguardOf(UUID captainId, UUID ownerCaptainId) {
+        if (captainId == null || ownerCaptainId == null || Objects.equals(captainId, ownerCaptainId)) {
+            return;
+        }
+        bodyguardOf.put(captainId, ownerCaptainId);
+        dirty = true;
+    }
+
+    public synchronized void setBloodBrother(UUID left, UUID right) {
+        if (left == null || right == null || Objects.equals(left, right)) {
+            return;
+        }
+        setBloodBrotherPair(left, right);
+        dirty = true;
+    }
+
     public synchronized void clearRelationship(UUID captainId) {
         if (captainId == null) {
             return;
