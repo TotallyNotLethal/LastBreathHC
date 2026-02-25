@@ -178,3 +178,12 @@ Players can force a specific dialogue tone with `/nemesis dialogue <captainId> <
 Warband members now also speak to each other (captain↔captain, captain↔warchief, captain↔overlord, warchief↔warchief, warchief↔overlord, overlord↔overlord) using weighted `npcConversations` entries from the same dialogue file, with nearby player-visible broadcasts.
 
 Combat event dialogue is also weighted through `eventConversations`, including captain betrayals and blood-brother vengeance callouts when avengers target a killer captain.
+
+### Orc schematic planning pack
+
+For deeper, stage-by-stage orc base planning (captain huts, warchief settlements, overlord strongholds), use:
+
+- `docs/nemesis/orc-warband-schematics.md`
+- `docs/nemesis/tools/orc_schematic_layout_generator.py`
+- Generated output: `docs/nemesis/generated/orc_warband_schematics.json`
+

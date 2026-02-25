@@ -1,0 +1,546 @@
+{
+  "schema": "lastbreath.nemesis.orc-layout.v1",
+  "summary": {
+    "ranks": [
+      "CAPTAIN",
+      "WARCHIEF",
+      "OVERLORD"
+    ],
+    "progression_rule": "Each variant advances from stage 1 to 3 based on rank milestones and regional pressure.",
+    "theme": "Orc warbands that escalate from rough encampments into fortified regional capitals."
+  },
+  "variants": [
+    {
+      "rank": "CAPTAIN",
+      "variantId": "captain-bonefire-hut",
+      "displayName": "Bonefire Raider Hut",
+      "biomeFit": [
+        "plains",
+        "savanna",
+        "badlands"
+      ],
+      "commandPost": "spike-ring firepit with hanging skull lanterns",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "Scout Camp",
+          "buildGoal": "Establish a hidden staging point after first kill.",
+          "footprint": {
+            "width": 9,
+            "depth": 9
+          },
+          "newStructures": [
+            "1x hide tent",
+            "1x cook-fire trench",
+            "2x crate piles"
+          ],
+          "blockPalette": [
+            "spruce_planks",
+            "oak_log",
+            "campfire",
+            "bone_block"
+          ],
+          "defenses": [
+            "thorn hedge",
+            "tripwire alarm"
+          ],
+          "flavor": "Ash-stained banners mark fresh blood-debt territory."
+        },
+        {
+          "stage": 2,
+          "title": "Bonefire Hut",
+          "buildGoal": "Upgrade into a durable hut for captain + 2 guards.",
+          "footprint": {
+            "width": 13,
+            "depth": 11
+          },
+          "newStructures": [
+            "1x tusk-framed hut",
+            "1x butcher rack",
+            "1x scavenged armory corner"
+          ],
+          "blockPalette": [
+            "dark_oak_planks",
+            "stripped_spruce_log",
+            "bone_block",
+            "chain"
+          ],
+          "defenses": [
+            "spike ditch",
+            "wolf-pen gate"
+          ],
+          "flavor": "The captain displays enemy helmets above the doorway."
+        },
+        {
+          "stage": 3,
+          "title": "Raider Compound",
+          "buildGoal": "Create a mini-cluster to support patrol raids.",
+          "footprint": {
+            "width": 19,
+            "depth": 16
+          },
+          "newStructures": [
+            "2x raider sleeping huts",
+            "1x watch scaffold",
+            "1x brew barrel pit"
+          ],
+          "blockPalette": [
+            "mud_bricks",
+            "dark_oak_fence",
+            "blackstone",
+            "torch"
+          ],
+          "defenses": [
+            "raised archer perch",
+            "firepot chokepoint"
+          ],
+          "flavor": "Drums and horn blasts can be heard from two hills away."
+        }
+      ]
+    },
+    {
+      "rank": "CAPTAIN",
+      "variantId": "captain-scrap-longhut",
+      "displayName": "Scrap Longhut",
+      "biomeFit": [
+        "taiga",
+        "snowy_plains",
+        "windswept_hills"
+      ],
+      "commandPost": "iron-scrap throne under stitched hide roof",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "Wreck Shelter",
+          "buildGoal": "Salvage ruined carts into temporary shelter.",
+          "footprint": {
+            "width": 8,
+            "depth": 10
+          },
+          "newStructures": [
+            "1x tilted cart-roof",
+            "1x ember brazier"
+          ],
+          "blockPalette": [
+            "spruce_slab",
+            "iron_bars",
+            "cobblestone",
+            "soul_torch"
+          ],
+          "defenses": [
+            "noise traps",
+            "snow berm wall"
+          ],
+          "flavor": "Frozen chains rattle to warn the camp."
+        },
+        {
+          "stage": 2,
+          "title": "Longhut Frame",
+          "buildGoal": "Expand to a narrow war hall for tactical planning.",
+          "footprint": {
+            "width": 16,
+            "depth": 8
+          },
+          "newStructures": [
+            "1x longhut",
+            "1x map table",
+            "1x supply lean-to"
+          ],
+          "blockPalette": [
+            "spruce_log",
+            "spruce_planks",
+            "packed_mud",
+            "iron_bars"
+          ],
+          "defenses": [
+            "front stake wall",
+            "flanking barricades"
+          ],
+          "flavor": "Clan glyphs burned into planks record past raids."
+        },
+        {
+          "stage": 3,
+          "title": "War Longhut",
+          "buildGoal": "Fully armed hall with elite guard bunk annex.",
+          "footprint": {
+            "width": 22,
+            "depth": 12
+          },
+          "newStructures": [
+            "1x elite bunk annex",
+            "1x chained wolf yard",
+            "2x warning pyres"
+          ],
+          "blockPalette": [
+            "deepslate_tiles",
+            "spruce_trapdoor",
+            "chain",
+            "lantern"
+          ],
+          "defenses": [
+            "double gate entry",
+            "crossfire lane"
+          ],
+          "flavor": "Smoke stacks paint the sky with oily black banners."
+        }
+      ]
+    },
+    {
+      "rank": "WARCHIEF",
+      "variantId": "warchief-palisade-settlement",
+      "displayName": "Palisade War Settlement",
+      "biomeFit": [
+        "plains",
+        "forest",
+        "savanna"
+      ],
+      "commandPost": "central war dais surrounded by trophy poles",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "Rally Ground",
+          "buildGoal": "Unify nearby captains with a shared meeting yard.",
+          "footprint": {
+            "width": 18,
+            "depth": 16
+          },
+          "newStructures": [
+            "1x drum platform",
+            "3x captain tents",
+            "1x ration pit"
+          ],
+          "blockPalette": [
+            "oak_log",
+            "spruce_fence",
+            "hay_block",
+            "campfire"
+          ],
+          "defenses": [
+            "sentry ring",
+            "alarm horns"
+          ],
+          "flavor": "Every post bears marks from sworn captains."
+        },
+        {
+          "stage": 2,
+          "title": "Fortified Palisade",
+          "buildGoal": "Enclose settlement and build command lodge.",
+          "footprint": {
+            "width": 28,
+            "depth": 24
+          },
+          "newStructures": [
+            "1x warchief lodge",
+            "1x prisoner cage lane",
+            "4x corner watch towers"
+          ],
+          "blockPalette": [
+            "dark_oak_log",
+            "stripped_oak_log",
+            "stone_bricks",
+            "chain"
+          ],
+          "defenses": [
+            "reinforced gate",
+            "murder slit walkway"
+          ],
+          "flavor": "Captured shields are bolted into the front gate."
+        },
+        {
+          "stage": 3,
+          "title": "Siege Hamlet",
+          "buildGoal": "Turn camp into a siege-forward operating base.",
+          "footprint": {
+            "width": 36,
+            "depth": 30
+          },
+          "newStructures": [
+            "1x crude forge",
+            "2x ammo sheds",
+            "1x beast pen",
+            "1x war shaman hut"
+          ],
+          "blockPalette": [
+            "blackstone",
+            "polished_andesite",
+            "mangrove_planks",
+            "blast_furnace"
+          ],
+          "defenses": [
+            "outer spike belt",
+            "boiling-oil catwalk"
+          ],
+          "flavor": "Drumbeats keep all squads on one marching rhythm."
+        }
+      ]
+    },
+    {
+      "rank": "WARCHIEF",
+      "variantId": "warchief-smokeforge-kraal",
+      "displayName": "Smokeforge Kraal",
+      "biomeFit": [
+        "badlands",
+        "stony_peaks",
+        "desert"
+      ],
+      "commandPost": "lava-fed forge throne with chained anvils",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "Ash Corral",
+          "buildGoal": "Fence a volcanic corral for beasts and workers.",
+          "footprint": {
+            "width": 20,
+            "depth": 14
+          },
+          "newStructures": [
+            "1x beast corral",
+            "1x ore cart pit",
+            "1x slag dump"
+          ],
+          "blockPalette": [
+            "acacia_fence",
+            "blackstone",
+            "magma_block",
+            "barrel"
+          ],
+          "defenses": [
+            "magma trench",
+            "smoke veil"
+          ],
+          "flavor": "Ore dust and blood mix in the same mud."
+        },
+        {
+          "stage": 2,
+          "title": "Smokeforge Hub",
+          "buildGoal": "Install forge lines and command bridge.",
+          "footprint": {
+            "width": 30,
+            "depth": 24
+          },
+          "newStructures": [
+            "2x smith bays",
+            "1x command bridge",
+            "1x chain-lift crane"
+          ],
+          "blockPalette": [
+            "deepslate_bricks",
+            "iron_bars",
+            "chain",
+            "blast_furnace"
+          ],
+          "defenses": [
+            "heated grate choke",
+            "tower ballista"
+          ],
+          "flavor": "The warchief judges captains by the quality of forged axes."
+        },
+        {
+          "stage": 3,
+          "title": "Warfoundry District",
+          "buildGoal": "Mass-produce gear for regional domination pushes.",
+          "footprint": {
+            "width": 40,
+            "depth": 32
+          },
+          "newStructures": [
+            "1x foundry hall",
+            "2x armor stores",
+            "1x smoke beacon",
+            "1x war map hall"
+          ],
+          "blockPalette": [
+            "nether_bricks",
+            "polished_blackstone",
+            "lava_cauldron",
+            "anvil"
+          ],
+          "defenses": [
+            "triple gate",
+            "overhead chain drop traps"
+          ],
+          "flavor": "A constant furnace roar drowns out screams from the cages."
+        }
+      ]
+    },
+    {
+      "rank": "OVERLORD",
+      "variantId": "overlord-ironmaw-stronghold",
+      "displayName": "Ironmaw Stronghold",
+      "biomeFit": [
+        "mountains",
+        "stony_peaks",
+        "windswept_hills"
+      ],
+      "commandPost": "obsidian throne pit with chained war map",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "War Citadel Core",
+          "buildGoal": "Anchor overlord authority with a stone keep nucleus.",
+          "footprint": {
+            "width": 34,
+            "depth": 28
+          },
+          "newStructures": [
+            "1x central keep",
+            "1x execution ring",
+            "2x signal towers"
+          ],
+          "blockPalette": [
+            "stone_bricks",
+            "polished_blackstone",
+            "obsidian",
+            "soul_fire"
+          ],
+          "defenses": [
+            "elevated gatehouse",
+            "drawbridge killbox"
+          ],
+          "flavor": "The overlord decrees are carved into iron plates."
+        },
+        {
+          "stage": 2,
+          "title": "Conquest Bastion",
+          "buildGoal": "Add barracks and ritual courts to secure loyalty.",
+          "footprint": {
+            "width": 46,
+            "depth": 38
+          },
+          "newStructures": [
+            "2x legion barracks",
+            "1x ritual arena",
+            "1x tribute vault"
+          ],
+          "blockPalette": [
+            "deepslate_tiles",
+            "iron_block",
+            "chiseled_stone_bricks",
+            "chain"
+          ],
+          "defenses": [
+            "arrow parapets",
+            "gate cauldron emplacements"
+          ],
+          "flavor": "Rival captains kneel before weekly blood oaths."
+        },
+        {
+          "stage": 3,
+          "title": "Empire Seat",
+          "buildGoal": "Complete capital-grade fortress controlling the region.",
+          "footprint": {
+            "width": 60,
+            "depth": 52
+          },
+          "newStructures": [
+            "1x overlord throne fortress",
+            "1x war beast arena",
+            "1x treasury tower",
+            "1x command ziggurat"
+          ],
+          "blockPalette": [
+            "blackstone",
+            "gilded_blackstone",
+            "ancient_debris",
+            "redstone_lamp"
+          ],
+          "defenses": [
+            "multi-layer walls",
+            "inner doom gate",
+            "lava moat"
+          ],
+          "flavor": "Sky-fires burn night and day to mark total domination."
+        }
+      ]
+    },
+    {
+      "rank": "OVERLORD",
+      "variantId": "overlord-bloodmoon-redoubt",
+      "displayName": "Bloodmoon Redoubt",
+      "biomeFit": [
+        "swamp",
+        "dark_forest",
+        "jungle_edge"
+      ],
+      "commandPost": "ritual mound ringed by crimson totems",
+      "stages": [
+        {
+          "stage": 1,
+          "title": "Totem Bastion",
+          "buildGoal": "Raise fear with cursed totem circles and palisades.",
+          "footprint": {
+            "width": 30,
+            "depth": 30
+          },
+          "newStructures": [
+            "1x ritual mound",
+            "3x totem circles",
+            "1x shaman hall"
+          ],
+          "blockPalette": [
+            "mangrove_log",
+            "mud_bricks",
+            "red_nether_bricks",
+            "soul_lantern"
+          ],
+          "defenses": [
+            "bog trench",
+            "totem fear aura perimeter"
+          ],
+          "flavor": "Moonlit rites bind captains under dread omens."
+        },
+        {
+          "stage": 2,
+          "title": "Hexwall Fortress",
+          "buildGoal": "Construct layered hex walls and corruption pools.",
+          "footprint": {
+            "width": 44,
+            "depth": 40
+          },
+          "newStructures": [
+            "1x hexwall ring",
+            "1x corruption cistern",
+            "2x hunter towers"
+          ],
+          "blockPalette": [
+            "cracked_deepslate_bricks",
+            "mossy_stone_bricks",
+            "crying_obsidian",
+            "chain"
+          ],
+          "defenses": [
+            "swamp gas burners",
+            "ambush boardwalk"
+          ],
+          "flavor": "Nocturnal warbands disappear into marsh mist patrols."
+        },
+        {
+          "stage": 3,
+          "title": "Bloodmoon Citadel",
+          "buildGoal": "Manifest full occult military capital.",
+          "footprint": {
+            "width": 58,
+            "depth": 54
+          },
+          "newStructures": [
+            "1x citadel keep",
+            "1x blood altar basin",
+            "1x beast crypt",
+            "1x eclipse beacon"
+          ],
+          "blockPalette": [
+            "netherite_block",
+            "red_nether_bricks",
+            "polished_basalt",
+            "respawn_anchor"
+          ],
+          "defenses": [
+            "curse totem gauntlet",
+            "inner spirit firewall"
+          ],
+          "flavor": "The overlord is proclaimed war-prophet of the red moon."
+        }
+      ]
+    }
+  ]
+}
