@@ -449,7 +449,7 @@ public final class LastBreathHC extends JavaPlugin {
         customPotionEffectManager = new CustomPotionEffectManager(this, potionDefinitionRegistry, customPotionEffectRegistry);
         effectsStatusGUI = new EffectsStatusGUI(customPotionEffectManager, customPotionEffectRegistry);
         titlesGUI = new TitlesGUI();
-        cosmeticsGUI = new CosmeticsGUI();
+        cosmeticsGUI = new CosmeticsGUI(dailyRewardManager);
         LeaderboardGUI leaderboardGUI = new LeaderboardGUI();
         dailyRewardGUI = new DailyRewardGUI(dailyRewardManager);
         dailyCosmeticListener = new DailyCosmeticListener(this, dailyRewardManager);

@@ -30,8 +30,8 @@ public class DailyCosmeticListener implements Listener {
                 if (cosmetic == null || cosmetic.style() != DailyCosmeticType.CosmeticRenderStyle.AURA) {
                     continue;
                 }
-                Location center = player.getLocation().clone().add(0, 1.1, 0);
-                player.getWorld().spawnParticle(cosmetic.particle(), center, 6, 0.35, 0.45, 0.35, 0.01);
+                Location center = player.getLocation().clone().add(0, 0.35, 0);
+                player.getWorld().spawnParticle(cosmetic.particle(), center, 8, 0.45, 0.15, 0.45, 0.005);
             }
         }, 20L, 20L);
     }
