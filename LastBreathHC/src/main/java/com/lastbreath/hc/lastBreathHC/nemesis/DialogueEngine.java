@@ -49,6 +49,8 @@ public class DialogueEngine {
     private final int conversationRecentSuppression;
     private final double audienceRangeMeters;
     private final long npcConversationCooldownMs;
+    private final long responseDelayMinTicks;
+    private final long responseDelayMaxTicks;
     private final Map<UUID, Long> perPlayerCooldown = new ConcurrentHashMap<>();
     private final Map<UUID, Deque<String>> perPlayerRecent = new ConcurrentHashMap<>();
     private final Map<Tone, List<DialogueOption>> choiceOptions = new EnumMap<>(Tone.class);
@@ -68,6 +70,10 @@ public class DialogueEngine {
         this.conversationRecentSuppression = Math.max(1, plugin.getConfig().getInt("nemesis.dialogue.conversationRecentSuppression", 2));
         this.audienceRangeMeters = Math.max(5.0, plugin.getConfig().getDouble("nemesis.dialogue.audienceRangeMeters", 50.0));
         this.npcConversationCooldownMs = Math.max(2000L, plugin.getConfig().getLong("nemesis.dialogue.npcConversationCooldownMs", 15000L));
+        long configuredResponseDelayMin = Math.max(0L, plugin.getConfig().getLong("nemesis.dialogue.responseDelayMinTicks", 12L));
+        long configuredResponseDelayMax = Math.max(0L, plugin.getConfig().getLong("nemesis.dialogue.responseDelayMaxTicks", 36L));
+        this.responseDelayMinTicks = Math.min(configuredResponseDelayMin, configuredResponseDelayMax);
+        this.responseDelayMaxTicks = Math.max(configuredResponseDelayMin, configuredResponseDelayMax);
         loadDialogueChoices();
     }
 
@@ -195,22 +201,33 @@ public class DialogueEngine {
 
         if (exchange.reply() != null) {
             DialogueExchange reply = exchange.reply();
-            String replyRendered = renderLine(reply.line(), listenerName, speakerName, fallenName);
-            if (!replyRendered.isBlank()) {
-                String replyPrefix = npcConversation
-                        ? "§8[§4Warband§8] §6" + listenerName + " §7to §c" + speakerName + "§7: "
-                        : "§8[§4Warband§8] §c" + listenerName + "§7: ";
-                broadcastToNearby(location, replyPrefix + replyRendered);
-            }
-            applyAction(reply.actionType(), listener, speaker, channelKey, location);
+            runLater(randomResponseDelayTicks(), () -> {
+                String replyRendered = renderLine(reply.line(), listenerName, speakerName, fallenName);
+                if (!replyRendered.isBlank()) {
+                    String replyPrefix = npcConversation
+                            ? "§8[§4Warband§8] §6" + listenerName + " §7to §c" + speakerName + "§7: "
+                            : "§8[§4Warband§8] §c" + listenerName + "§7: ";
+                    broadcastToNearby(location, replyPrefix + replyRendered);
+                }
+                applyAction(reply.actionType(), listener, speaker, channelKey, location);
+                emitFollowUp(channelKey, exchange, speaker, listener, location, npcConversation, depth, fallenName);
+            });
+            return;
         }
 
-        if (exchange.followUps() != null && !exchange.followUps().isEmpty()) {
-            DialogueExchange followUp = weightedExchange(exchange.followUps(), null);
-            if (followUp != null) {
-                emitExchange(channelKey, followUp, speaker, listener, location, npcConversation, depth + 1, fallenName);
-            }
+        emitFollowUp(channelKey, exchange, speaker, listener, location, npcConversation, depth, fallenName);
+    }
+
+    private void emitFollowUp(String channelKey, DialogueExchange exchange, CaptainRecord speaker, CaptainRecord listener, Location location,
+                              boolean npcConversation, int depth, String fallenName) {
+        if (exchange.followUps() == null || exchange.followUps().isEmpty()) {
+            return;
         }
+        DialogueExchange followUp = weightedExchange(exchange.followUps(), null);
+        if (followUp == null) {
+            return;
+        }
+        runLater(randomResponseDelayTicks(), () -> emitExchange(channelKey, followUp, speaker, listener, location, npcConversation, depth + 1, fallenName));
     }
 
     private String renderLine(String line, String speakerName, String listenerName, String fallenName) {
@@ -248,6 +265,24 @@ public class DialogueEngine {
                 nearby.sendMessage(message);
             }
         }
+    }
+
+    private long randomResponseDelayTicks() {
+        if (responseDelayMaxTicks <= responseDelayMinTicks) {
+            return responseDelayMinTicks;
+        }
+        return responseDelayMinTicks + (long) (Math.random() * (responseDelayMaxTicks - responseDelayMinTicks + 1));
+    }
+
+    private void runLater(long delayTicks, Runnable task) {
+        if (task == null) {
+            return;
+        }
+        if (delayTicks <= 0L) {
+            task.run();
+            return;
+        }
+        plugin.getServer().getScheduler().runTaskLater(plugin, task, delayTicks);
     }
 
     private DialogueOption weighted(List<DialogueOption> options) {
