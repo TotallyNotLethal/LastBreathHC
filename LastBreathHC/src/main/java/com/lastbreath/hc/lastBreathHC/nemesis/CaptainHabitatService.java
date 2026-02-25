@@ -45,6 +45,23 @@ public final class CaptainHabitatService {
         captainRegistry.upsert(updated);
     }
 
+    public int clearAllHabitatLinks() {
+        int cleared = 0;
+        for (CaptainRecord record : captainRegistry.getAll()) {
+            if (record.habitat().isEmpty()) {
+                continue;
+            }
+            CaptainRecord updated = new CaptainRecord(
+                    record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(),
+                    record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry(),
+                    record.political(), record.social(), record.relationships(), record.memory(), record.persona(), Optional.empty()
+            );
+            captainRegistry.upsert(updated);
+            cleared++;
+        }
+        return cleared;
+    }
+
     public DeathCleanupResult handlePermanentCaptainDeath(UUID captainId) {
         CaptainRecord record = captainRegistry.getByCaptainUuid(captainId);
         if (record == null) {

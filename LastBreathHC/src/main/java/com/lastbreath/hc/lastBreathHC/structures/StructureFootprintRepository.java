@@ -160,6 +160,16 @@ public final class StructureFootprintRepository {
         return footprints.values();
     }
 
+    public int clearAll() {
+        int removed = footprints.size();
+        if (removed == 0) {
+            return 0;
+        }
+        footprints.clear();
+        dirty = true;
+        return removed;
+    }
+
     public boolean isDirty() {
         return dirty;
     }

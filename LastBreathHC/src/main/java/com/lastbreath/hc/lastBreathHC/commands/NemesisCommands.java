@@ -345,15 +345,21 @@ public class NemesisCommands implements BasicCommand {
             return;
         }
         if (args.length < 2 || !"confirm".equalsIgnoreCase(args[1])) {
-            sender.sendMessage("§cThis will clear all nemesis captains and minions.");
+            sender.sendMessage("§cThis will clear all nemesis captains, minions, and structures.");
             sender.sendMessage("§eUsage: /nemesis clear confirm");
             return;
         }
 
+        int habitatLinksRemoved = captainHabitatService.clearAllHabitatLinks();
         int captainsRemoved = registry.clearAll();
         armyGraphService.pruneMissingCaptains(java.util.Set.of());
         int minionsRemoved = minionController.despawnAllMinions();
-        sender.sendMessage("§aNemesis data cleared. Captains removed: §e" + captainsRemoved + "§a, minions removed: §e" + minionsRemoved);
+        int structuresRemoved = structureFootprintRepository.clearAll();
+        structureFootprintRepository.saveIfDirty();
+        sender.sendMessage("§aNemesis data cleared. Captains removed: §e" + captainsRemoved
+                + "§a, minions removed: §e" + minionsRemoved
+                + "§a, structures removed: §e" + structuresRemoved
+                + "§a, habitat links cleared: §e" + habitatLinksRemoved);
     }
 
     private void handleDebug(CommandSender sender, String[] args) {
