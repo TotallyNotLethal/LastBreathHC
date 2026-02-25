@@ -5,6 +5,8 @@ import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossKillMessage;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossPrefix;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticManager;
+import com.lastbreath.hc.lastBreathHC.daily.DailyCosmeticType;
+import com.lastbreath.hc.lastBreathHC.daily.DailyRewardManager;
 import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.Bukkit;
@@ -30,15 +32,18 @@ public class CosmeticsGUI implements Listener {
     private static final String TYPE_KILL = "kill";
     private static final String TYPE_CLEAR = "clear";
     private static final String TYPE_PAGE = "page";
+    private static final String TYPE_DAILY = "daily";
     private static final String PAGE_BOSS = "boss";
     private static final String PAGE_ASTEROID = "asteroid";
 
     private final NamespacedKey typeKey;
     private final NamespacedKey idKey;
+    private final DailyRewardManager dailyRewardManager;
 
-    public CosmeticsGUI() {
+    public CosmeticsGUI(DailyRewardManager dailyRewardManager) {
         this.typeKey = new NamespacedKey(LastBreathHC.getInstance(), "cosmetic-type");
         this.idKey = new NamespacedKey(LastBreathHC.getInstance(), "cosmetic-id");
+        this.dailyRewardManager = dailyRewardManager;
     }
 
     public void open(Player player) {
@@ -82,6 +87,11 @@ public class CosmeticsGUI implements Listener {
                 if (!aura.isBossUnlock()) {
                     inventory.setItem(auraSlot++, buildAuraItem(player, aura));
                 }
+            }
+
+            int dailySlot = 27;
+            for (DailyCosmeticType cosmetic : DailyCosmeticType.values()) {
+                inventory.setItem(dailySlot++, buildDailyCosmeticItem(player, cosmetic));
             }
         }
 
@@ -145,6 +155,16 @@ public class CosmeticsGUI implements Listener {
             } else {
                 player.sendMessage(ChatColor.GREEN + "Equipped kill message: " + message.displayName());
             }
+        } else if (TYPE_DAILY.equals(type)) {
+            DailyCosmeticType cosmetic = DailyCosmeticType.fromInput(id);
+            if (cosmetic == null) {
+                return;
+            }
+            if (!dailyRewardManager.equipCosmetic(player.getUniqueId(), cosmetic)) {
+                player.sendMessage(ChatColor.RED + "You have not unlocked that daily cosmetic yet.");
+            } else {
+                player.sendMessage(ChatColor.GREEN + "Equipped daily cosmetic: " + cosmetic.displayName());
+            }
         }
         open(player, currentPageId(event.getView().getTitle()));
     }
@@ -156,7 +176,7 @@ public class CosmeticsGUI implements Listener {
         meta.setLore(List.of(
                 ChatColor.GRAY + (bossPage
                         ? "Equip cosmetics earned from world bosses."
-                        : "Equip cosmetics found in tier 3 asteroids."),
+                        : "Equip cosmetics found in tier 3 asteroids and /daily."),
                 ChatColor.DARK_GRAY + "Use the button to swap pages."
         ));
         item.setItemMeta(meta);
@@ -226,6 +246,30 @@ public class CosmeticsGUI implements Listener {
         return item;
     }
 
+    private ItemStack buildDailyCosmeticItem(Player player, DailyCosmeticType cosmetic) {
+        ItemStack item = new ItemStack(Material.NETHER_STAR);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.AQUA + cosmetic.displayName());
+
+        List<String> lore = new ArrayList<>();
+        boolean unlocked = dailyRewardManager.getUnlockedCosmetics(player.getUniqueId()).contains(cosmetic);
+        DailyCosmeticType equipped = dailyRewardManager.getEquippedCosmetic(player.getUniqueId());
+        if (equipped == cosmetic) {
+            lore.add(ChatColor.GREEN + "Equipped");
+        } else if (unlocked) {
+            lore.add(ChatColor.YELLOW + "Click to equip.");
+        } else {
+            lore.add(ChatColor.DARK_RED + "Locked - unlock from /daily rewards.");
+        }
+        lore.add(ChatColor.GRAY + "Type: " + ChatColor.WHITE + cosmetic.style().name());
+
+        meta.setLore(lore);
+        meta.getPersistentDataContainer().set(typeKey, PersistentDataType.STRING, TYPE_DAILY);
+        meta.getPersistentDataContainer().set(idKey, PersistentDataType.STRING, cosmetic.name());
+        item.setItemMeta(meta);
+        return item;
+    }
+
     private ItemStack buildKillMessageItem(Player player, BossKillMessage message) {
         ItemStack item = new ItemStack(message.icon());
         ItemMeta meta = item.getItemMeta();
@@ -252,6 +296,7 @@ public class CosmeticsGUI implements Listener {
             player.sendMessage(ChatColor.YELLOW + "Prefix cleared.");
         } else if (TYPE_AURA.equals(id)) {
             CosmeticManager.equipAura(player, null);
+            dailyRewardManager.equipCosmetic(player.getUniqueId(), null);
             player.sendMessage(ChatColor.YELLOW + "Aura cleared.");
         } else if (TYPE_KILL.equals(id)) {
             CosmeticManager.equipKillMessage(player, null);

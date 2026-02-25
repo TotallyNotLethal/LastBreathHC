@@ -159,9 +159,22 @@ public class DailyRewardManager {
 
         DailyCosmeticType selected = pool.get(ThreadLocalRandom.current().nextInt(pool.size()));
         data.getUnlockedCosmetics().add(selected);
-        data.setEquippedCosmetic(selected);
         save(uuid);
         return selected;
+    }
+
+    public List<DailyCosmeticType> getUnlockedCosmetics(UUID uuid) {
+        return List.copyOf(get(uuid).getUnlockedCosmetics());
+    }
+
+    public boolean equipCosmetic(UUID uuid, DailyCosmeticType cosmetic) {
+        DailyRewardData data = get(uuid);
+        if (cosmetic != null && !data.getUnlockedCosmetics().contains(cosmetic)) {
+            return false;
+        }
+        data.setEquippedCosmetic(cosmetic);
+        save(uuid);
+        return true;
     }
 
     public DailyCosmeticType getEquippedCosmetic(UUID uuid) {
