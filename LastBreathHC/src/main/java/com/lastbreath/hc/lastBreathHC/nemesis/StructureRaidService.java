@@ -135,12 +135,12 @@ public final class StructureRaidService implements Listener {
 
         double pressureDelta = switch (action) {
             case BANNER_BREAK -> randomBetween(bannerPressureMin, bannerPressureMax);
-            case THRONE_HEART_BREAK -> randomBetween(throneHeartPressureMin, throneHeartPressureMax);
+            case THRONE_BREAK, HEART_BREAK -> randomBetween(throneHeartPressureMin, throneHeartPressureMax);
             case GUARD_KILL -> randomBetween(guardKillPressureMin, guardKillPressureMax);
         };
         double influenceLoss = switch (action) {
             case BANNER_BREAK -> 0.03;
-            case THRONE_HEART_BREAK -> 0.08;
+            case THRONE_BREAK, HEART_BREAK -> 0.08;
             case GUARD_KILL -> 0.01;
         };
         influenceLoss = capInfluenceLoss(footprint.structureId(), influenceLoss, now);
@@ -152,7 +152,7 @@ public final class StructureRaidService implements Listener {
         );
         CaptainRecord.Social social = record.social().orElse(new CaptainRecord.Social(0.5, 0.2, 0.5, 0.5));
         CaptainRecord.Social updatedSocial = new CaptainRecord.Social(
-                Math.max(0.0, social.loyalty() - (action == RaidAction.THRONE_HEART_BREAK ? 0.04 : 0.02)),
+                Math.max(0.0, social.loyalty() - ((action == RaidAction.THRONE_BREAK || action == RaidAction.HEART_BREAK) ? 0.04 : 0.02)),
                 Math.min(1.0, social.fear() + 0.02),
                 social.ambition(),
                 social.confidence()
@@ -172,8 +172,7 @@ public final class StructureRaidService implements Listener {
 
         orchestrator.onRaidInteraction(new PlayerRaidInteractionEvent(
                 actor.getUniqueId(), actor.getName(),
-                action == RaidAction.BANNER_BREAK ? PlayerRaidInteractionEvent.RaidTargetType.BANNER :
-                        (action == RaidAction.THRONE_HEART_BREAK ? PlayerRaidInteractionEvent.RaidTargetType.THRONE : PlayerRaidInteractionEvent.RaidTargetType.HEART),
+                toRaidTarget(action),
                 footprint.region(),
                 location,
                 now
@@ -242,15 +241,27 @@ public final class StructureRaidService implements Listener {
         if (material.name().endsWith("_BANNER")) {
             return RaidAction.BANNER_BREAK;
         }
-        if (material == Material.LODESTONE || material == Material.RESPAWN_ANCHOR) {
-            return RaidAction.THRONE_HEART_BREAK;
+        if (material == Material.LODESTONE) {
+            return RaidAction.THRONE_BREAK;
+        }
+        if (material == Material.RESPAWN_ANCHOR) {
+            return RaidAction.HEART_BREAK;
         }
         return null;
     }
 
+    private PlayerRaidInteractionEvent.RaidTargetType toRaidTarget(RaidAction action) {
+        return switch (action) {
+            case BANNER_BREAK -> PlayerRaidInteractionEvent.RaidTargetType.BANNER;
+            case THRONE_BREAK -> PlayerRaidInteractionEvent.RaidTargetType.THRONE;
+            case HEART_BREAK, GUARD_KILL -> PlayerRaidInteractionEvent.RaidTargetType.HEART;
+        };
+    }
+
     private enum RaidAction {
         BANNER_BREAK,
-        THRONE_HEART_BREAK,
+        THRONE_BREAK,
+        HEART_BREAK,
         GUARD_KILL
     }
 
