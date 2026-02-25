@@ -1,677 +1,676 @@
 choices:
   positive:
     positive_01:
-      line: "Pledge 1: We build together with {player}, while {captain} holds the line."
+      line: '{captain} says, "Careful, {player}. Walk away and you might keep your head."'
       action: UNITY
       weight: 1.45
     positive_02:
-      line: "Pledge 2: We build together with {player}, while {captain} holds the line."
+      line: '{captain} snarls, "You are prey, {player}, but I might let you run."'
       action: FORTIFY
       weight: 1.9
     positive_03:
-      line: "Pledge 3: We build together with {player}, while {captain} holds the line."
+      line: '{captain} says, "Drop your weapon, {player}. I am in a merciful mood."'
       action: STAND_DOWN
       weight: 2.35
     positive_04:
-      line: "Pledge 4: We build together with {player}, while {captain} holds the line."
+      line: '{captain} growls, "Do not test me, {player}. One more step and I charge."'
       action: UNITY
       weight: 2.8
     positive_05:
-      line: "Pledge 5: We build together with {player}, while {captain} holds the line."
+      line: '{captain} says, "You are marked, {player}, but I will give you one warning."'
       action: FORTIFY
       weight: 1.0
     positive_06:
-      line: "Pledge 6: We build together with {player}, while {captain} holds the line."
+      line: '{captain} says, "Leave this ground, {player}, before my warband stops playing nice."'
       action: STAND_DOWN
       weight: 1.45
     positive_07:
-      line: "Pledge 7: We build together with {player}, while {captain} holds the line."
+      line: '{captain} hisses, "You are still my enemy, {player}. I simply choose patience."'
       action: UNITY
       weight: 1.9
     positive_08:
-      line: "Pledge 8: We build together with {player}, while {captain} holds the line."
+      line: '{captain} says, "Turn around now, {player}. I would rather hunt you later."'
       action: FORTIFY
       weight: 2.35
     positive_09:
-      line: "Pledge 9: We build together with {player}, while {captain} holds the line."
+      line: '{captain} growls, "I can end this now, {player}. Do not make me prove it."'
       action: STAND_DOWN
       weight: 2.8
     positive_10:
-      line: "Pledge 10: We build together with {player}, while {captain} holds the line."
+      line: '{captain} says, "You are not a friend, {player}. Consider this your final warning."'
       action: UNITY
       weight: 1.0
     positive_11:
-      line: "Pledge 11: We build together with {player}, while {captain} holds the line."
+      line: '{captain} says, "Back off, {player}. Mercy is expensive and mine is almost gone."'
       action: FORTIFY
       weight: 1.45
     positive_12:
-      line: "Pledge 12: We build together with {player}, while {captain} holds the line."
+      line: '{captain} snarls, "Run while you can, {player}; next time I won''t speak first."'
       action: STAND_DOWN
       weight: 1.9
   neutral:
     neutral_01:
-      line: "Watch 1: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} says, "Keep your distance, {player}. I have not chosen violence yet."'
       action: UNITY
       weight: 1.45
     neutral_02:
-      line: "Watch 2: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} growls, "You are in my hunting grounds, {player}. Tread lightly."'
       action: FORTIFY
       weight: 1.9
     neutral_03:
-      line: "Watch 3: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} says, "Another step, {player}, and this turns into blood."'
       action: AGGRESSION
       weight: 2.35
     neutral_04:
-      line: "Watch 4: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} mutters, "Not yet... but I am watching you, {player}."'
       action: STAND_DOWN
       weight: 2.8
     neutral_05:
-      line: "Watch 5: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} says, "Do not mistake silence for peace, {player}."'
       action: UNITY
       weight: 1.0
     neutral_06:
-      line: "Watch 6: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} says, "I can hear your heartbeat, {player}. That should worry you."'
       action: FORTIFY
       weight: 1.45
     neutral_07:
-      line: "Watch 7: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} says, "You look nervous, {player}. Good. Stay that way."'
       action: AGGRESSION
       weight: 1.9
     neutral_08:
-      line: "Watch 8: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} says, "You are still the enemy, {player}. I am just waiting for a cleaner kill."'
       action: STAND_DOWN
       weight: 2.35
     neutral_09:
-      line: "Watch 9: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} growls, "Leave now, {player}, or feed the crows."'
       action: UNITY
       weight: 2.8
     neutral_10:
-      line: "Watch 10: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} says, "I warned you once, {player}. I rarely repeat myself."'
       action: FORTIFY
       weight: 1.0
     neutral_11:
-      line: "Watch 11: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} says, "My warband wants your head, {player}. I have not said no."'
       action: AGGRESSION
       weight: 1.45
     neutral_12:
-      line: "Watch 12: Keep distance from {player} while {captain} sets the pace."
+      line: '{captain} hisses, "Keep moving, {player}. Standing still makes this too easy."'
       action: STAND_DOWN
       weight: 1.9
   negative:
     negative_01:
-      line: "Threat 1: {captain} marks {player} for warband punishment."
+      line: '{captain} roars, "There you are, {player}. Tear them apart!"'
       action: BETRAYAL
       weight: 1.45
     negative_02:
-      line: "Threat 2: {captain} marks {player} for warband punishment."
+      line: '{captain} snarls, "No warnings now, {player}. I am taking your life."'
       action: BLOOD_FEUD
       weight: 1.9
     negative_03:
-      line: "Threat 3: {captain} marks {player} for warband punishment."
+      line: '{captain} says, "{player}, bleed for every insult you gave my warband."'
       action: AGGRESSION
       weight: 2.35
     negative_04:
-      line: "Threat 4: {captain} marks {player} for warband punishment."
+      line: '{captain} growls, "Close in! {player} dies here."'
       action: BETRAYAL
       weight: 2.8
     negative_05:
-      line: "Threat 5: {captain} marks {player} for warband punishment."
+      line: '{captain} roars, "I warned you, {player}. Now you pay."'
       action: BLOOD_FEUD
       weight: 1.0
     negative_06:
-      line: "Threat 6: {captain} marks {player} for warband punishment."
+      line: '{captain} shouts, "Warband, crush {player} before they can run!"'
       action: AGGRESSION
       weight: 1.45
     negative_07:
-      line: "Threat 7: {captain} marks {player} for warband punishment."
+      line: '{captain} snarls, "Break {player}''s legs. I want them alive for a minute."'
       action: BETRAYAL
       weight: 1.9
     negative_08:
-      line: "Threat 8: {captain} marks {player} for warband punishment."
+      line: '{captain} says, "{player}, I am done talking. Draw steel."'
       action: BLOOD_FEUD
       weight: 2.35
     negative_09:
-      line: "Threat 9: {captain} marks {player} for warband punishment."
+      line: '{captain} roars, "Drive {player} into the dirt and do not stop."'
       action: AGGRESSION
       weight: 2.8
     negative_10:
-      line: "Threat 10: {captain} marks {player} for warband punishment."
+      line: '{captain} hisses, "You should have fled, {player}."'
       action: BETRAYAL
       weight: 1.0
     negative_11:
-      line: "Threat 11: {captain} marks {player} for warband punishment."
+      line: '{captain} growls, "Every captain here wants your death, {player}."'
       action: BLOOD_FEUD
       weight: 1.45
     negative_12:
-      line: "Threat 12: {captain} marks {player} for warband punishment."
+      line: '{captain} roars, "No mercy! Carve {player} out of this battlefield!"'
       action: AGGRESSION
       weight: 1.9
-
 npcConversations:
   captain_to_captain:
     captain_to_captain_01:
-      line: "captain -> captain order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     captain_to_captain_02:
-      line: "captain -> captain order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     captain_to_captain_03:
-      line: "captain -> captain order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     captain_to_captain_04:
-      line: "captain -> captain order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     captain_to_captain_05:
-      line: "captain -> captain order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
   captain_to_warchief:
     captain_to_warchief_01:
-      line: "captain -> warchief order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     captain_to_warchief_02:
-      line: "captain -> warchief order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     captain_to_warchief_03:
-      line: "captain -> warchief order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     captain_to_warchief_04:
-      line: "captain -> warchief order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     captain_to_warchief_05:
-      line: "captain -> warchief order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
   captain_to_overlord:
     captain_to_overlord_01:
-      line: "captain -> overlord order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     captain_to_overlord_02:
-      line: "captain -> overlord order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     captain_to_overlord_03:
-      line: "captain -> overlord order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     captain_to_overlord_04:
-      line: "captain -> overlord order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     captain_to_overlord_05:
-      line: "captain -> overlord order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
   warchief_to_captain:
     warchief_to_captain_01:
-      line: "warchief -> captain order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     warchief_to_captain_02:
-      line: "warchief -> captain order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     warchief_to_captain_03:
-      line: "warchief -> captain order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     warchief_to_captain_04:
-      line: "warchief -> captain order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     warchief_to_captain_05:
-      line: "warchief -> captain order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
   warchief_to_warchief:
     warchief_to_warchief_01:
-      line: "warchief -> warchief order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     warchief_to_warchief_02:
-      line: "warchief -> warchief order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     warchief_to_warchief_03:
-      line: "warchief -> warchief order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     warchief_to_warchief_04:
-      line: "warchief -> warchief order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     warchief_to_warchief_05:
-      line: "warchief -> warchief order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
   warchief_to_overlord:
     warchief_to_overlord_01:
-      line: "warchief -> overlord order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     warchief_to_overlord_02:
-      line: "warchief -> overlord order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     warchief_to_overlord_03:
-      line: "warchief -> overlord order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     warchief_to_overlord_04:
-      line: "warchief -> overlord order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     warchief_to_overlord_05:
-      line: "warchief -> overlord order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
   overlord_to_captain:
     overlord_to_captain_01:
-      line: "overlord -> captain order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     overlord_to_captain_02:
-      line: "overlord -> captain order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     overlord_to_captain_03:
-      line: "overlord -> captain order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     overlord_to_captain_04:
-      line: "overlord -> captain order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     overlord_to_captain_05:
-      line: "overlord -> captain order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
   overlord_to_warchief:
     overlord_to_warchief_01:
-      line: "overlord -> warchief order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     overlord_to_warchief_02:
-      line: "overlord -> warchief order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     overlord_to_warchief_03:
-      line: "overlord -> warchief order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     overlord_to_warchief_04:
-      line: "overlord -> warchief order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     overlord_to_warchief_05:
-      line: "overlord -> warchief order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
   overlord_to_overlord:
     overlord_to_overlord_01:
-      line: "overlord -> overlord order 1: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, take the left flank and keep formation tight."'
       weight: 1.45
     overlord_to_overlord_02:
-      line: "overlord -> overlord order 2: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} barks, "{listener}, hold the choke point—no one gets through."'
       weight: 1.8
       action: FORTIFY
       reply:
-        line: "Reply 2: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} answers, "Understood, {speaker}. My line is locking in now."'
         weight: 1.0
         action: UNITY
     overlord_to_overlord_03:
-      line: "overlord -> overlord order 3: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, push the ridge and call out every contact."'
       weight: 2.15
     overlord_to_overlord_04:
-      line: "overlord -> overlord order 4: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} growls, "{listener}, rotate your squad and keep pressure on them."'
       weight: 2.5
       action: UNITY
       reply:
-        line: "Reply 4: {listener} acknowledges {speaker} and tightens formation."
+        line: '{listener} replies, "Got it, {speaker}. We''re moving and holding discipline."'
         weight: 1.0
         action: STAND_DOWN
     overlord_to_overlord_05:
-      line: "overlord -> overlord order 5: {speaker} directs {listener} to secure the lane."
+      line: '{speaker} says, "{listener}, regroup at the banner; we strike together."'
       weight: 2.85
       followUps:
         follow_1:
-          line: "Follow-up 1: Scouts report the flank is holding."
+          line: 'A scout reports, "The flank is holding, and their push is slowing."'
           weight: 1.4
           action: FORTIFY
         follow_2:
-          line: "Follow-up 2: Drums call both crews back to the banner."
+          line: 'War drums thunder—both crews pull back toward the banner.'
           weight: 1.0
           reply:
-            line: "Reply follow-up: {listener} signals readiness to {speaker}."
+            line: '{listener} says, "We''re set, {speaker}. Just give the word."'
             weight: 1.0
 
 eventConversations:
   betrayal:
     betrayal_01:
-      line: "betrayal event 1: {speaker} calls out {listener} before the ranks."
+      line: 'betrayal event 1: {speaker} calls out {listener} before the ranks.'
       weight: 1.7
     betrayal_02:
-      line: "betrayal event 2: {speaker} calls out {listener} before the ranks."
+      line: 'betrayal event 2: {speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: AGGRESSION
       reply:
-        line: "Counter 2: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: BLOOD_FEUD
     betrayal_03:
-      line: "betrayal event 3: {speaker} calls out {listener} before the ranks."
+      line: 'betrayal event 3: {speaker} calls out {listener} before the ranks.'
       weight: 2.7
     betrayal_04:
-      line: "betrayal event 4: {speaker} calls out {listener} before the ranks."
+      line: 'betrayal event 4: {speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: AGGRESSION
       reply:
-        line: "Counter 4: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: BLOOD_FEUD
       followUps:
         after_1:
-          line: "Aftershock: the ranks chant and tighten the perimeter."
+          line: 'Aftershock: the ranks chant and tighten the perimeter.'
           weight: 1.1
           action: FORTIFY
         after_2:
-          line: "Aftershock: scouts fan outward hunting weak points."
+          line: 'Aftershock: scouts fan outward hunting weak points.'
           weight: 1.0
           action: AGGRESSION
   blood_brother_avenge:
     blood_brother_avenge_01:
-      line: "blood brother avenge event 1: {speaker} swears vengeance for {fallen} against {listener}."
+      line: 'blood brother avenge event 1: {speaker} swears vengeance for {fallen} against {listener}.'
       weight: 1.7
     blood_brother_avenge_02:
-      line: "blood brother avenge event 2: {speaker} swears vengeance for {fallen} against {listener}."
+      line: 'blood brother avenge event 2: {speaker} swears vengeance for {fallen} against {listener}.'
       weight: 2.2
       action: FORTIFY
       reply:
-        line: "Counter 2: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     blood_brother_avenge_03:
-      line: "blood brother avenge event 3: {speaker} swears vengeance for {fallen} against {listener}."
+      line: 'blood brother avenge event 3: {speaker} swears vengeance for {fallen} against {listener}.'
       weight: 2.7
     blood_brother_avenge_04:
-      line: "blood brother avenge event 4: {speaker} swears vengeance for {fallen} against {listener}."
+      line: 'blood brother avenge event 4: {speaker} swears vengeance for {fallen} against {listener}.'
       weight: 3.2
       action: FORTIFY
       reply:
-        line: "Counter 4: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
         after_1:
-          line: "Aftershock: the ranks chant and tighten the perimeter."
+          line: 'Aftershock: the ranks chant and tighten the perimeter.'
           weight: 1.1
           action: FORTIFY
         after_2:
-          line: "Aftershock: scouts fan outward hunting weak points."
+          line: 'Aftershock: scouts fan outward hunting weak points.'
           weight: 1.0
           action: AGGRESSION
   warband_feud:
     warband_feud_01:
-      line: "warband feud event 1: {speaker} calls out {listener} before the ranks."
+      line: 'warband feud event 1: {speaker} calls out {listener} before the ranks.'
       weight: 1.7
     warband_feud_02:
-      line: "warband feud event 2: {speaker} calls out {listener} before the ranks."
+      line: 'warband feud event 2: {speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: AGGRESSION
       reply:
-        line: "Counter 2: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     warband_feud_03:
-      line: "warband feud event 3: {speaker} calls out {listener} before the ranks."
+      line: 'warband feud event 3: {speaker} calls out {listener} before the ranks.'
       weight: 2.7
     warband_feud_04:
-      line: "warband feud event 4: {speaker} calls out {listener} before the ranks."
+      line: 'warband feud event 4: {speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: AGGRESSION
       reply:
-        line: "Counter 4: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
         after_1:
-          line: "Aftershock: the ranks chant and tighten the perimeter."
+          line: 'Aftershock: the ranks chant and tighten the perimeter.'
           weight: 1.1
           action: FORTIFY
         after_2:
-          line: "Aftershock: scouts fan outward hunting weak points."
+          line: 'Aftershock: scouts fan outward hunting weak points.'
           weight: 1.0
           action: AGGRESSION
   fight_pit:
     fight_pit_01:
-      line: "fight pit event 1: {speaker} calls out {listener} before the ranks."
+      line: 'fight pit event 1: {speaker} calls out {listener} before the ranks.'
       weight: 1.7
     fight_pit_02:
-      line: "fight pit event 2: {speaker} calls out {listener} before the ranks."
+      line: 'fight pit event 2: {speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: FORTIFY
       reply:
-        line: "Counter 2: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     fight_pit_03:
-      line: "fight pit event 3: {speaker} calls out {listener} before the ranks."
+      line: 'fight pit event 3: {speaker} calls out {listener} before the ranks.'
       weight: 2.7
     fight_pit_04:
-      line: "fight pit event 4: {speaker} calls out {listener} before the ranks."
+      line: 'fight pit event 4: {speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: FORTIFY
       reply:
-        line: "Counter 4: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
         after_1:
-          line: "Aftershock: the ranks chant and tighten the perimeter."
+          line: 'Aftershock: the ranks chant and tighten the perimeter.'
           weight: 1.1
           action: FORTIFY
         after_2:
-          line: "Aftershock: scouts fan outward hunting weak points."
+          line: 'Aftershock: scouts fan outward hunting weak points.'
           weight: 1.0
           action: AGGRESSION
   promotion_rite:
     promotion_rite_01:
-      line: "promotion rite event 1: {speaker} calls out {listener} before the ranks."
+      line: 'promotion rite event 1: {speaker} calls out {listener} before the ranks.'
       weight: 1.7
     promotion_rite_02:
-      line: "promotion rite event 2: {speaker} calls out {listener} before the ranks."
+      line: 'promotion rite event 2: {speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: FORTIFY
       reply:
-        line: "Counter 2: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     promotion_rite_03:
-      line: "promotion rite event 3: {speaker} calls out {listener} before the ranks."
+      line: 'promotion rite event 3: {speaker} calls out {listener} before the ranks.'
       weight: 2.7
     promotion_rite_04:
-      line: "promotion rite event 4: {speaker} calls out {listener} before the ranks."
+      line: 'promotion rite event 4: {speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: FORTIFY
       reply:
-        line: "Counter 4: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
         after_1:
-          line: "Aftershock: the ranks chant and tighten the perimeter."
+          line: 'Aftershock: the ranks chant and tighten the perimeter.'
           weight: 1.1
           action: FORTIFY
         after_2:
-          line: "Aftershock: scouts fan outward hunting weak points."
+          line: 'Aftershock: scouts fan outward hunting weak points.'
           weight: 1.0
           action: AGGRESSION
   retaliation_scout:
     retaliation_scout_01:
-      line: "retaliation scout event 1: {speaker} calls out {listener} before the ranks."
+      line: 'retaliation scout event 1: {speaker} calls out {listener} before the ranks.'
       weight: 1.7
     retaliation_scout_02:
-      line: "retaliation scout event 2: {speaker} calls out {listener} before the ranks."
+      line: 'retaliation scout event 2: {speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: AGGRESSION
       reply:
-        line: "Counter 2: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     retaliation_scout_03:
-      line: "retaliation scout event 3: {speaker} calls out {listener} before the ranks."
+      line: 'retaliation scout event 3: {speaker} calls out {listener} before the ranks.'
       weight: 2.7
     retaliation_scout_04:
-      line: "retaliation scout event 4: {speaker} calls out {listener} before the ranks."
+      line: 'retaliation scout event 4: {speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: AGGRESSION
       reply:
-        line: "Counter 4: {listener} answers {speaker} in front of the warband."
+        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
         after_1:
-          line: "Aftershock: the ranks chant and tighten the perimeter."
+          line: 'Aftershock: the ranks chant and tighten the perimeter.'
           weight: 1.1
           action: FORTIFY
         after_2:
-          line: "Aftershock: scouts fan outward hunting weak points."
+          line: 'Aftershock: scouts fan outward hunting weak points.'
           weight: 1.0
           action: AGGRESSION

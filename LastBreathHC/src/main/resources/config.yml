@@ -1661,6 +1661,8 @@ nemesis:
     recentSuppression: 3
     audienceRangeMeters: 50.0
     npcConversationCooldownMs: 15000
+    responseDelayMinTicks: 12
+    responseDelayMaxTicks: 36
 
   warband:
     tickPeriodTicks: 40
