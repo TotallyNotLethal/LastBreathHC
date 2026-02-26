@@ -1,0 +1,27 @@
+nemesisBuildings:
+  schematicsDirectory: schematics
+  defaults:
+    structureType: nemesis_fortification
+    spawnRadiusExclusion: 24
+  ranks:
+    captain:
+      templateId: nemesis_rank1_outpost
+      rank: CAPTAIN
+      displayName: Nemesis Outpost
+      schematic: nemesis_rank1_outpost.litematic
+      buildSeconds: 300
+      tier: 1
+    warchief:
+      templateId: nemesis_rank2_bastion
+      rank: WARCHIEF
+      displayName: Nemesis Bastion
+      schematic: nemesis_rank2_bastion.litematic
+      buildSeconds: 720
+      tier: 2
+    overlord:
+      templateId: nemesis_rank3_citadel
+      rank: OVERLORD
+      displayName: Nemesis Citadel
+      schematic: nemesis_rank3_citadel.litematic
+      buildSeconds: 1200
+      tier: 3
