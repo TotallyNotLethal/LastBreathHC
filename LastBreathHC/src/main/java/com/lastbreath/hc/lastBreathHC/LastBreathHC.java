@@ -55,6 +55,7 @@ import com.lastbreath.hc.lastBreathHC.nemesis.NemesisRivalryDirector;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisUI;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisWarbandCoordinator;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisAdminWarbandService;
+import com.lastbreath.hc.lastBreathHC.nemesis.NemesisBuildingService;
 import com.lastbreath.hc.lastBreathHC.nemesis.AntiCheeseMonitor;
 import com.lastbreath.hc.lastBreathHC.nemesis.DialogueEngine;
 import com.lastbreath.hc.lastBreathHC.nemesis.InfluenceItemHandler;
@@ -206,6 +207,7 @@ public final class LastBreathHC extends JavaPlugin {
     private StructureFootprintRepository structureFootprintRepository;
     private StructureManager structureManager;
     private StructureEventOrchestrator structureEventOrchestrator;
+    private NemesisBuildingService nemesisBuildingService;
     private NemesisAdminWarbandService nemesisAdminWarbandService;
     private CaptainHabitatService captainHabitatService;
     private StructureRaidService structureRaidService;
@@ -243,6 +245,8 @@ public final class LastBreathHC extends JavaPlugin {
                 new StructurePlacementValidator.NoOpProtectedRegionAdapter()
         );
         structureManager = new StructureManagerImpl(structurePlacementValidator, structureFootprintRepository);
+        nemesisBuildingService = new NemesisBuildingService(this, structureManager);
+        nemesisBuildingService.initialize();
         captainRegistry = new CaptainRegistry();
         captainHabitatService = new CaptainHabitatService(this, captainRegistry, structureFootprintRepository);
         captainSerializer = new CaptainSerializer(this, new java.io.File(getDataFolder(), "nemesis-captains.yml"));
@@ -251,7 +255,7 @@ public final class LastBreathHC extends JavaPlugin {
         armyGraphService = new ArmyGraphService();
         armyGraphService.load(armyGraphSerializer.load());
         armyGraphService.seedFromCaptains(captainRegistry.getAll());
-        structureEventOrchestrator = new StructureEventOrchestrator(captainRegistry, structureManager, captainHabitatService, armyGraphService);
+        structureEventOrchestrator = new StructureEventOrchestrator(captainRegistry, structureManager, captainHabitatService, armyGraphService, nemesisBuildingService);
         armyGraphService.pruneMissingCaptains(captainRegistry.getAll().stream().map(record -> record.identity().captainId()).collect(java.util.stream.Collectors.toSet()));
         long captainFlushIntervalTicks = 20L * 60L * 3L;
         captainFlushTask = getServer().getScheduler().runTaskTimer(this, this::flushDirtyCaptains, captainFlushIntervalTicks, captainFlushIntervalTicks);
@@ -670,6 +674,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (fakePlayerService != null) {
             fakePlayerService.shutdown();
             fakePlayerService = null;
+        }
+        if (nemesisBuildingService != null) {
+            nemesisBuildingService.shutdown();
+            nemesisBuildingService = null;
         }
         if (structureFootprintRepository != null) {
             structureFootprintRepository.saveIfDirty();

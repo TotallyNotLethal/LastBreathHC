@@ -18,13 +18,19 @@ public final class StructureEventOrchestrator {
     private final StructureManager structureManager;
     private final CaptainHabitatService captainHabitatService;
     private final ArmyGraphService armyGraphService;
+    private final NemesisBuildingService nemesisBuildingService;
     private final Set<String> processedTriggerKeys = ConcurrentHashMap.newKeySet();
 
-    public StructureEventOrchestrator(CaptainRegistry registry, StructureManager structureManager, CaptainHabitatService captainHabitatService, ArmyGraphService armyGraphService) {
+    public StructureEventOrchestrator(CaptainRegistry registry,
+                                      StructureManager structureManager,
+                                      CaptainHabitatService captainHabitatService,
+                                      ArmyGraphService armyGraphService,
+                                      NemesisBuildingService nemesisBuildingService) {
         this.registry = registry;
         this.structureManager = structureManager;
         this.captainHabitatService = captainHabitatService;
         this.armyGraphService = armyGraphService;
+        this.nemesisBuildingService = nemesisBuildingService;
     }
 
 
@@ -57,7 +63,7 @@ public final class StructureEventOrchestrator {
         }
         applyTelemetry(event.captainId(), "structureTriggers.rankChange");
         structureManager.upgradeLatestStructureForOwner(event.captainId().toString(), event.currentRank().ordinal() + 1, event.occurredAtEpochMillis());
-        spawnForCaptainAndWarband(event.captainId(), rankTemplate(event.currentRank()), event.currentRank().name());
+        scheduleRankConstructionForCaptainAndWarband(event.captainId(), event.currentRank(), event.currentRank().name());
         if (event.currentRank() == Rank.OVERLORD) {
             foldCaptainsIntoOverlordArmy(event.captainId());
         }
@@ -220,12 +226,15 @@ public final class StructureEventOrchestrator {
                 overlord.origin().spawnZ() + offsetZ);
     }
 
-    private String rankTemplate(Rank rank) {
-        return switch (rank) {
-            case CAPTAIN -> "nemesis-captain-hut";
-            case WARCHIEF -> "nemesis-warchief-settlement";
-            case OVERLORD -> "nemesis-overlord-stronghold";
-        };
+    private void scheduleRankConstructionForCaptainAndWarband(UUID captainId, Rank rank, String region) {
+        int index = 0;
+        for (UUID memberId : warbandMembers(captainId)) {
+            CaptainRecord record = registry.getByCaptainUuid(memberId);
+            if (record == null) {
+                continue;
+            }
+            nemesisBuildingService.scheduleRankConstruction(record, rank, region, index++);
+        }
     }
 
     private int spawnForCaptainAndWarband(UUID captainId, String templateId, String region) {
