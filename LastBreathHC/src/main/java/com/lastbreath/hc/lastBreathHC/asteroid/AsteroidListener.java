@@ -140,6 +140,10 @@ public class AsteroidListener implements Listener {
                 LastBreathHC.getInstance().getLogger().warning("Asteroid "
                         + AsteroidManager.asteroidKey(asteroidLoc)
                         + " has no Discord message id to delete; continuing asteroid cleanup.");
+            } else if (!AsteroidManager.isLastAsteroidForDiscordMessage(asteroidLoc, discordMessageId)) {
+                LastBreathHC.getInstance().getLogger().fine("Skipping Discord message delete for asteroid "
+                        + AsteroidManager.asteroidKey(asteroidLoc)
+                        + " because linked meteor shower asteroids remain active.");
             } else {
                 DiscordWebhookService webhookService = LastBreathHC.getInstance().getDiscordWebhookService();
                 String webhookUrl = LastBreathHC.getInstance().getConfig()
