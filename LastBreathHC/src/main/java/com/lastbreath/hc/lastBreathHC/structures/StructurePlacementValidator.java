@@ -11,10 +11,14 @@ import org.bukkit.util.BoundingBox;
 public final class StructurePlacementValidator {
     private final StructureFootprintRepository footprintRepository;
     private final ProtectedRegionAdapter protectedRegionAdapter;
+    private final PlayerPlacedBlockIndex playerPlacedBlockIndex;
 
-    public StructurePlacementValidator(StructureFootprintRepository footprintRepository, ProtectedRegionAdapter protectedRegionAdapter) {
+    public StructurePlacementValidator(StructureFootprintRepository footprintRepository,
+                                       ProtectedRegionAdapter protectedRegionAdapter,
+                                       PlayerPlacedBlockIndex playerPlacedBlockIndex) {
         this.footprintRepository = footprintRepository;
         this.protectedRegionAdapter = protectedRegionAdapter;
+        this.playerPlacedBlockIndex = playerPlacedBlockIndex;
     }
 
     public ValidationResult validate(Location anchor, StructureTemplateMetadata metadata, SpawnContext context, BoundingBox absoluteBoundingBox) {
@@ -41,6 +45,9 @@ public final class StructurePlacementValidator {
 
         for (StructureBlockPlacement placement : metadata.template().getBlockPlacements()) {
             Block block = world.getBlockAt(anchor.clone().add(placement.relativeOffset()));
+            if (playerPlacedBlockIndex != null && playerPlacedBlockIndex.isPlayerPlaced(block)) {
+                return ValidationResult.rejected("Overlaps player-placed block");
+            }
             if (isLikelyPlayerBuilt(block)) {
                 return ValidationResult.rejected("Overlaps likely player-built structure");
             }

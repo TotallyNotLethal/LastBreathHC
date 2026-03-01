@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.nemesis;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.structures.PlayerPlacedBlockIndex;
 import org.bukkit.Bukkit;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
@@ -57,7 +58,10 @@ public class CaptainSpawner implements Listener {
     private final int randomOverworldMobPoolLimit;
     private final int randomOverworldActiveCap;
     private final int minimumSpawnY;
+    private final int minDistanceFromPlayer;
+    private final int maxDistanceFromPlayer;
     private final NamespacedKey worldBossTypeKey;
+    private final PlayerPlacedBlockIndex playerPlacedBlockIndex;
 
     private final Map<UUID, Long> playerSpawnInterest = new HashMap<>();
     private final Map<UUID, Long> playerMovementProbeCooldown = new HashMap<>();
@@ -69,12 +73,14 @@ public class CaptainSpawner implements Listener {
                           CaptainRegistry registry,
                           CaptainEntityBinder binder,
                           ProtectedRegionChecker protectedRegionChecker,
+                          PlayerPlacedBlockIndex playerPlacedBlockIndex,
                           CaptainNameGenerator nameGenerator,
                           StructureEventOrchestrator structureEventOrchestrator) {
         this.plugin = plugin;
         this.registry = registry;
         this.binder = binder;
         this.protectedRegionChecker = protectedRegionChecker;
+        this.playerPlacedBlockIndex = playerPlacedBlockIndex;
         this.stateMachine = new CaptainStateMachine();
         this.nameGenerator = nameGenerator;
         this.structureEventOrchestrator = structureEventOrchestrator;
@@ -95,6 +101,8 @@ public class CaptainSpawner implements Listener {
         this.randomOverworldMobPoolLimit = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.mobPoolLimit", 64));
         this.randomOverworldActiveCap = Math.max(1, plugin.getConfig().getInt("nemesis.spawn.overworldRandomCaptain.activeCap", 20));
         this.minimumSpawnY = Math.max(plugin.getConfig().getInt("nemesis.spawn.location.minimumY", 63), 63);
+        this.minDistanceFromPlayer = Math.max(24, plugin.getConfig().getInt("nemesis.spawn.location.minDistanceFromPlayer", 96));
+        this.maxDistanceFromPlayer = Math.max(this.minDistanceFromPlayer, plugin.getConfig().getInt("nemesis.spawn.location.maxDistanceFromPlayer", 128));
         this.worldBossTypeKey = new NamespacedKey(plugin, WorldBossConstants.WORLD_BOSS_TYPE_KEY);
         this.encounterMilestoneThresholds = List.of(3, 5, 10, 20);
     }
@@ -510,9 +518,13 @@ public class CaptainSpawner implements Listener {
     private Location findValidSpawnLocation(CaptainRecord record, Player nearPlayer) {
         World world = nearPlayer.getWorld();
         int radius = nearbyRangeBlocks;
-        for (int i = 0; i < 8; i++) {
-            int dx = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
-            int dz = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
+        int maxDistance = Math.min(maxDistanceFromPlayer, radius);
+        int minDistance = Math.min(minDistanceFromPlayer, maxDistance);
+        for (int i = 0; i < 16; i++) {
+            double angle = ThreadLocalRandom.current().nextDouble(0, Math.PI * 2.0);
+            int distance = ThreadLocalRandom.current().nextInt(minDistance, maxDistance + 1);
+            int dx = (int) Math.round(Math.cos(angle) * distance);
+            int dz = (int) Math.round(Math.sin(angle) * distance);
             int x = nearPlayer.getLocation().getBlockX() + dx;
             int z = nearPlayer.getLocation().getBlockZ() + dz;
             int y = world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES) + 1;
@@ -555,6 +567,15 @@ public class CaptainSpawner implements Listener {
 
         if (location.clone().subtract(0, 1, 0).getBlock().isLiquid()) {
             return false;
+        }
+
+        if (playerPlacedBlockIndex != null) {
+            if (playerPlacedBlockIndex.isPlayerPlaced(location.getBlock())) {
+                return false;
+            }
+            if (playerPlacedBlockIndex.isPlayerPlaced(location.clone().subtract(0, 1, 0).getBlock())) {
+                return false;
+            }
         }
 
         String biome = location.getBlock().getBiome().name().toLowerCase(Locale.ROOT);
