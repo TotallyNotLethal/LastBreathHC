@@ -46,6 +46,7 @@ discordWebhook:
   asteroidsUsername: "Asteroid Watch"
   asteroidsAvatarUrl: ""
   asteroidsEmbedColor: "D97B00"
+  clearAsteroidMessagesOnStartup: true
 
 teamChat:
   format: "&7[Team] &b%player%&7: &f%message%"
