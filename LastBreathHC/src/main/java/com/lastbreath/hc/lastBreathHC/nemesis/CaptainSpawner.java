@@ -400,9 +400,10 @@ public class CaptainSpawner implements Listener {
         };
         CaptainRecord.Progression progression = new CaptainRecord.Progression(level, level * 80L, "RARE");
         CaptainRecord.Traits traits = new CaptainRecord.Traits(List.of("raider", "strength_brutal_strikes"), List.of(), List.of());
-        String token = captainId.toString().substring(0, 4).toUpperCase(Locale.ROOT);
         String title = titleToken == null || titleToken.isBlank() ? "Warband" : titleToken;
-        CaptainRecord.Naming naming = new CaptainRecord.Naming(title + " " + token, "the Besieger", rank.name(), token);
+        String readableName = title.trim();
+        String aliasSeed = title.replace(' ', '_').toUpperCase(Locale.ROOT);
+        CaptainRecord.Naming naming = new CaptainRecord.Naming(readableName, "the Besieger", rank.name(), aliasSeed);
         int minionCount = Math.max(1, plugin.getConfig().getInt("nemesis.minions.defaultCount", 2));
         CaptainRecord.MinionPack minionPack = new CaptainRecord.MinionPack(
                 "default",

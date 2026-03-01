@@ -51,6 +51,9 @@ public class DialogueEngine {
     private final long npcConversationCooldownMs;
     private final long responseDelayMinTicks;
     private final long responseDelayMaxTicks;
+    private final double npcReplyChance;
+    private final double eventReplyChance;
+    private final double followUpChance;
     private final Map<UUID, Long> perPlayerCooldown = new ConcurrentHashMap<>();
     private final Map<UUID, Deque<String>> perPlayerRecent = new ConcurrentHashMap<>();
     private final Map<Tone, List<DialogueOption>> choiceOptions = new EnumMap<>(Tone.class);
@@ -74,6 +77,9 @@ public class DialogueEngine {
         long configuredResponseDelayMax = Math.max(0L, plugin.getConfig().getLong("nemesis.dialogue.responseDelayMaxTicks", 36L));
         this.responseDelayMinTicks = Math.min(configuredResponseDelayMin, configuredResponseDelayMax);
         this.responseDelayMaxTicks = Math.max(configuredResponseDelayMin, configuredResponseDelayMax);
+        this.npcReplyChance = clampChance(plugin.getConfig().getDouble("nemesis.dialogue.npcReplyChance", 0.45));
+        this.eventReplyChance = clampChance(plugin.getConfig().getDouble("nemesis.dialogue.eventReplyChance", 0.55));
+        this.followUpChance = clampChance(plugin.getConfig().getDouble("nemesis.dialogue.followUpChance", 0.25));
         loadDialogueChoices();
     }
 
@@ -199,7 +205,7 @@ public class DialogueEngine {
         }
         applyAction(exchange.actionType(), speaker, listener, channelKey, location);
 
-        if (exchange.reply() != null) {
+        if (exchange.reply() != null && shouldSendReply(npcConversation)) {
             DialogueExchange reply = exchange.reply();
             runLater(randomResponseDelayTicks(), () -> {
                 String replyRendered = renderLine(reply.line(), listenerName, speakerName, fallenName);
@@ -221,6 +227,9 @@ public class DialogueEngine {
     private void emitFollowUp(String channelKey, DialogueExchange exchange, CaptainRecord speaker, CaptainRecord listener, Location location,
                               boolean npcConversation, int depth, String fallenName) {
         if (exchange.followUps() == null || exchange.followUps().isEmpty()) {
+            return;
+        }
+        if (Math.random() > followUpChance) {
             return;
         }
         DialogueExchange followUp = weightedExchange(exchange.followUps(), null);
@@ -458,6 +467,14 @@ public class DialogueEngine {
         } catch (IllegalArgumentException ignored) {
             return null;
         }
+    }
+
+    private boolean shouldSendReply(boolean npcConversation) {
+        return Math.random() <= (npcConversation ? npcReplyChance : eventReplyChance);
+    }
+
+    private double clampChance(double chance) {
+        return Math.max(0.0, Math.min(1.0, chance));
     }
 
     private String pickWeighted(LineType type, UUID playerId, String name) {

@@ -484,25 +484,25 @@ npcConversations:
 eventConversations:
   betrayal:
     betrayal_01:
-      line: 'betrayal event 1: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 1.7
     betrayal_02:
-      line: 'betrayal event 2: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: AGGRESSION
       reply:
-        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: BLOOD_FEUD
     betrayal_03:
-      line: 'betrayal event 3: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.7
     betrayal_04:
-      line: 'betrayal event 4: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: AGGRESSION
       reply:
-        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: BLOOD_FEUD
       followUps:
@@ -516,25 +516,25 @@ eventConversations:
           action: AGGRESSION
   blood_brother_avenge:
     blood_brother_avenge_01:
-      line: 'blood brother avenge event 1: {speaker} swears vengeance for {fallen} against {listener}.'
+      line: '{speaker} swears vengeance for {fallen} against {listener}.'
       weight: 1.7
     blood_brother_avenge_02:
-      line: 'blood brother avenge event 2: {speaker} swears vengeance for {fallen} against {listener}.'
+      line: '{speaker} swears vengeance for {fallen} against {listener}.'
       weight: 2.2
       action: FORTIFY
       reply:
-        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     blood_brother_avenge_03:
-      line: 'blood brother avenge event 3: {speaker} swears vengeance for {fallen} against {listener}.'
+      line: '{speaker} swears vengeance for {fallen} against {listener}.'
       weight: 2.7
     blood_brother_avenge_04:
-      line: 'blood brother avenge event 4: {speaker} swears vengeance for {fallen} against {listener}.'
+      line: '{speaker} swears vengeance for {fallen} against {listener}.'
       weight: 3.2
       action: FORTIFY
       reply:
-        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
@@ -548,25 +548,25 @@ eventConversations:
           action: AGGRESSION
   warband_feud:
     warband_feud_01:
-      line: 'warband feud event 1: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 1.7
     warband_feud_02:
-      line: 'warband feud event 2: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: AGGRESSION
       reply:
-        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     warband_feud_03:
-      line: 'warband feud event 3: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.7
     warband_feud_04:
-      line: 'warband feud event 4: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: AGGRESSION
       reply:
-        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
@@ -580,25 +580,25 @@ eventConversations:
           action: AGGRESSION
   fight_pit:
     fight_pit_01:
-      line: 'fight pit event 1: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 1.7
     fight_pit_02:
-      line: 'fight pit event 2: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: FORTIFY
       reply:
-        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     fight_pit_03:
-      line: 'fight pit event 3: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.7
     fight_pit_04:
-      line: 'fight pit event 4: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: FORTIFY
       reply:
-        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
@@ -612,25 +612,25 @@ eventConversations:
           action: AGGRESSION
   promotion_rite:
     promotion_rite_01:
-      line: 'promotion rite event 1: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 1.7
     promotion_rite_02:
-      line: 'promotion rite event 2: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: FORTIFY
       reply:
-        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     promotion_rite_03:
-      line: 'promotion rite event 3: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.7
     promotion_rite_04:
-      line: 'promotion rite event 4: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: FORTIFY
       reply:
-        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
@@ -644,25 +644,25 @@ eventConversations:
           action: AGGRESSION
   retaliation_scout:
     retaliation_scout_01:
-      line: 'retaliation scout event 1: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 1.7
     retaliation_scout_02:
-      line: 'retaliation scout event 2: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.2
       action: AGGRESSION
       reply:
-        line: 'Counter 2: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
     retaliation_scout_03:
-      line: 'retaliation scout event 3: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 2.7
     retaliation_scout_04:
-      line: 'retaliation scout event 4: {speaker} calls out {listener} before the ranks.'
+      line: '{speaker} calls out {listener} before the ranks.'
       weight: 3.2
       action: AGGRESSION
       reply:
-        line: 'Counter 4: {listener} answers {speaker} in front of the warband.'
+        line: '{listener} answers {speaker} in front of the warband.'
         weight: 1.0
         action: UNITY
       followUps:
