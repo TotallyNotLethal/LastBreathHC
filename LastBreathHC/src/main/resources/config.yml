@@ -43,6 +43,7 @@ discordWebhook:
   footerText: "Charon, Ferryman of the Fallen"
   asteroidsEnabled: true
   asteroidsUrl: "https://discord.com/api/webhooks/1467134026044145880/0ywcs5lSzWDJdzkZe9_nWJyXw3vIOfMA4Loz102Ox2XxgAMFC0oJZVP8naEhepqBsomJ"
+  clearAsteroidMessagesOnStartup: true
   asteroidsUsername: "Asteroid Watch"
   asteroidsAvatarUrl: ""
   asteroidsEmbedColor: "D97B00"

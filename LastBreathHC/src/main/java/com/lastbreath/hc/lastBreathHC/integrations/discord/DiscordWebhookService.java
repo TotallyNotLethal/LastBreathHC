@@ -14,15 +14,21 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class DiscordWebhookService {
 
     private static final String CONFIG_ROOT = "discordWebhook";
     private static final int DEFAULT_EMBED_COLOR = 0x7b1f1f;
+    private static final int WEBHOOK_PAGE_SIZE = 100;
+    private static final int WEBHOOK_DELETE_PAGE_CAP = 25;
+    private static final Pattern MESSAGE_ID_PATTERN = Pattern.compile("\\\"id\\\"\\s*:\\s*\\\"(\\d+)\\\"");
     private final LastBreathHC plugin;
 
     public DiscordWebhookService(LastBreathHC plugin) {
@@ -189,6 +195,74 @@ public class DiscordWebhookService {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload));
     }
 
+    public void clearAsteroidWebhookMessages() {
+        String webhookUrl = plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsUrl", "").trim();
+        if (webhookUrl.isEmpty()) {
+            plugin.getLogger().info("Asteroid Discord webhook URL empty; skipping startup asteroid message cleanup.");
+            return;
+        }
+
+        String webhookMessagesEndpoint = resolveWebhookMessagesEndpoint(webhookUrl);
+        if (webhookMessagesEndpoint == null) {
+            plugin.getLogger().warning("Unable to parse asteroid webhook URL for startup cleanup. url=" + webhookUrl);
+            return;
+        }
+
+        int deletedCount = 0;
+        int failureCount = 0;
+        String beforeMessageId = null;
+
+        for (int page = 0; page < WEBHOOK_DELETE_PAGE_CAP; page++) {
+            String listEndpoint = webhookMessagesEndpoint + "?limit=" + WEBHOOK_PAGE_SIZE;
+            if (beforeMessageId != null) {
+                listEndpoint = listEndpoint + "&before=" + beforeMessageId;
+            }
+
+            HttpResponse listResponse = executeWebhookRequest("GET", listEndpoint);
+            if (listResponse == null) {
+                failureCount++;
+                break;
+            }
+            if (listResponse.statusCode() < 200 || listResponse.statusCode() >= 300) {
+                failureCount++;
+                plugin.getLogger().warning("Failed to fetch asteroid webhook messages during startup cleanup. code="
+                        + listResponse.statusCode() + " body=" + safeValue(listResponse.body()));
+                break;
+            }
+
+            List<String> messageIds = extractMessageIds(listResponse.body());
+            if (messageIds.isEmpty()) {
+                break;
+            }
+
+            beforeMessageId = messageIds.get(messageIds.size() - 1);
+            for (String messageId : messageIds) {
+                String deleteEndpoint = webhookMessagesEndpoint + "/" + messageId;
+                HttpResponse deleteResponse = executeWebhookRequest("DELETE", deleteEndpoint);
+                if (deleteResponse == null) {
+                    failureCount++;
+                    continue;
+                }
+                if (deleteResponse.statusCode() < 200 || deleteResponse.statusCode() >= 300) {
+                    failureCount++;
+                    plugin.getLogger().warning("Failed to delete asteroid webhook message during startup cleanup."
+                            + " messageId=" + messageId
+                            + " code=" + deleteResponse.statusCode()
+                            + " body=" + safeValue(deleteResponse.body()));
+                    continue;
+                }
+                deletedCount++;
+            }
+
+            if (messageIds.size() < WEBHOOK_PAGE_SIZE) {
+                break;
+            }
+        }
+
+        plugin.getLogger().info("Startup asteroid webhook cleanup completed. deletedMessages=" + deletedCount
+                + " failures=" + failureCount + " pageCap=" + WEBHOOK_DELETE_PAGE_CAP);
+    }
+
     private void postPayload(String webhookUrl, Map<String, Object> payload) {
         HttpURLConnection connection = null;
         try {
@@ -237,6 +311,86 @@ public class DiscordWebhookService {
             }
             return new String(bytes, StandardCharsets.UTF_8);
         }
+    }
+
+    private String resolveWebhookMessagesEndpoint(String webhookUrl) {
+        URI uri;
+        try {
+            uri = URI.create(webhookUrl);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+
+        String path = uri.getPath();
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+
+        String[] segments = path.split("/");
+        int webhooksIndex = -1;
+        for (int i = 0; i < segments.length; i++) {
+            if ("webhooks".equals(segments[i])) {
+                webhooksIndex = i;
+                break;
+            }
+        }
+        if (webhooksIndex < 0 || webhooksIndex + 2 >= segments.length) {
+            return null;
+        }
+
+        String webhookId = segments[webhooksIndex + 1];
+        String webhookToken = segments[webhooksIndex + 2];
+        if (webhookId.isBlank() || webhookToken.isBlank()) {
+            return null;
+        }
+
+        String scheme = uri.getScheme() == null ? "https" : uri.getScheme();
+        String host = uri.getHost();
+        if (host == null || host.isBlank()) {
+            return null;
+        }
+        int port = uri.getPort();
+        String authority = port > 0 ? host + ":" + port : host;
+
+        return scheme + "://" + authority + "/api/webhooks/" + webhookId + "/" + webhookToken + "/messages";
+    }
+
+    private List<String> extractMessageIds(String body) {
+        List<String> ids = new ArrayList<>();
+        if (body == null || body.isBlank()) {
+            return ids;
+        }
+
+        Matcher matcher = MESSAGE_ID_PATTERN.matcher(body);
+        while (matcher.find()) {
+            ids.add(matcher.group(1));
+        }
+        return ids;
+    }
+
+    private HttpResponse executeWebhookRequest(String method, String endpoint) {
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) URI.create(endpoint).toURL().openConnection();
+            connection.setRequestMethod(method);
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(8000);
+
+            int code = connection.getResponseCode();
+            String responseBody = readResponseBody(connection, code);
+            return new HttpResponse(code, responseBody);
+        } catch (IOException | IllegalArgumentException e) {
+            plugin.getLogger().log(Level.WARNING, "Discord webhook request failed. method=" + method
+                    + " endpoint=" + endpoint, e);
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private record HttpResponse(int statusCode, String body) {
     }
 
     private String formatLocation(Location location) {

@@ -569,7 +569,18 @@ public final class LastBreathHC extends JavaPlugin {
         TokenRecipe.register();
         ReviveGuiTokenRecipe.register();
         CustomItemRecipes.register();
-        scheduleNextAsteroid();
+        boolean clearAsteroidWebhookMessagesOnStartup = getConfig().getBoolean(
+                "discordWebhook.clearAsteroidMessagesOnStartup",
+                true
+        );
+        if (clearAsteroidWebhookMessagesOnStartup) {
+            getServer().getScheduler().runTaskAsynchronously(this, () -> {
+                discordWebhookService.clearAsteroidWebhookMessages();
+                getServer().getScheduler().runTask(this, this::scheduleNextAsteroid);
+            });
+        } else {
+            scheduleNextAsteroid();
+        }
         scheduleBountyTimers();
         scheduleBloodMoonChecks();
         scheduleTitleEffects();
