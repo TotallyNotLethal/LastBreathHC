@@ -6,6 +6,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
@@ -14,6 +15,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 public final class NemesisWarbandCoordinator {
     private final LastBreathHC plugin;
@@ -26,8 +29,15 @@ public final class NemesisWarbandCoordinator {
     private final double leashDistanceSq;
     private final long feudBroadcastCooldownMs;
     private final long fightPitBroadcastCooldownMs;
+    private final long warStateCooldownMs;
+    private final double interArmyWarChance;
+    private final double playerHuntRange;
+    private final double armyRecruitRange;
+    private final List<String> armyColorPalette;
     private final Map<String, Long> armyFeudCooldowns = new HashMap<>();
     private final Map<String, Long> armyFightPitCooldowns = new HashMap<>();
+    private final Map<String, Long> interArmyWarCooldowns = new HashMap<>();
+    private final Map<String, String> armyColors = new HashMap<>();
     private BukkitTask task;
 
     public NemesisWarbandCoordinator(LastBreathHC plugin, CaptainRegistry registry, CaptainEntityBinder binder, DialogueEngine dialogueEngine) {
@@ -41,6 +51,13 @@ public final class NemesisWarbandCoordinator {
         this.leashDistanceSq = Math.pow(Math.max(24.0, plugin.getConfig().getDouble("nemesis.warband.leashDistanceMeters", 40.0)), 2);
         this.feudBroadcastCooldownMs = Math.max(5_000L, plugin.getConfig().getLong("nemesis.warband.feudBroadcastCooldownMs", 45_000L));
         this.fightPitBroadcastCooldownMs = Math.max(10_000L, plugin.getConfig().getLong("nemesis.warband.fightPitBroadcastCooldownMs", 60_000L));
+        this.warStateCooldownMs = Math.max(15_000L, plugin.getConfig().getLong("nemesis.warband.warStateCooldownMs", 60_000L));
+        this.interArmyWarChance = Math.max(0.0, Math.min(1.0, plugin.getConfig().getDouble("nemesis.warband.interArmyWarChance", 0.25)));
+        this.playerHuntRange = Math.max(32.0, plugin.getConfig().getDouble("nemesis.warband.playerHuntRangeMeters", 96.0));
+        this.armyRecruitRange = Math.max(24.0, plugin.getConfig().getDouble("nemesis.warband.armyRecruitRangeMeters", 80.0));
+        this.armyColorPalette = plugin.getConfig().getStringList("nemesis.warband.armyColorPalette").isEmpty()
+                ? List.of("§c", "§9", "§2", "§6", "§5", "§3")
+                : plugin.getConfig().getStringList("nemesis.warband.armyColorPalette");
     }
 
     public void start() {
@@ -56,10 +73,14 @@ public final class NemesisWarbandCoordinator {
         }
         armyFeudCooldowns.clear();
         armyFightPitCooldowns.clear();
+        interArmyWarCooldowns.clear();
+        armyColors.clear();
     }
 
     private void tick() {
+        recruitNearbyUnassignedCaptains();
         Map<String, List<CaptainRecord>> armies = collectArmies();
+        resolveArmyWars(armies);
         for (Map.Entry<String, List<CaptainRecord>> armyEntry : armies.entrySet()) {
             List<CaptainRecord> members = armyEntry.getValue();
             if (members.size() < 2) {
@@ -81,6 +102,8 @@ public final class NemesisWarbandCoordinator {
                 }
                 coordinateMember(armyEntry.getKey(), leaderRecord, memberRecord, leader, member);
             }
+
+            huntNearbyPlayers(leaderRecord, leader, members);
 
             maybeBroadcastFightPit(armyEntry.getKey(), leaderRecord, members, leader.getLocation());
         }
@@ -120,6 +143,143 @@ public final class NemesisWarbandCoordinator {
         syncCombatTargets(leader, member);
         maybeRunConversation(leaderRecord, memberRecord, leader.getLocation(), distanceSq);
         maybeBroadcastFeud(armyId, leaderRecord, memberRecord, leader.getLocation());
+        applyArmyColor(memberRecord, member, armyId);
+    }
+
+    private void huntNearbyPlayers(CaptainRecord leaderRecord, LivingEntity leader, List<CaptainRecord> members) {
+        if (!(leader instanceof Mob leaderMob)) {
+            return;
+        }
+        Player target = leader.getWorld().getPlayers().stream()
+                .filter(Player::isOnline)
+                .filter(player -> player.getGameMode() == org.bukkit.GameMode.SURVIVAL || player.getGameMode() == org.bukkit.GameMode.ADVENTURE)
+                .min(Comparator.comparingDouble(player -> player.getLocation().distanceSquared(leader.getLocation())))
+                .orElse(null);
+        if (target == null) {
+            return;
+        }
+        if (target.getLocation().distanceSquared(leader.getLocation()) > playerHuntRange * playerHuntRange) {
+            leaderMob.getPathfinder().moveTo(target.getLocation());
+            return;
+        }
+        leaderMob.setTarget(target);
+        applyArmyColor(leaderRecord, leader, leaderRecord.political().map(CaptainRecord.Political::seatId).orElse(""));
+        for (CaptainRecord member : members) {
+            LivingEntity memberEntity = resolve(member);
+            if (memberEntity instanceof Mob memberMob) {
+                memberMob.setTarget(target);
+            }
+        }
+    }
+
+    private void resolveArmyWars(Map<String, List<CaptainRecord>> armies) {
+        List<String> ids = armies.keySet().stream().sorted().collect(Collectors.toList());
+        for (int i = 0; i < ids.size(); i++) {
+            for (int j = i + 1; j < ids.size(); j++) {
+                String leftId = ids.get(i);
+                String rightId = ids.get(j);
+                if (ThreadLocalRandom.current().nextDouble() > interArmyWarChance) {
+                    continue;
+                }
+                String pairKey = leftId + "::" + rightId;
+                long now = System.currentTimeMillis();
+                if (now < interArmyWarCooldowns.getOrDefault(pairKey, 0L)) {
+                    continue;
+                }
+                engageWar(armies.get(leftId), armies.get(rightId));
+                interArmyWarCooldowns.put(pairKey, now + warStateCooldownMs);
+            }
+        }
+    }
+
+    private void engageWar(List<CaptainRecord> leftArmy, List<CaptainRecord> rightArmy) {
+        if (leftArmy == null || rightArmy == null || leftArmy.isEmpty() || rightArmy.isEmpty()) {
+            return;
+        }
+        CaptainRecord leftLeader = resolveLeader(leftArmy);
+        CaptainRecord rightLeader = resolveLeader(rightArmy);
+        LivingEntity leftEntity = resolve(leftLeader);
+        LivingEntity rightEntity = resolve(rightLeader);
+        if (!(leftEntity instanceof Mob leftMob) || !(rightEntity instanceof Mob rightMob)) {
+            return;
+        }
+        if (!leftEntity.getWorld().equals(rightEntity.getWorld())) {
+            return;
+        }
+        leftMob.setTarget(rightEntity);
+        rightMob.setTarget(leftEntity);
+        maybeBroadcastFeud(leftLeader.political().map(CaptainRecord.Political::seatId).orElse("army-left"), leftLeader, rightLeader, leftEntity.getLocation());
+    }
+
+    private void recruitNearbyUnassignedCaptains() {
+        List<CaptainRecord> all = registry.getAll();
+        List<CaptainRecord> leaders = all.stream()
+                .filter(record -> record.political().map(CaptainRecord.Political::seatId).orElse("") != null)
+                .filter(record -> !record.political().map(CaptainRecord.Political::seatId).orElse("").isBlank())
+                .toList();
+        for (CaptainRecord candidate : all) {
+            CaptainRecord.Political political = candidate.political().orElse(null);
+            if (political == null || (political.seatId() != null && !political.seatId().isBlank())) {
+                continue;
+            }
+            LivingEntity entity = resolve(candidate);
+            if (entity == null) {
+                continue;
+            }
+            CaptainRecord nearestLeader = leaders.stream()
+                    .filter(leader -> resolve(leader) != null)
+                    .filter(leader -> resolve(leader).getWorld().equals(entity.getWorld()))
+                    .min(Comparator.comparingDouble(leader -> resolve(leader).getLocation().distanceSquared(entity.getLocation())))
+                    .orElse(null);
+            if (nearestLeader == null) {
+                continue;
+            }
+            LivingEntity leaderEntity = resolve(nearestLeader);
+            if (leaderEntity == null || leaderEntity.getLocation().distanceSquared(entity.getLocation()) > armyRecruitRange * armyRecruitRange) {
+                continue;
+            }
+            String seatId = nearestLeader.political().map(CaptainRecord.Political::seatId).orElse("");
+            CaptainRecord updated = withSeat(candidate, seatId);
+            registry.upsert(updated);
+        }
+    }
+
+    private CaptainRecord withSeat(CaptainRecord record, String seatId) {
+        CaptainRecord.Political base = record.political().orElse(new CaptainRecord.Political(Rank.CAPTAIN.name(), "unknown", "", 0.0, 0.0));
+        CaptainRecord.Political political = new CaptainRecord.Political(base.rank(), base.region(), seatId, base.promotionScore() + 10.0, Math.max(base.influence(), 0.1));
+        return new CaptainRecord(
+                record.identity(),
+                record.origin(),
+                record.victims(),
+                record.nemesisScores(),
+                record.progression(),
+                record.naming(),
+                record.traits(),
+                record.minionPack(),
+                record.state(),
+                record.telemetry(),
+                java.util.Optional.of(political),
+                record.social(),
+                record.relationships(),
+                record.memory(),
+                record.persona(),
+                record.habitat()
+        );
+    }
+
+    private void applyArmyColor(CaptainRecord record, LivingEntity entity, String armyId) {
+        if (record == null || entity == null || record.naming() == null || armyId == null || armyId.isBlank()) {
+            return;
+        }
+        String color = armyColors.computeIfAbsent(armyId, this::pickColor);
+        String display = color + record.naming().displayName();
+        entity.setCustomName(display);
+        entity.setCustomNameVisible(true);
+    }
+
+    private String pickColor(String armyId) {
+        int index = Math.floorMod(armyId.hashCode(), armyColorPalette.size());
+        return armyColorPalette.get(index);
     }
 
     private void syncCombatTargets(LivingEntity leader, LivingEntity member) {
