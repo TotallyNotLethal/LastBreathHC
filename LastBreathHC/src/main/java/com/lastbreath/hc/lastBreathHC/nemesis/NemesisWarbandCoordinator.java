@@ -342,6 +342,6 @@ public final class NemesisWarbandCoordinator {
         if (entity instanceof LivingEntity living && living.getScoreboardTags().contains(CaptainEntityBinder.CAPTAIN_SCOREBOARD_TAG)) {
             return living;
         }
-        return binder.resolveEntity(record.identity().captainId()).orElse(null);
+        return binder.resolveLiveKillerEntity(record);
     }
 }
