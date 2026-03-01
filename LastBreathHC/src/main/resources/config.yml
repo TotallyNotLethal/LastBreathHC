@@ -586,6 +586,9 @@ dailyRewards:
       - type: DAILY_RANDOM_COSMETIC
 
 nemesis:
+  buildings:
+    queue:
+      tickPeriodTicks: 100
   creation:
     dedupeRadius: 48.0
     throttle:
@@ -753,7 +756,9 @@ nemesis:
       mobPoolLimit: 64
       activeCap: 8
     location:
-      nearbyRangeBlocks: 96
+      nearbyRangeBlocks: 140
+      minDistanceFromPlayer: 96
+      maxDistanceFromPlayer: 128
       minimumY: 63
       minLight: 0
       maxLight: 12
@@ -1672,6 +1677,17 @@ nemesis:
     leashDistanceMeters: 40.0
     feudBroadcastCooldownMs: 45000
     fightPitBroadcastCooldownMs: 60000
+    warStateCooldownMs: 60000
+    interArmyWarChance: 0.25
+    playerHuntRangeMeters: 120.0
+    armyRecruitRangeMeters: 80.0
+    armyColorPalette:
+      - "§c"
+      - "§9"
+      - "§2"
+      - "§6"
+      - "§5"
+      - "§3"
 
   territoryPressure:
     enabled: true

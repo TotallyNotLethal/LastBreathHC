@@ -16,6 +16,8 @@ import org.bukkit.scheduler.BukkitTask;
 import java.io.File;
 import java.io.IOException;
 import java.util.EnumMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +29,8 @@ public final class NemesisBuildingService {
     private final LitematicStructureTemplateLoader litematicLoader;
     private final Map<Rank, RankBuildingDefinition> definitionsByRank = new EnumMap<>(Rank.class);
     private final Map<UUID, BukkitTask> pendingByCaptain = new ConcurrentHashMap<>();
+    private final Map<UUID, PendingConstruction> queuedConstructions = new LinkedHashMap<>();
+    private BukkitTask queueTask;
 
     public NemesisBuildingService(LastBreathHC plugin, StructureManager structureManager) {
         this.plugin = plugin;
@@ -93,6 +97,8 @@ public final class NemesisBuildingService {
                         + " because schematic is missing or invalid: " + litematic.getAbsolutePath());
             }
         }
+
+        startQueueProcessor();
     }
 
     public void scheduleRankConstruction(CaptainRecord record, Rank rank, String region, int cohortIndex) {
@@ -131,11 +137,9 @@ public final class NemesisBuildingService {
 
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             pendingByCaptain.remove(captainId);
-            structureManager.spawnStructure(
-                    definition.templateId(),
-                    anchor,
-                    new SpawnContext(captainId.toString(), region, System.currentTimeMillis())
-            );
+            synchronized (queuedConstructions) {
+                queuedConstructions.put(captainId, new PendingConstruction(definition.templateId(), anchor, captainId.toString(), region, System.currentTimeMillis()));
+            }
         }, delayTicks);
 
         pendingByCaptain.put(captainId, task);
@@ -146,6 +150,59 @@ public final class NemesisBuildingService {
             task.cancel();
         }
         pendingByCaptain.clear();
+        if (queueTask != null) {
+            queueTask.cancel();
+            queueTask = null;
+        }
+        synchronized (queuedConstructions) {
+            queuedConstructions.clear();
+        }
+    }
+
+    private void startQueueProcessor() {
+        if (queueTask != null) {
+            queueTask.cancel();
+        }
+        long period = Math.max(20L, plugin.getConfig().getLong("nemesis.buildings.queue.tickPeriodTicks", 100L));
+        queueTask = Bukkit.getScheduler().runTaskTimer(plugin, this::processQueuedConstructions, period, period);
+    }
+
+    private void processQueuedConstructions() {
+        synchronized (queuedConstructions) {
+            Iterator<Map.Entry<UUID, PendingConstruction>> iterator = queuedConstructions.entrySet().iterator();
+            while (iterator.hasNext()) {
+                PendingConstruction pending = iterator.next().getValue();
+                if (tryPlaceNow(pending)) {
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
+    private boolean tryPlaceNow(PendingConstruction pending) {
+        World world = pending.anchor().getWorld();
+        if (world == null) {
+            return true;
+        }
+        int chunkX = pending.anchor().getBlockX() >> 4;
+        int chunkZ = pending.anchor().getBlockZ() >> 4;
+
+        boolean forceLoaded = world.isChunkForceLoaded(chunkX, chunkZ);
+        if (!forceLoaded) {
+            world.setChunkForceLoaded(chunkX, chunkZ, true);
+        }
+        try {
+            world.getChunkAt(chunkX, chunkZ).load(true);
+            return structureManager.spawnStructure(
+                    pending.templateId(),
+                    pending.anchor(),
+                    new SpawnContext(pending.ownerCaptainId(), pending.region(), pending.queuedAt())
+            ).isPresent();
+        } finally {
+            if (!forceLoaded) {
+                world.setChunkForceLoaded(chunkX, chunkZ, false);
+            }
+        }
     }
 
     private record RankBuildingDefinition(
@@ -153,6 +210,15 @@ public final class NemesisBuildingService {
             String displayName,
             String schematicName,
             long buildSeconds
+    ) {
+    }
+
+    private record PendingConstruction(
+            String templateId,
+            Location anchor,
+            String ownerCaptainId,
+            String region,
+            long queuedAt
     ) {
     }
 }
