@@ -14,6 +14,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -26,6 +27,9 @@ public class DiscordWebhookService {
 
     public DiscordWebhookService(LastBreathHC plugin) {
         this.plugin = plugin;
+    }
+
+    public record AsteroidSpawnInfo(Location location, int tier) {
     }
 
     public void sendDeathWebhook(Player player,
@@ -96,6 +100,95 @@ public class DiscordWebhookService {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload));
     }
 
+    public void sendAsteroidCrashWebhook(Location loc, int tier, boolean meteorShowerContext) {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".asteroidsEnabled", false)) {
+            return;
+        }
+
+        String webhookUrl = plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsUrl", "").trim();
+        if (webhookUrl.isEmpty()) {
+            plugin.getLogger().info("Asteroid Discord webhook URL empty; skipping asteroid crash notification.");
+            return;
+        }
+
+        String username = plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsUsername",
+                plugin.getConfig().getString(CONFIG_ROOT + ".username", "Charon"));
+        String avatarUrl = plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsAvatarUrl",
+                plugin.getConfig().getString(CONFIG_ROOT + ".avatarUrl", "")).trim();
+        int embedColor = parseEmbedColor(plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsEmbedColor",
+                plugin.getConfig().getString(CONFIG_ROOT + ".embedColor", "")));
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("username", username);
+        if (!avatarUrl.isEmpty()) {
+            payload.put("avatar_url", avatarUrl);
+        }
+
+        Map<String, Object> embed = new LinkedHashMap<>();
+        embed.put("title", meteorShowerContext ? "☄ Meteor Shower Impact" : "☄ Asteroid Impact");
+        embed.put("description", "An asteroid has crashed.");
+        embed.put("color", embedColor);
+        embed.put("timestamp", Instant.now().toString());
+        embed.put("fields", new Object[]{
+                Map.of("name", "World", "value", formatWorld(loc), "inline", true),
+                Map.of("name", "Coordinates", "value", formatCoordinates(loc), "inline", true),
+                Map.of("name", "Tier", "value", String.valueOf(tier), "inline", true)
+        });
+
+        payload.put("embeds", new Object[]{embed});
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload));
+    }
+
+    public void sendMeteorShowerWebhook(List<AsteroidSpawnInfo> asteroids) {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".asteroidsEnabled", false) || asteroids == null || asteroids.isEmpty()) {
+            return;
+        }
+
+        String webhookUrl = plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsUrl", "").trim();
+        if (webhookUrl.isEmpty()) {
+            plugin.getLogger().info("Asteroid Discord webhook URL empty; skipping meteor shower notification.");
+            return;
+        }
+
+        String username = plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsUsername",
+                plugin.getConfig().getString(CONFIG_ROOT + ".username", "Charon"));
+        String avatarUrl = plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsAvatarUrl",
+                plugin.getConfig().getString(CONFIG_ROOT + ".avatarUrl", "")).trim();
+        int embedColor = parseEmbedColor(plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsEmbedColor",
+                plugin.getConfig().getString(CONFIG_ROOT + ".embedColor", "")));
+
+        StringBuilder listBuilder = new StringBuilder();
+        int index = 1;
+        for (AsteroidSpawnInfo asteroid : asteroids) {
+            listBuilder.append(index++)
+                    .append(". `")
+                    .append(formatWorld(asteroid.location()))
+                    .append(" | ")
+                    .append(formatCoordinates(asteroid.location()))
+                    .append(" | Tier ")
+                    .append(asteroid.tier())
+                    .append("`\n");
+        }
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("username", username);
+        if (!avatarUrl.isEmpty()) {
+            payload.put("avatar_url", avatarUrl);
+        }
+
+        Map<String, Object> embed = new LinkedHashMap<>();
+        embed.put("title", "☄ Meteor Shower Detected");
+        embed.put("description", "Multiple asteroids are inbound.");
+        embed.put("color", embedColor);
+        embed.put("timestamp", Instant.now().toString());
+        embed.put("fields", new Object[]{
+                Map.of("name", "Asteroids", "value", listBuilder.toString().trim(), "inline", false)
+        });
+
+        payload.put("embeds", new Object[]{embed});
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload));
+    }
+
     private void postPayload(String webhookUrl, Map<String, Object> payload) {
         HttpURLConnection connection = null;
         try {
@@ -154,6 +247,20 @@ public class DiscordWebhookService {
                 + " (" + location.getBlockX()
                 + ", " + location.getBlockY()
                 + ", " + location.getBlockZ() + ")";
+    }
+
+    private String formatWorld(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return "Unknown";
+        }
+        return location.getWorld().getName();
+    }
+
+    private String formatCoordinates(Location location) {
+        if (location == null) {
+            return "Unknown";
+        }
+        return location.getBlockX() + ", " + location.getBlockY() + ", " + location.getBlockZ();
     }
 
     private String formatDuration(long seconds) {
