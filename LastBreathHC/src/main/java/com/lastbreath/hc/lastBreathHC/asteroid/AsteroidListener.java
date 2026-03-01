@@ -1,5 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.asteroid;
 
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
@@ -129,6 +131,25 @@ public class AsteroidListener implements Listener {
                 }
 
                 TitleManager.checkProgressTitles(player);
+            }
+
+            AsteroidManager.AsteroidEntry asteroidEntry = AsteroidManager.getEntry(asteroidLoc);
+            String discordMessageId = asteroidEntry == null ? null : asteroidEntry.discordMessageId();
+
+            if (discordMessageId == null || discordMessageId.isBlank()) {
+                LastBreathHC.getInstance().getLogger().warning("Asteroid "
+                        + AsteroidManager.asteroidKey(asteroidLoc)
+                        + " has no Discord message id to delete; continuing asteroid cleanup.");
+            } else {
+                DiscordWebhookService webhookService = LastBreathHC.getInstance().getDiscordWebhookService();
+                String webhookUrl = LastBreathHC.getInstance().getConfig()
+                        .getString("discordWebhook.asteroidsUrl", "").trim();
+                if (webhookService == null || webhookUrl.isEmpty()) {
+                    LastBreathHC.getInstance().getLogger().warning("Unable to delete asteroid Discord message "
+                            + discordMessageId + ": webhook service or URL unavailable.");
+                } else {
+                    webhookService.deleteWebhookMessage(webhookUrl, discordMessageId);
+                }
             }
 
             AsteroidManager.remove(asteroidLoc);

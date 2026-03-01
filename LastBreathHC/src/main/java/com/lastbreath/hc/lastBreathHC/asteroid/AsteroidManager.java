@@ -58,7 +58,7 @@ public class AsteroidManager {
     public static final String ASTEROID_SCALE_TAG_PREFIX = "asteroid_scale:";
     public static final String ASTEROID_TIER_TAG_PREFIX = "asteroid_tier:";
     public static final String ASTEROID_MARKER_TAG = "asteroid_marker";
-    private static final Set<String> PERSISTED_ASTEROIDS = new HashSet<>();
+    private static final Map<String, PersistedAsteroidData> PERSISTED_ASTEROIDS = new HashMap<>();
     private static File dataFile;
     private static JavaPlugin plugin;
     private static BukkitTask mobLeashTask;
@@ -80,6 +80,7 @@ public class AsteroidManager {
         private final int tier;
         private final Set<UUID> mobs;
         private UUID markerId;
+        private String discordMessageId;
 
         private AsteroidEntry(Inventory inventory, int tier) {
             this.inventory = inventory;
@@ -106,6 +107,17 @@ public class AsteroidManager {
         public void markerId(UUID markerId) {
             this.markerId = markerId;
         }
+
+        public String discordMessageId() {
+            return discordMessageId;
+        }
+
+        public void discordMessageId(String discordMessageId) {
+            this.discordMessageId = discordMessageId;
+        }
+    }
+
+    private record PersistedAsteroidData(int tier, String discordMessageId) {
     }
 
     public static boolean isAsteroid(Location loc) {
@@ -140,11 +152,7 @@ public class AsteroidManager {
     public static void remove(Location loc) {
         Location blockLoc = blockLocation(loc);
         AsteroidEntry entry = ASTEROIDS.remove(blockLoc);
-        if (entry != null) {
-            PERSISTED_ASTEROIDS.remove(toKey(blockLoc, entry.tier()));
-        } else {
-            PERSISTED_ASTEROIDS.remove(toKey(blockLoc));
-        }
+        PERSISTED_ASTEROIDS.remove(toKey(blockLoc));
         saveAsteroids();
         removeAsteroidMobs(blockLoc, entry);
         removeAsteroidMarker(blockLoc, entry);
@@ -154,9 +162,52 @@ public class AsteroidManager {
     public static void registerAsteroid(Location loc, int tier) {
         Location blockLoc = blockLocation(loc);
         ASTEROIDS.put(blockLoc, new AsteroidEntry(AsteroidLoot.createLoot(tier), tier));
-        PERSISTED_ASTEROIDS.add(toKey(blockLoc, tier));
+        PERSISTED_ASTEROIDS.put(toKey(blockLoc), new PersistedAsteroidData(tier, null));
         saveAsteroids();
         ensureAsteroidMarker(blockLoc);
+    }
+
+    public static void updateDiscordMessageId(Location loc, String discordMessageId) {
+        Location blockLoc = resolveAsteroidLocation(loc);
+        if (blockLoc == null) {
+            return;
+        }
+
+        AsteroidEntry entry = ASTEROIDS.get(blockLoc);
+        if (entry == null) {
+            return;
+        }
+
+        entry.discordMessageId(discordMessageId);
+        PERSISTED_ASTEROIDS.put(toKey(blockLoc), new PersistedAsteroidData(entry.tier(), discordMessageId));
+        saveAsteroids();
+    }
+
+    public static Location resolveAsteroidLocation(Location loc) {
+        if (loc == null || loc.getWorld() == null) {
+            return null;
+        }
+        Location blockLoc = blockLocation(loc);
+        if (ASTEROIDS.containsKey(blockLoc)) {
+            return blockLoc;
+        }
+
+        Location resolved = null;
+        int closestDistance = Integer.MAX_VALUE;
+        for (Location asteroidLoc : ASTEROIDS.keySet()) {
+            if (asteroidLoc.getWorld() == null
+                    || !asteroidLoc.getWorld().equals(blockLoc.getWorld())
+                    || asteroidLoc.getBlockX() != blockLoc.getBlockX()
+                    || asteroidLoc.getBlockZ() != blockLoc.getBlockZ()) {
+                continue;
+            }
+            int deltaY = Math.abs(asteroidLoc.getBlockY() - blockLoc.getBlockY());
+            if (deltaY < closestDistance) {
+                closestDistance = deltaY;
+                resolved = asteroidLoc;
+            }
+        }
+        return resolved;
     }
 
     public static void initialize(JavaPlugin plugin) {
@@ -625,6 +676,9 @@ public class AsteroidManager {
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(dataFile);
         List<String> entries = config.getStringList("asteroids");
+        if (entries.isEmpty() && config.isConfigurationSection("asteroids")) {
+            entries = new ArrayList<>(config.getConfigurationSection("asteroids").getKeys(false));
+        }
         for (String entry : entries) {
             Location location = fromKey(entry);
             if (location == null) {
@@ -650,7 +704,15 @@ public class AsteroidManager {
         }
 
         YamlConfiguration config = new YamlConfiguration();
-        config.set("asteroids", List.copyOf(PERSISTED_ASTEROIDS));
+        for (Map.Entry<String, PersistedAsteroidData> persisted : PERSISTED_ASTEROIDS.entrySet()) {
+            String key = persisted.getKey();
+            PersistedAsteroidData data = persisted.getValue();
+            if (data == null) {
+                continue;
+            }
+            config.set("asteroids." + key + ".tier", data.tier());
+            config.set("asteroids." + key + ".discordMessageId", data.discordMessageId());
+        }
         try {
             config.save(dataFile);
         } catch (IOException e) {
@@ -828,15 +890,21 @@ public class AsteroidManager {
         return loc.getWorld().getName() + ":" + loc.getBlockX() + "," + loc.getBlockY() + "," + loc.getBlockZ();
     }
 
-    private static String toKey(Location loc, int tier) {
-        return toKey(loc) + ":" + tier;
-    }
-
     private static Location fromKey(String entry) {
         if (entry == null || entry.isBlank()) {
             return null;
         }
-        String[] parts = entry.split(":");
+        int firstColonIndex = entry.indexOf(':');
+        if (firstColonIndex <= 0 || firstColonIndex >= entry.length() - 1) {
+            return null;
+        }
+        String worldName = entry.substring(0, firstColonIndex);
+        String coordinatePart = entry.substring(firstColonIndex + 1);
+        int tierSeparatorIndex = coordinatePart.indexOf(':');
+        if (tierSeparatorIndex > -1) {
+            coordinatePart = coordinatePart.substring(0, tierSeparatorIndex);
+        }
+        String[] parts = new String[]{worldName, coordinatePart};
         if (parts.length < 2) {
             return null;
         }

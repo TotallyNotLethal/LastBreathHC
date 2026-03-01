@@ -808,6 +808,10 @@ public final class LastBreathHC extends JavaPlugin {
         return fakePlayersSettings;
     }
 
+    public DiscordWebhookService getDiscordWebhookService() {
+        return discordWebhookService;
+    }
+
     public CaptainRegistry getCaptainRegistry() {
         return captainRegistry;
     }

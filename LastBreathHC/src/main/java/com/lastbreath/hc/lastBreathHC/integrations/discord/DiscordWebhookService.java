@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.integrations.discord;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -18,11 +19,14 @@ import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class DiscordWebhookService {
 
     private static final String CONFIG_ROOT = "discordWebhook";
     private static final int DEFAULT_EMBED_COLOR = 0x7b1f1f;
+    private static final Pattern MESSAGE_ID_PATTERN = Pattern.compile("\"id\"\\s*:\\s*\"(\\d+)\"");
     private final LastBreathHC plugin;
 
     public DiscordWebhookService(LastBreathHC plugin) {
@@ -97,7 +101,7 @@ public class DiscordWebhookService {
         });
         payload.put("embeds", new Object[]{embed});
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload));
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload, false));
     }
 
     public void sendAsteroidCrashWebhook(Location loc, int tier, boolean meteorShowerContext) {
@@ -136,7 +140,16 @@ public class DiscordWebhookService {
         });
 
         payload.put("embeds", new Object[]{embed});
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload));
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            String responseBody = postPayload(webhookUrl, payload, true);
+            String messageId = extractMessageId(responseBody);
+            if (messageId == null || messageId.isBlank()) {
+                plugin.getLogger().warning("Unable to resolve Discord message id for asteroid webhook at "
+                        + formatLocation(loc) + ".");
+                return;
+            }
+            Bukkit.getScheduler().runTask(plugin, () -> AsteroidManager.updateDiscordMessageId(loc, messageId));
+        });
     }
 
     public void sendMeteorShowerWebhook(List<AsteroidSpawnInfo> asteroids) {
@@ -186,13 +199,14 @@ public class DiscordWebhookService {
         });
 
         payload.put("embeds", new Object[]{embed});
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload));
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload, false));
     }
 
-    private void postPayload(String webhookUrl, Map<String, Object> payload) {
+    private String postPayload(String webhookUrl, Map<String, Object> payload, boolean includeWaitParam) {
         HttpURLConnection connection = null;
         try {
-            connection = (HttpURLConnection) URI.create(webhookUrl).toURL().openConnection();
+            String targetWebhookUrl = includeWaitParam ? withWaitParam(webhookUrl) : webhookUrl;
+            connection = (HttpURLConnection) URI.create(targetWebhookUrl).toURL().openConnection();
             connection.setRequestMethod("POST");
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(8000);
@@ -210,17 +224,65 @@ public class DiscordWebhookService {
                 String responseBody = readResponseBody(connection, code);
                 plugin.getLogger().warning("Discord webhook responded with non-2xx status. code=" + code
                         + " body=" + responseBody);
-            } else {
-                String responseBody = readResponseBody(connection, code);
-                plugin.getLogger().info("Discord webhook responded. code=" + code + " body=" + responseBody);
+                return null;
             }
+            String responseBody = readResponseBody(connection, code);
+            plugin.getLogger().info("Discord webhook responded. code=" + code + " body=" + responseBody);
+            return responseBody;
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to deliver Discord webhook.", e);
+            return null;
         } finally {
             if (connection != null) {
                 connection.disconnect();
             }
         }
+    }
+
+    public void deleteWebhookMessage(String webhookUrl, String messageId) {
+        if (webhookUrl == null || webhookUrl.isBlank() || messageId == null || messageId.isBlank()) {
+            return;
+        }
+
+        HttpURLConnection connection = null;
+        try {
+            String targetUrl = webhookUrl + "/messages/" + messageId;
+            connection = (HttpURLConnection) URI.create(targetUrl).toURL().openConnection();
+            connection.setRequestMethod("DELETE");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(8000);
+
+            int code = connection.getResponseCode();
+            if (code < 200 || code >= 300) {
+                String responseBody = readResponseBody(connection, code);
+                plugin.getLogger().warning("Discord webhook message delete failed. code=" + code
+                        + " messageId=" + messageId + " body=" + responseBody);
+            }
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to delete Discord webhook message. messageId=" + messageId, e);
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private String withWaitParam(String webhookUrl) {
+        if (webhookUrl.contains("?")) {
+            return webhookUrl + "&wait=true";
+        }
+        return webhookUrl + "?wait=true";
+    }
+
+    private String extractMessageId(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return null;
+        }
+        Matcher matcher = MESSAGE_ID_PATTERN.matcher(responseBody);
+        if (!matcher.find()) {
+            return null;
+        }
+        return matcher.group(1);
     }
 
     private String readResponseBody(HttpURLConnection connection, int code) throws IOException {
