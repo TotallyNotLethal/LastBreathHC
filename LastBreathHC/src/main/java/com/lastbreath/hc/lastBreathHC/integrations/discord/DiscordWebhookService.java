@@ -203,7 +203,19 @@ public class DiscordWebhookService {
         });
 
         payload.put("embeds", new Object[]{embed});
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> postPayload(webhookUrl, payload, false));
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            String responseBody = postPayload(webhookUrl, payload, true);
+            String messageId = extractMessageId(responseBody);
+            if (messageId == null || messageId.isBlank()) {
+                plugin.getLogger().warning("Unable to resolve Discord message id for meteor shower webhook.");
+                return;
+            }
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                for (AsteroidSpawnInfo asteroid : asteroids) {
+                    AsteroidManager.updateDiscordMessageId(asteroid.location(), messageId);
+                }
+            });
+        });
     }
 
     private String postPayload(String webhookUrl, Map<String, Object> payload, boolean includeWaitParam) {

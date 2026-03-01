@@ -183,6 +183,31 @@ public class AsteroidManager {
         saveAsteroids();
     }
 
+    public static boolean isLastAsteroidForDiscordMessage(Location loc, String discordMessageId) {
+        if (discordMessageId == null || discordMessageId.isBlank()) {
+            return false;
+        }
+
+        Location blockLoc = resolveAsteroidLocation(loc);
+        if (blockLoc == null) {
+            return false;
+        }
+
+        int matchCount = 0;
+        for (Map.Entry<Location, AsteroidEntry> asteroidEntry : ASTEROIDS.entrySet()) {
+            AsteroidEntry entry = asteroidEntry.getValue();
+            if (entry == null || !discordMessageId.equals(entry.discordMessageId())) {
+                continue;
+            }
+            matchCount++;
+            if (matchCount > 1) {
+                return false;
+            }
+        }
+
+        return matchCount == 1;
+    }
+
     public static Location resolveAsteroidLocation(Location loc) {
         if (loc == null || loc.getWorld() == null) {
             return null;
