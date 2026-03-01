@@ -28,7 +28,9 @@ public class DiscordWebhookService {
     private static final String CONFIG_ROOT = "discordWebhook";
     private static final int DEFAULT_EMBED_COLOR = 0x7b1f1f;
     private static final int WEBHOOK_CLEANUP_PAGE_SIZE = 100;
-    private static final int WEBHOOK_CLEANUP_MAX_PAGES = 20;
+    private static final int WEBHOOK_CLEANUP_MAX_PAGES = 100;
+    private static final int WEBHOOK_RATE_LIMIT_RETRY_MAX_ATTEMPTS = 5;
+    private static final long WEBHOOK_RATE_LIMIT_FALLBACK_WAIT_MS = 1000L;
     private static final Pattern WEBHOOK_PATH_PATTERN = Pattern.compile(".*/webhooks/([0-9]+)/([^/?#]+).*");
     private static final Pattern MESSAGE_ID_PATTERN = Pattern.compile("\"id\"\\s*:\\s*\"(\\d+)\"");
     private final LastBreathHC plugin;
@@ -330,62 +332,120 @@ public class DiscordWebhookService {
     }
 
     private String fetchWebhookMessages(WebhookCredentials credentials, String beforeMessageId, int limit) {
-        HttpURLConnection connection = null;
-        try {
-            StringBuilder targetUrl = new StringBuilder(credentials.baseUrl())
-                    .append("/messages?limit=")
-                    .append(limit);
-            if (beforeMessageId != null && !beforeMessageId.isBlank()) {
-                targetUrl.append("&before=").append(beforeMessageId);
-            }
-            connection = (HttpURLConnection) URI.create(targetUrl.toString()).toURL().openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(8000);
+        for (int attempt = 1; attempt <= WEBHOOK_RATE_LIMIT_RETRY_MAX_ATTEMPTS; attempt++) {
+            HttpURLConnection connection = null;
+            try {
+                StringBuilder targetUrl = new StringBuilder(credentials.baseUrl())
+                        .append("/messages?limit=")
+                        .append(limit);
+                if (beforeMessageId != null && !beforeMessageId.isBlank()) {
+                    targetUrl.append("&before=").append(beforeMessageId);
+                }
+                connection = (HttpURLConnection) URI.create(targetUrl.toString()).toURL().openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(8000);
 
-            int code = connection.getResponseCode();
-            String responseBody = readResponseBody(connection, code);
-            if (code < 200 || code >= 300) {
+                int code = connection.getResponseCode();
+                String responseBody = readResponseBody(connection, code);
+                if (code >= 200 && code < 300) {
+                    return responseBody;
+                }
+
+                if (code == 429 && attempt < WEBHOOK_RATE_LIMIT_RETRY_MAX_ATTEMPTS) {
+                    waitForRateLimit(connection, responseBody, "fetch", attempt);
+                    continue;
+                }
+
                 plugin.getLogger().warning("Discord webhook message fetch failed. code=" + code
                         + " body=" + responseBody);
                 return null;
-            }
-            return responseBody;
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.WARNING, "Failed to fetch Discord webhook messages for startup cleanup.", e);
-            return null;
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to fetch Discord webhook messages for startup cleanup.", e);
+                return null;
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         }
+        return null;
     }
 
     private boolean deleteWebhookMessage(WebhookCredentials credentials, String messageId) {
-        HttpURLConnection connection = null;
-        try {
-            String targetUrl = credentials.baseUrl() + "/messages/" + messageId;
-            connection = (HttpURLConnection) URI.create(targetUrl).toURL().openConnection();
-            connection.setRequestMethod("DELETE");
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(8000);
+        for (int attempt = 1; attempt <= WEBHOOK_RATE_LIMIT_RETRY_MAX_ATTEMPTS; attempt++) {
+            HttpURLConnection connection = null;
+            try {
+                String targetUrl = credentials.baseUrl() + "/messages/" + messageId;
+                connection = (HttpURLConnection) URI.create(targetUrl).toURL().openConnection();
+                connection.setRequestMethod("DELETE");
+                connection.setConnectTimeout(5000);
+                connection.setReadTimeout(8000);
 
-            int code = connection.getResponseCode();
-            if (code < 200 || code >= 300) {
+                int code = connection.getResponseCode();
+                if (code >= 200 && code < 300) {
+                    return true;
+                }
+
                 String responseBody = readResponseBody(connection, code);
+                if (code == 429 && attempt < WEBHOOK_RATE_LIMIT_RETRY_MAX_ATTEMPTS) {
+                    waitForRateLimit(connection, responseBody, "delete", attempt);
+                    continue;
+                }
+
                 plugin.getLogger().warning("Discord webhook message delete failed. code=" + code
                         + " messageId=" + messageId + " body=" + responseBody);
                 return false;
-            }
-            return true;
-        } catch (IOException e) {
-            plugin.getLogger().log(Level.WARNING, "Failed to delete Discord webhook message. messageId=" + messageId, e);
-            return false;
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to delete Discord webhook message. messageId=" + messageId, e);
+                return false;
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
             }
         }
+        return false;
+    }
+
+    private void waitForRateLimit(HttpURLConnection connection,
+                                  String responseBody,
+                                  String operation,
+                                  int attempt) {
+        long retryAfterMillis = resolveRetryAfterMillis(connection, responseBody);
+        plugin.getLogger().info("Discord webhook cleanup rate-limited during " + operation
+                + ". retryAttempt=" + attempt
+                + " waitMs=" + retryAfterMillis);
+        try {
+            Thread.sleep(retryAfterMillis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private long resolveRetryAfterMillis(HttpURLConnection connection, String responseBody) {
+        String retryAfterHeader = connection.getHeaderField("Retry-After");
+        if (retryAfterHeader != null && !retryAfterHeader.isBlank()) {
+            try {
+                return Math.max(1L, (long) Math.ceil(Double.parseDouble(retryAfterHeader) * 1000.0));
+            } catch (NumberFormatException ignored) {
+                // Fall through to response body parsing.
+            }
+        }
+
+        if (responseBody != null && !responseBody.isBlank()) {
+            Matcher matcher = Pattern.compile("\"retry_after\"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)")
+                    .matcher(responseBody);
+            if (matcher.find()) {
+                try {
+                    return Math.max(1L, (long) Math.ceil(Double.parseDouble(matcher.group(1)) * 1000.0));
+                } catch (NumberFormatException ignored) {
+                    // Use fallback below.
+                }
+            }
+        }
+
+        return WEBHOOK_RATE_LIMIT_FALLBACK_WAIT_MS;
     }
 
     private WebhookCredentials resolveWebhookCredentials(String webhookUrl) {
