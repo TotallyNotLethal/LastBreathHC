@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -185,12 +186,12 @@ public class CaptainSerializer {
                 readCounters(row.getConfigurationSection("telemetry.counters"))
         );
 
-        CaptainRecord.Political political = parsePolitical(row);
-        CaptainRecord.Social social = parseSocial(row);
-        CaptainRecord.Relationships relationships = parseRelationships(row);
-        CaptainRecord.Memory memory = parseMemory(row);
-        CaptainRecord.Persona persona = parsePersona(row);
-        CaptainRecord.Habitat habitat = parseHabitat(row);
+        Optional<CaptainRecord.Political> political = Optional.ofNullable(parsePolitical(row));
+        Optional<CaptainRecord.Social> social = Optional.ofNullable(parseSocial(row));
+        Optional<CaptainRecord.Relationships> relationships = Optional.ofNullable(parseRelationships(row));
+        Optional<CaptainRecord.Memory> memory = Optional.ofNullable(parseMemory(row));
+        Optional<CaptainRecord.Persona> persona = Optional.ofNullable(parsePersona(row));
+        Optional<CaptainRecord.Habitat> habitat = Optional.ofNullable(parseHabitat(row));
 
         extrasByCaptainId.put(captainUuid, readExtras(row));
 
