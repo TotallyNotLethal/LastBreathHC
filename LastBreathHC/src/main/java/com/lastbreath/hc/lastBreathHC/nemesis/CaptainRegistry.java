@@ -173,8 +173,8 @@ public class CaptainRegistry {
         return matches;
     }
 
-    public Collection<CaptainRecord> getAll() {
-        return Collections.unmodifiableCollection(captainsByUuid.values());
+    public List<CaptainRecord> getAll() {
+        return List.copyOf(captainsByUuid.values());
     }
 
     private void index(CaptainRecord record) {

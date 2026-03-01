@@ -212,7 +212,7 @@ public final class NemesisWarbandCoordinator {
     }
 
     private void recruitNearbyUnassignedCaptains() {
-        List<CaptainRecord> all = new ArrayList<>(registry.getAll());
+        List<CaptainRecord> all = registry.getAll();
         List<CaptainRecord> leaders = all.stream()
                 .filter(record -> record.political().map(CaptainRecord.Political::seatId).orElse("") != null)
                 .filter(record -> !record.political().map(CaptainRecord.Political::seatId).orElse("").isBlank())
