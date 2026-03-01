@@ -118,8 +118,7 @@ public class CaptainNameGenerator {
         if (existing == 0L) {
             return normalizedBase;
         }
-        String token = captainId.toString().substring(0, 4).toUpperCase(Locale.ROOT);
-        return normalizedBase + " #" + token;
+        return normalizedBase + " " + (existing + 1L);
     }
 
     private List<String> weightedEpithetEntries(Random random, CaptainRecord.Traits traits) {

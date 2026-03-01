@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,8 @@ public final class NemesisWarbandCoordinator {
     private final DialogueEngine dialogueEngine;
     private final double conversationRangeMeters;
     private final double conversationChancePerPair;
+    private final long conversationIntervalMinMs;
+    private final long conversationIntervalMaxMs;
     private final double regroupDistanceSq;
     private final double leashDistanceSq;
     private final long feudBroadcastCooldownMs;
@@ -37,6 +40,7 @@ public final class NemesisWarbandCoordinator {
     private final Map<String, Long> armyFeudCooldowns = new HashMap<>();
     private final Map<String, Long> armyFightPitCooldowns = new HashMap<>();
     private final Map<String, Long> interArmyWarCooldowns = new HashMap<>();
+    private final Map<String, Long> pairConversationCooldowns = new HashMap<>();
     private final Map<String, String> armyColors = new HashMap<>();
     private BukkitTask task;
 
@@ -47,6 +51,10 @@ public final class NemesisWarbandCoordinator {
         this.dialogueEngine = dialogueEngine;
         this.conversationRangeMeters = Math.max(4.0, plugin.getConfig().getDouble("nemesis.warband.conversationRangeMeters", 18.0));
         this.conversationChancePerPair = Math.max(0.0, Math.min(1.0, plugin.getConfig().getDouble("nemesis.warband.conversationChancePerPair", 0.2)));
+        long configuredConversationIntervalMin = Math.max(5_000L, plugin.getConfig().getLong("nemesis.warband.conversationIntervalMinMs", 20_000L));
+        long configuredConversationIntervalMax = Math.max(5_000L, plugin.getConfig().getLong("nemesis.warband.conversationIntervalMaxMs", 45_000L));
+        this.conversationIntervalMinMs = Math.min(configuredConversationIntervalMin, configuredConversationIntervalMax);
+        this.conversationIntervalMaxMs = Math.max(configuredConversationIntervalMin, configuredConversationIntervalMax);
         this.regroupDistanceSq = Math.pow(Math.max(8.0, plugin.getConfig().getDouble("nemesis.warband.regroupDistanceMeters", 10.0)), 2);
         this.leashDistanceSq = Math.pow(Math.max(24.0, plugin.getConfig().getDouble("nemesis.warband.leashDistanceMeters", 40.0)), 2);
         this.feudBroadcastCooldownMs = Math.max(5_000L, plugin.getConfig().getLong("nemesis.warband.feudBroadcastCooldownMs", 45_000L));
@@ -74,6 +82,7 @@ public final class NemesisWarbandCoordinator {
         armyFeudCooldowns.clear();
         armyFightPitCooldowns.clear();
         interArmyWarCooldowns.clear();
+        pairConversationCooldowns.clear();
         armyColors.clear();
     }
 
@@ -299,13 +308,45 @@ public final class NemesisWarbandCoordinator {
     }
 
     private void maybeRunConversation(CaptainRecord leaderRecord, CaptainRecord memberRecord, Location origin, double distanceSq) {
+        String pairKey = buildPairKey(leaderRecord, memberRecord);
+        if (pairKey == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now < pairConversationCooldowns.getOrDefault(pairKey, 0L)) {
+            return;
+        }
         if (Math.random() > conversationChancePerPair) {
+            scheduleNextConversation(pairKey, now);
             return;
         }
         if (distanceSq > conversationRangeMeters * conversationRangeMeters) {
+            scheduleNextConversation(pairKey, now);
             return;
         }
-        dialogueEngine.emitNpcConversation(leaderRecord, memberRecord, origin);
+        if (dialogueEngine.emitNpcConversation(leaderRecord, memberRecord, origin)) {
+            scheduleNextConversation(pairKey, now);
+            return;
+        }
+        pairConversationCooldowns.put(pairKey, now + 5_000L);
+    }
+
+    private void scheduleNextConversation(String pairKey, long now) {
+        long delay = conversationIntervalMinMs;
+        if (conversationIntervalMaxMs > conversationIntervalMinMs) {
+            delay += ThreadLocalRandom.current().nextLong(conversationIntervalMaxMs - conversationIntervalMinMs + 1L);
+        }
+        pairConversationCooldowns.put(pairKey, now + delay);
+    }
+
+    private String buildPairKey(CaptainRecord left, CaptainRecord right) {
+        if (left == null || right == null || left.identity() == null || right.identity() == null
+                || left.identity().captainId() == null || right.identity().captainId() == null) {
+            return null;
+        }
+        UUID leftId = left.identity().captainId();
+        UUID rightId = right.identity().captainId();
+        return leftId.compareTo(rightId) <= 0 ? leftId + ":" + rightId : rightId + ":" + leftId;
     }
 
     private void maybeBroadcastFeud(String armyId, CaptainRecord speaker, CaptainRecord listener, Location origin) {
