@@ -15,6 +15,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -26,6 +27,9 @@ public class DiscordWebhookService {
 
     private static final String CONFIG_ROOT = "discordWebhook";
     private static final int DEFAULT_EMBED_COLOR = 0x7b1f1f;
+    private static final int WEBHOOK_CLEANUP_PAGE_SIZE = 100;
+    private static final int WEBHOOK_CLEANUP_MAX_PAGES = 20;
+    private static final Pattern WEBHOOK_PATH_PATTERN = Pattern.compile(".*/webhooks/([0-9]+)/([^/?#]+).*");
     private static final Pattern MESSAGE_ID_PATTERN = Pattern.compile("\"id\"\\s*:\\s*\"(\\d+)\"");
     private final LastBreathHC plugin;
 
@@ -244,9 +248,111 @@ public class DiscordWebhookService {
             return;
         }
 
+        WebhookCredentials credentials = resolveWebhookCredentials(webhookUrl);
+        if (credentials == null) {
+            plugin.getLogger().warning("Unable to resolve webhook credentials from URL; skipping delete for messageId="
+                    + messageId);
+            return;
+        }
+        deleteWebhookMessage(credentials, messageId);
+    }
+
+    public void clearAsteroidWebhookMessages() {
+        if (!plugin.getConfig().getBoolean(CONFIG_ROOT + ".clearAsteroidMessagesOnStartup", true)) {
+            plugin.getLogger().info("Asteroid webhook startup cleanup disabled by config.");
+            return;
+        }
+
+        String webhookUrl = plugin.getConfig().getString(CONFIG_ROOT + ".asteroidsUrl", "").trim();
+        if (webhookUrl.isEmpty()) {
+            plugin.getLogger().info("Asteroid webhook URL empty; skipping startup cleanup.");
+            return;
+        }
+
+        WebhookCredentials credentials = resolveWebhookCredentials(webhookUrl);
+        if (credentials == null) {
+            plugin.getLogger().warning("Unable to parse asteroid webhook URL for startup cleanup.");
+            return;
+        }
+
+        int deletedCount = 0;
+        int failedCount = 0;
+        int pageCount = 0;
+        String beforeMessageId = null;
+        boolean reachedSafetyCap = false;
+
+        while (pageCount < WEBHOOK_CLEANUP_MAX_PAGES) {
+            String response = fetchWebhookMessages(credentials, beforeMessageId, WEBHOOK_CLEANUP_PAGE_SIZE);
+            if (response == null) {
+                failedCount++;
+                break;
+            }
+
+            List<String> messageIds = extractMessageIdsFromMessagesResponse(response);
+            if (messageIds.isEmpty()) {
+                break;
+            }
+
+            for (String messageId : messageIds) {
+                if (deleteWebhookMessage(credentials, messageId)) {
+                    deletedCount++;
+                } else {
+                    failedCount++;
+                }
+            }
+
+            pageCount++;
+            beforeMessageId = messageIds.get(messageIds.size() - 1);
+            if (messageIds.size() < WEBHOOK_CLEANUP_PAGE_SIZE) {
+                break;
+            }
+        }
+
+        if (pageCount >= WEBHOOK_CLEANUP_MAX_PAGES) {
+            reachedSafetyCap = true;
+        }
+
+        plugin.getLogger().info("Asteroid webhook startup cleanup finished. deleted=" + deletedCount
+                + " failures=" + failedCount + " pages=" + pageCount
+                + (reachedSafetyCap ? " safetyCapReached=true" : ""));
+    }
+
+    private String fetchWebhookMessages(WebhookCredentials credentials, String beforeMessageId, int limit) {
         HttpURLConnection connection = null;
         try {
-            String targetUrl = webhookUrl + "/messages/" + messageId;
+            StringBuilder targetUrl = new StringBuilder(credentials.baseUrl())
+                    .append("/messages?limit=")
+                    .append(limit);
+            if (beforeMessageId != null && !beforeMessageId.isBlank()) {
+                targetUrl.append("&before=").append(beforeMessageId);
+            }
+            connection = (HttpURLConnection) URI.create(targetUrl.toString()).toURL().openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(8000);
+
+            int code = connection.getResponseCode();
+            String responseBody = readResponseBody(connection, code);
+            if (code < 200 || code >= 300) {
+                plugin.getLogger().warning("Discord webhook message fetch failed. code=" + code
+                        + " body=" + responseBody);
+                return null;
+            }
+            return responseBody;
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to fetch Discord webhook messages for startup cleanup.", e);
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private boolean deleteWebhookMessage(WebhookCredentials credentials, String messageId) {
+        HttpURLConnection connection = null;
+        try {
+            String targetUrl = credentials.baseUrl() + "/messages/" + messageId;
             connection = (HttpURLConnection) URI.create(targetUrl).toURL().openConnection();
             connection.setRequestMethod("DELETE");
             connection.setConnectTimeout(5000);
@@ -257,14 +363,106 @@ public class DiscordWebhookService {
                 String responseBody = readResponseBody(connection, code);
                 plugin.getLogger().warning("Discord webhook message delete failed. code=" + code
                         + " messageId=" + messageId + " body=" + responseBody);
+                return false;
             }
+            return true;
         } catch (IOException e) {
             plugin.getLogger().log(Level.WARNING, "Failed to delete Discord webhook message. messageId=" + messageId, e);
+            return false;
         } finally {
             if (connection != null) {
                 connection.disconnect();
             }
         }
+    }
+
+    private WebhookCredentials resolveWebhookCredentials(String webhookUrl) {
+        try {
+            String sanitized = webhookUrl;
+            int queryStart = sanitized.indexOf('?');
+            if (queryStart >= 0) {
+                sanitized = sanitized.substring(0, queryStart);
+            }
+
+            Matcher matcher = WEBHOOK_PATH_PATTERN.matcher(sanitized);
+            if (!matcher.matches()) {
+                return null;
+            }
+
+            String webhookId = matcher.group(1);
+            String token = matcher.group(2);
+            String baseUrl = sanitized.substring(0, matcher.start(1)) + webhookId + "/" + token;
+            return new WebhookCredentials(baseUrl);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private List<String> extractMessageIdsFromMessagesResponse(String responseBody) {
+        List<String> ids = new ArrayList<>();
+        if (responseBody == null || responseBody.isBlank()) {
+            return ids;
+        }
+
+        boolean inString = false;
+        boolean escaping = false;
+        int arrayDepth = 0;
+        int depth = 0;
+        int objectStart = -1;
+
+        for (int i = 0; i < responseBody.length(); i++) {
+            char c = responseBody.charAt(i);
+            if (inString) {
+                if (escaping) {
+                    escaping = false;
+                    continue;
+                }
+                if (c == '\\') {
+                    escaping = true;
+                } else if (c == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (c == '"') {
+                inString = true;
+                continue;
+            }
+
+            if (c == '[') {
+                arrayDepth++;
+                continue;
+            }
+            if (c == ']') {
+                arrayDepth = Math.max(0, arrayDepth - 1);
+                continue;
+            }
+
+            if (c == '{' && arrayDepth == 1) {
+                if (depth == 0) {
+                    objectStart = i;
+                }
+                depth++;
+                continue;
+            }
+
+            if (c == '}' && arrayDepth == 1 && depth > 0) {
+                depth--;
+                if (depth == 0) {
+                    String objectBody = responseBody.substring(objectStart, i + 1);
+                    Matcher matcher = MESSAGE_ID_PATTERN.matcher(objectBody);
+                    if (matcher.find()) {
+                        ids.add(matcher.group(1));
+                    }
+                    objectStart = -1;
+                }
+            }
+        }
+        return ids;
+    }
+
+    private record WebhookCredentials(String baseUrl) {
     }
 
     private String withWaitParam(String webhookUrl) {

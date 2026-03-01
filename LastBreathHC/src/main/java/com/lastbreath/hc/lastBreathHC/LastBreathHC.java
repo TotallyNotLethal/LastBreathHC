@@ -569,6 +569,7 @@ public final class LastBreathHC extends JavaPlugin {
         TokenRecipe.register();
         ReviveGuiTokenRecipe.register();
         CustomItemRecipes.register();
+        discordWebhookService.clearAsteroidWebhookMessages();
         scheduleNextAsteroid();
         scheduleBountyTimers();
         scheduleBloodMoonChecks();
