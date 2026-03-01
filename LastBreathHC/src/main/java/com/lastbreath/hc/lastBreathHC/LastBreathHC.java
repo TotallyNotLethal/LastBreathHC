@@ -145,10 +145,12 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class LastBreathHC extends JavaPlugin {
 
@@ -1177,42 +1179,85 @@ public final class LastBreathHC extends JavaPlugin {
 
         double meteorShowerChance = getConfig().getDouble("asteroid.spawn.meteorShowerChance", 0.0);
         boolean meteorShower = random.nextDouble() < meteorShowerChance;
-        List<DiscordWebhookService.AsteroidSpawnInfo> showerAsteroids = new ArrayList<>();
-        showerAsteroids.add(new DiscordWebhookService.AsteroidSpawnInfo(location, tier));
-        AsteroidManager.spawnAsteroid(world, location, tier);
-
-        if (meteorShower) {
-            Bukkit.broadcastMessage("☄ Meteor shower incoming!");
-            int showerCount = 3 + random.nextInt(3);
-            double showerRadius = 50.0;
-            int offsetAttempts = 3;
-            int offsetSearchAttempts = 6;
-            long cumulativeDelay = 0L;
-            for (int spawnIndex = 1; spawnIndex < showerCount; spawnIndex++) {
-                Location offsetLocation = null;
-                for (int attempt = 0; attempt < offsetAttempts; attempt++) {
-                    offsetLocation = pickAsteroidLocationNear(world, location, showerRadius, offsetSearchAttempts);
-                    if (offsetLocation != null) {
-                        break;
-                    }
-                }
-                if (offsetLocation == null) {
-                    continue;
-                }
-                int offsetTier = pickWeightedAsteroidTier();
-                showerAsteroids.add(new DiscordWebhookService.AsteroidSpawnInfo(offsetLocation, offsetTier));
-                long delay = 2L + random.nextInt(4);
-                cumulativeDelay += delay;
-                Location finalOffsetLocation = offsetLocation;
-                int finalOffsetTier = offsetTier;
-                Bukkit.getScheduler().runTaskLater(this, () -> {
-                    AsteroidManager.spawnAsteroid(world, finalOffsetLocation, finalOffsetTier);
-                }, cumulativeDelay);
-            }
-            discordWebhookService.sendMeteorShowerWebhook(showerAsteroids);
-        } else {
+        if (!meteorShower) {
+            AsteroidManager.spawnAsteroid(world, location, tier);
             discordWebhookService.sendAsteroidCrashWebhook(location, tier, false);
+            return true;
         }
+
+        int showerCount = 3 + random.nextInt(3);
+        double showerRadius = 50.0;
+        int offsetAttempts = 3;
+        int offsetSearchAttempts = 6;
+        long cumulativeDelay = 0L;
+        List<MeteorShowerSpawnPlan> spawnPlan = new ArrayList<>();
+        spawnPlan.add(new MeteorShowerSpawnPlan(location, tier, 0L));
+
+        for (int spawnIndex = 1; spawnIndex < showerCount; spawnIndex++) {
+            Location offsetLocation = null;
+            for (int attempt = 0; attempt < offsetAttempts; attempt++) {
+                offsetLocation = pickAsteroidLocationNear(world, location, showerRadius, offsetSearchAttempts);
+                if (offsetLocation != null) {
+                    break;
+                }
+            }
+            if (offsetLocation == null) {
+                continue;
+            }
+
+            int offsetTier = pickWeightedAsteroidTier();
+            long delay = 2L + random.nextInt(4);
+            cumulativeDelay += delay;
+            spawnPlan.add(new MeteorShowerSpawnPlan(offsetLocation, offsetTier, cumulativeDelay));
+        }
+
+        MeteorShowerAccumulator showerAccumulator = new MeteorShowerAccumulator(spawnPlan.size());
+        Bukkit.broadcastMessage("☄ Meteor shower incoming!");
+
+        for (MeteorShowerSpawnPlan plannedSpawn : spawnPlan) {
+            Runnable spawnTask = () -> {
+                AsteroidManager.spawnAsteroid(world, plannedSpawn.location(), plannedSpawn.tier());
+                showerAccumulator.recordSpawn(plannedSpawn.location(), plannedSpawn.tier());
+                showerAccumulator.completeSpawn(discordWebhookService);
+            };
+
+            if (plannedSpawn.delayTicks() == 0L) {
+                spawnTask.run();
+            } else {
+                Bukkit.getScheduler().runTaskLater(this, spawnTask, plannedSpawn.delayTicks());
+            }
+        }
+
         return true;
+    }
+
+    private record MeteorShowerSpawnPlan(Location location, int tier, long delayTicks) {
+    }
+
+    private static final class MeteorShowerAccumulator {
+        private final int expectedSpawnCount;
+        private final List<DiscordWebhookService.AsteroidSpawnInfo> spawnedAsteroids;
+        private final AtomicInteger completedSpawns = new AtomicInteger();
+
+        private MeteorShowerAccumulator(int expectedSpawnCount) {
+            this.expectedSpawnCount = expectedSpawnCount;
+            this.spawnedAsteroids = Collections.synchronizedList(new ArrayList<>());
+        }
+
+        private void recordSpawn(Location location, int tier) {
+            spawnedAsteroids.add(new DiscordWebhookService.AsteroidSpawnInfo(location, tier));
+        }
+
+        private void completeSpawn(DiscordWebhookService webhookService) {
+            if (completedSpawns.incrementAndGet() != expectedSpawnCount) {
+                return;
+            }
+
+            List<DiscordWebhookService.AsteroidSpawnInfo> snapshot;
+            synchronized (spawnedAsteroids) {
+                snapshot = new ArrayList<>(spawnedAsteroids);
+            }
+            webhookService.sendMeteorShowerWebhook(snapshot);
+        }
     }
 }
