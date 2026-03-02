@@ -88,7 +88,7 @@ public final class StructurePlacementValidator {
                 || Tag.BANNERS.isTagged(material)
                 || Tag.SIGNS.isTagged(material)
                 || Tag.CARPETS.isTagged(material)
-                || Tag.GLASS.isTagged(material)
+                //|| Tag.GLASS.isTagged(material)
                 || Tag.STAIRS.isTagged(material)
                 || Tag.SLABS.isTagged(material)
                 || Tag.WALLS.isTagged(material)) {
