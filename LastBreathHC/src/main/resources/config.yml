@@ -1704,7 +1704,13 @@ nemesis:
   influenceItems:
     enabled: true
 
+lastbreath:
+  api:
+    baseUrl: "https://www.lastbreath.net"
+    apiKey: "LASTBREATH_PLUGIN_TEST_KEY_CHANGE_ME"
+    statsIntervalTicks: 1200
+
 lastBreathApi:
-  baseUrl: "https://lastbreath.net/api"
+  baseUrl: "https://www.lastbreath.net"
   apiKey: "LASTBREATH_PLUGIN_TEST_KEY_CHANGE_ME"
-  statsIntervalTicks: 6000
+  statsIntervalTicks: 1200
