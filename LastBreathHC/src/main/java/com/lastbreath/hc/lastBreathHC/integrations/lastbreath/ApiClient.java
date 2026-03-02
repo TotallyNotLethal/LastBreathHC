@@ -18,16 +18,17 @@ import java.util.concurrent.TimeUnit;
 public class ApiClient implements Closeable {
     private static final int MAX_ATTEMPTS = 3;
     private static final long BASE_BACKOFF_MILLIS = 500L;
+    private static final int PAYLOAD_LOG_MAX_LENGTH = 300;
 
     private final JavaPlugin plugin;
     private final HttpClient httpClient;
     private final ScheduledExecutorService scheduler;
-    private final String baseUrl;
+    private final String apiBaseUrl;
     private final String apiKey;
 
     public ApiClient(JavaPlugin plugin, String baseUrl, String apiKey) {
         this.plugin = plugin;
-        this.baseUrl = stripTrailingSlash(baseUrl);
+        this.apiBaseUrl = normalizeApiBaseUrl(baseUrl);
         this.apiKey = apiKey;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread thread = new Thread(r, "lastbreath-api-client");
@@ -38,6 +39,10 @@ public class ApiClient implements Closeable {
                 .connectTimeout(Duration.ofSeconds(5))
                 .executor(scheduler)
                 .build();
+
+        plugin.getLogger().info("LastBreath API client initialized. configuredBaseUrl=" + baseUrl
+                + " normalizedApiBaseUrl=" + this.apiBaseUrl
+                + " endpoint=/plugin/event");
     }
 
     public void sendJoin(UUID uuid, String username) {
@@ -68,8 +73,13 @@ public class ApiClient implements Closeable {
     }
 
     private void postWithRetry(String endpoint, String payload, int attempt) {
+        String requestUrl = apiBaseUrl + endpoint;
+        plugin.getLogger().info("LastBreath API POST attempt=" + attempt
+                + " url=" + requestUrl
+                + " payload=" + summarizePayload(payload));
+
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + endpoint))
+                .uri(URI.create(requestUrl))
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
                 .header("x-api-key", apiKey)
@@ -85,31 +95,67 @@ public class ApiClient implements Closeable {
                     }
 
                     int statusCode = response.statusCode();
-                    if (statusCode < 200 || statusCode >= 300) {
-                        String responseBody = response.body() == null ? "" : response.body();
-                        plugin.getLogger().warning("LastBreath API non-2xx response for " + endpoint
+                    String responseBody = response.body() == null ? "" : response.body();
+                    if (statusCode >= 200 && statusCode < 300) {
+                        plugin.getLogger().info("LastBreath API success"
+                                + " attempt=" + attempt
+                                + " url=" + requestUrl
                                 + " status=" + statusCode
-                                + " body=" + responseBody);
-                        handleFailure(endpoint, payload, attempt, "status " + statusCode);
+                                + " body=" + summarizePayload(responseBody));
+                        return;
                     }
+
+                    plugin.getLogger().warning("LastBreath API non-2xx response"
+                            + " attempt=" + attempt
+                            + " url=" + requestUrl
+                            + " status=" + statusCode
+                            + " body=" + summarizePayload(responseBody));
+                    handleFailure(endpoint, payload, attempt, "status " + statusCode);
                 });
     }
 
     private void handleFailure(String endpoint, String payload, int attempt, String reason) {
         if (attempt >= MAX_ATTEMPTS) {
-            plugin.getLogger().warning("LastBreath API request failed after " + attempt + " attempts for " + endpoint + ": " + reason);
+            plugin.getLogger().warning("LastBreath API request failed after " + attempt + " attempts"
+                    + " endpoint=" + endpoint
+                    + " reason=" + reason
+                    + " payload=" + summarizePayload(payload));
             return;
         }
 
         long delayMillis = BASE_BACKOFF_MILLIS * (1L << (attempt - 1));
-        scheduler.schedule(() -> postWithRetry(endpoint, payload, attempt + 1), delayMillis, TimeUnit.MILLISECONDS);
+        int nextAttempt = attempt + 1;
+        plugin.getLogger().warning("LastBreath API scheduling retry"
+                + " endpoint=" + endpoint
+                + " reason=" + reason
+                + " nextAttempt=" + nextAttempt
+                + " delayMs=" + delayMillis);
+        scheduler.schedule(() -> postWithRetry(endpoint, payload, nextAttempt), delayMillis, TimeUnit.MILLISECONDS);
     }
 
-    private static String stripTrailingSlash(String value) {
-        if (value.endsWith("/")) {
-            return value.substring(0, value.length() - 1);
+    private static String normalizeApiBaseUrl(String value) {
+        String normalized = value.endsWith("/")
+                ? value.substring(0, value.length() - 1)
+                : value;
+
+        return normalized.endsWith("/api") ? normalized : normalized + "/api";
+    }
+
+    private static String summarizePayload(String value) {
+        if (value == null) {
+            return "<null>";
         }
-        return value;
+
+        String sanitized = value
+                .replace('\n', ' ')
+                .replace('\r', ' ')
+                .trim();
+
+        if (sanitized.length() <= PAYLOAD_LOG_MAX_LENGTH) {
+            return sanitized;
+        }
+
+        return sanitized.substring(0, PAYLOAD_LOG_MAX_LENGTH) + "...<truncated>";
     }
 
     private static String escapeJson(String value) {
