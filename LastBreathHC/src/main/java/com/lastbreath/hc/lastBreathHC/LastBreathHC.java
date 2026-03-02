@@ -122,6 +122,8 @@ import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerTabSyncListener;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.SkinService;
 import com.lastbreath.hc.lastBreathHC.gui.BountyBoardGUI;
 import com.lastbreath.hc.lastBreathHC.integrations.discord.DiscordWebhookService;
+import com.lastbreath.hc.lastBreathHC.integrations.lastbreath.ApiClient;
+import com.lastbreath.hc.lastBreathHC.integrations.lastbreath.ApiEventListener;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantBookRecipeListener;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemCraftListener;
 import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantAnvilListener;
@@ -141,6 +143,7 @@ import com.lastbreath.hc.lastBreathHC.potion.CauldronBrewingListener;
 import com.lastbreath.hc.lastBreathHC.potion.PotionHandler;
 import com.lastbreath.hc.lastBreathHC.potion.PotionDefinitionRegistry;
 import com.lastbreath.hc.lastBreathHC.nickname.NicknamePermissionMonitor;
+import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -164,6 +167,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask nicknamePermissionTask;
     private BukkitTask statsAutosaveTask;
     private BukkitTask captainFlushTask;
+    private BukkitTask apiStatsTask;
     private BloodMoonManager bloodMoonManager;
     private DeathMarkerManager deathMarkerManager;
     private EnvironmentalEffectsManager environmentalEffectsManager;
@@ -218,6 +222,8 @@ public final class LastBreathHC extends JavaPlugin {
     private StructureRaidService structureRaidService;
     private NemesisWarbandCoordinator nemesisWarbandCoordinator;
     private DiscordWebhookService discordWebhookService;
+    private ApiClient apiClient;
+    private ApiEventListener apiEventListener;
 
 
     @Override
@@ -434,6 +440,13 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new StatsListener(), this
         );
+
+        String apiBaseUrl = getConfig().getString("lastBreathApi.baseUrl", "https://lastbreath.net/api");
+        String apiKey = getConfig().getString("lastBreathApi.apiKey", "LASTBREATH_PLUGIN_TEST_KEY_CHANGE_ME");
+        apiClient = new ApiClient(this, apiBaseUrl, apiKey);
+        apiEventListener = new ApiEventListener(apiClient);
+        getServer().getPluginManager().registerEvents(apiEventListener, this);
+        scheduleApiStatsUpdates();
         getServer().getPluginManager().registerEvents(
                 new BloodMoonListener(bloodMoonManager), this
         );
@@ -647,6 +660,10 @@ public final class LastBreathHC extends JavaPlugin {
             captainFlushTask.cancel();
             captainFlushTask = null;
         }
+        if (apiStatsTask != null) {
+            apiStatsTask.cancel();
+            apiStatsTask = null;
+        }
         if (cosmeticAuraService != null) {
             cosmeticAuraService.stop();
             cosmeticAuraService = null;
@@ -766,6 +783,11 @@ public final class LastBreathHC extends JavaPlugin {
             bannedDeathZombieService.stop();
             bannedDeathZombieService = null;
         }
+        if (apiClient != null) {
+            apiClient.close();
+            apiClient = null;
+        }
+        apiEventListener = null;
         dailyRewardGUI = null;
         potionDefinitionRegistry = null;
         customPotionEffectRegistry = null;
@@ -891,6 +913,22 @@ public final class LastBreathHC extends JavaPlugin {
             statsAutosaveTask.cancel();
         }
         statsAutosaveTask = getServer().getScheduler().runTaskTimer(this, StatsManager::saveDirty, 20L * 60L, 20L * 60L);
+    }
+
+    private void scheduleApiStatsUpdates() {
+        if (apiStatsTask != null) {
+            apiStatsTask.cancel();
+        }
+
+        long periodTicks = Math.max(20L, getConfig().getLong("lastBreathApi.statsIntervalTicks", 20L * 300L));
+        apiStatsTask = getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
+            if (apiEventListener == null) {
+                return;
+            }
+            for (Player player : getServer().getOnlinePlayers()) {
+                apiEventListener.sendStatsFor(player);
+            }
+        }, periodTicks, periodTicks);
     }
 
     private void scheduleTabMenuRefresh() {
