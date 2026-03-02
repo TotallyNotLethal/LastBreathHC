@@ -23,12 +23,12 @@ public class ApiClient implements Closeable {
     private final JavaPlugin plugin;
     private final HttpClient httpClient;
     private final ScheduledExecutorService scheduler;
-    private final String apiBaseUrl;
+    private final URI pluginEventUri;
     private final String apiKey;
 
     public ApiClient(JavaPlugin plugin, String baseUrl, String apiKey) {
         this.plugin = plugin;
-        this.apiBaseUrl = normalizeApiBaseUrl(baseUrl);
+        this.pluginEventUri = resolvePluginEventUri(baseUrl);
         this.apiKey = apiKey;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread thread = new Thread(r, "lastbreath-api-client");
@@ -37,49 +37,54 @@ public class ApiClient implements Closeable {
         });
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NORMAL)
                 .executor(scheduler)
                 .build();
 
         plugin.getLogger().info("LastBreath API client initialized. configuredBaseUrl=" + baseUrl
-                + " normalizedApiBaseUrl=" + this.apiBaseUrl
-                + " endpoint=/plugin/event");
+                + " resolvedPluginEventUrl=" + this.pluginEventUri);
     }
 
     public void sendJoin(UUID uuid, String username) {
-        postEvent("{\"event\":\"join\",\"uuid\":\"" + uuid + "\",\"username\":\"" + escapeJson(username) + "\"}");
+        postEvent("join", "{\"event\":\"join\",\"uuid\":\"" + uuid + "\",\"username\":\"" + escapeJson(username) + "\"}");
     }
 
     public void sendLeave(UUID uuid) {
-        postEvent("{\"event\":\"leave\",\"uuid\":\"" + uuid + "\"}");
+        postEvent("leave", "{\"event\":\"leave\",\"uuid\":\"" + uuid + "\"}");
     }
 
     public void sendDeath(UUID uuid, String deathMessage) {
-        postEvent("{\"event\":\"death\",\"uuid\":\"" + uuid + "\",\"death_message\":\"" + escapeJson(deathMessage) + "\"}");
+        postEvent("death", "{\"event\":\"death\",\"uuid\":\"" + uuid + "\",\"death_message\":\"" + escapeJson(deathMessage) + "\"}");
     }
 
     public void sendStats(UUID uuid, long survivalMinutes, int kills) {
-        postEvent("{\"event\":\"stats\",\"uuid\":\"" + uuid + "\",\"survival_time\":" + survivalMinutes + ",\"kills\":" + kills + "}");
+        postEvent("stats", "{\"event\":\"stats\",\"uuid\":\"" + uuid + "\",\"survival_time\":" + survivalMinutes + ",\"kills\":" + kills + "}");
     }
 
     public void sendDragon(Optional<UUID> uuid) {
         String payload = uuid
                 .map(value -> "{\"event\":\"dragon\",\"uuid\":\"" + value + "\"}")
                 .orElse("{\"event\":\"dragon\"}");
-        postEvent(payload);
+        postEvent("dragon", payload);
     }
 
-    private void postEvent(String payload) {
-        postWithRetry("/plugin/event", payload, 1);
+    public String getResolvedPluginEventUrl() {
+        return pluginEventUri.toString();
     }
 
-    private void postWithRetry(String endpoint, String payload, int attempt) {
-        String requestUrl = apiBaseUrl + endpoint;
+    private void postEvent(String eventType, String payload) {
+        postWithRetry(eventType, payload, 1);
+    }
+
+    private void postWithRetry(String eventType, String payload, int attempt) {
+        String requestUrl = pluginEventUri.toString();
         plugin.getLogger().info("LastBreath API POST attempt=" + attempt
                 + " url=" + requestUrl
+                + " event=" + eventType
                 + " payload=" + summarizePayload(payload));
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(requestUrl))
+                .uri(pluginEventUri)
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKey)
                 .header("x-api-key", apiKey)
@@ -90,7 +95,7 @@ public class ApiClient implements Closeable {
         httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .whenComplete((response, throwable) -> {
                     if (throwable != null) {
-                        handleFailure(endpoint, payload, attempt, "request error: " + throwable.getMessage());
+                        handleFailure(eventType, payload, attempt, "request error: " + throwable.getMessage());
                         return;
                     }
 
@@ -100,6 +105,7 @@ public class ApiClient implements Closeable {
                         plugin.getLogger().info("LastBreath API success"
                                 + " attempt=" + attempt
                                 + " url=" + requestUrl
+                                + " event=" + eventType
                                 + " status=" + statusCode
                                 + " body=" + summarizePayload(responseBody));
                         return;
@@ -108,16 +114,23 @@ public class ApiClient implements Closeable {
                     plugin.getLogger().warning("LastBreath API non-2xx response"
                             + " attempt=" + attempt
                             + " url=" + requestUrl
+                            + " event=" + eventType
                             + " status=" + statusCode
                             + " body=" + summarizePayload(responseBody));
-                    handleFailure(endpoint, payload, attempt, "status " + statusCode);
+
+                    if (!shouldRetry(statusCode)) {
+                        return;
+                    }
+
+                    handleFailure(eventType, payload, attempt, "status " + statusCode);
                 });
     }
 
-    private void handleFailure(String endpoint, String payload, int attempt, String reason) {
+    private void handleFailure(String eventType, String payload, int attempt, String reason) {
         if (attempt >= MAX_ATTEMPTS) {
             plugin.getLogger().warning("LastBreath API request failed after " + attempt + " attempts"
-                    + " endpoint=" + endpoint
+                    + " url=" + pluginEventUri
+                    + " event=" + eventType
                     + " reason=" + reason
                     + " payload=" + summarizePayload(payload));
             return;
@@ -126,19 +139,33 @@ public class ApiClient implements Closeable {
         long delayMillis = BASE_BACKOFF_MILLIS * (1L << (attempt - 1));
         int nextAttempt = attempt + 1;
         plugin.getLogger().warning("LastBreath API scheduling retry"
-                + " endpoint=" + endpoint
+                + " url=" + pluginEventUri
+                + " event=" + eventType
                 + " reason=" + reason
                 + " nextAttempt=" + nextAttempt
                 + " delayMs=" + delayMillis);
-        scheduler.schedule(() -> postWithRetry(endpoint, payload, nextAttempt), delayMillis, TimeUnit.MILLISECONDS);
+        scheduler.schedule(() -> postWithRetry(eventType, payload, nextAttempt), delayMillis, TimeUnit.MILLISECONDS);
     }
 
-    private static String normalizeApiBaseUrl(String value) {
-        String normalized = value.endsWith("/")
-                ? value.substring(0, value.length() - 1)
-                : value;
+    private static URI resolvePluginEventUri(String baseUrl) {
+        String normalized = baseUrl == null ? "" : baseUrl.trim();
+        if (normalized.isEmpty()) {
+            normalized = "https://www.lastbreath.net";
+        }
 
-        return normalized.endsWith("/api") ? normalized : normalized + "/api";
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+
+        if (normalized.endsWith("/api")) {
+            normalized = normalized.substring(0, normalized.length() - 4);
+        }
+
+        return URI.create(normalized + "/api/plugin/event");
+    }
+
+    private static boolean shouldRetry(int statusCode) {
+        return statusCode == 429 || statusCode >= 500;
     }
 
     private static String summarizePayload(String value) {
@@ -159,6 +186,10 @@ public class ApiClient implements Closeable {
     }
 
     private static String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+
         return value
                 .replace("\\", "\\\\")
                 .replace("\"", "\\\"")

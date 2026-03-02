@@ -441,9 +441,12 @@ public final class LastBreathHC extends JavaPlugin {
                 new StatsListener(), this
         );
 
-        String apiBaseUrl = getConfig().getString("lastBreathApi.baseUrl", "https://lastbreath.net/api");
-        String apiKey = getConfig().getString("lastBreathApi.apiKey", "LASTBREATH_PLUGIN_TEST_KEY_CHANGE_ME");
+        String apiBaseUrl = getConfig().getString("lastbreath.api.baseUrl",
+                getConfig().getString("lastBreathApi.baseUrl", "https://www.lastbreath.net"));
+        String apiKey = getConfig().getString("lastbreath.api.apiKey",
+                getConfig().getString("lastBreathApi.apiKey", "LASTBREATH_PLUGIN_TEST_KEY_CHANGE_ME"));
         apiClient = new ApiClient(this, apiBaseUrl, apiKey);
+        getLogger().info("LastBreath API startup self-test: resolved event URL = " + apiClient.getResolvedPluginEventUrl());
         apiEventListener = new ApiEventListener(apiClient);
         getServer().getPluginManager().registerEvents(apiEventListener, this);
         scheduleApiStatsUpdates();
@@ -920,7 +923,8 @@ public final class LastBreathHC extends JavaPlugin {
             apiStatsTask.cancel();
         }
 
-        long periodTicks = Math.max(20L, getConfig().getLong("lastBreathApi.statsIntervalTicks", 20L * 300L));
+        long periodTicks = Math.max(20L, getConfig().getLong("lastbreath.api.statsIntervalTicks",
+                getConfig().getLong("lastBreathApi.statsIntervalTicks", 20L * 60L)));
         apiStatsTask = getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
             if (apiEventListener == null) {
                 return;
