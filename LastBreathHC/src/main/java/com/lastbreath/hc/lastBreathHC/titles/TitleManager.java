@@ -517,10 +517,20 @@ public class TitleManager {
         if (player == null) {
             return;
         }
+        refreshPlayerDisplayName(player);
+    }
+
+    public static void refreshPlayerDisplayName(Player player) {
+        if (player == null) {
+            return;
+        }
         NamespacedKey nicknameKey = new NamespacedKey(LastBreathHC.getInstance(), "nickname");
         String nickname = player.getPersistentDataContainer().get(nicknameKey, PersistentDataType.STRING);
         String displayName = nickname == null || nickname.isBlank() ? player.getName() : nickname;
+        player.setDisplayName(displayName);
         player.setPlayerListName(getTitleTabTag(player) + displayName);
+        player.setCustomName(displayName);
+        player.setCustomNameVisible(true);
     }
 
     public static void refreshAllTabTitles() {

@@ -52,14 +52,12 @@ public class NickUsageListener implements Listener {
 
     private void clearNickname(Player player, PersistentDataContainer container) {
         container.remove(nicknameKey);
-        player.setDisplayName(player.getName());
-        TitleManager.refreshPlayerTabTitle(player);
+        TitleManager.refreshPlayerDisplayName(player);
         updateNicknameStats(player, null);
     }
 
     private void applyNickname(Player player, String nickname) {
-        player.setDisplayName(nickname);
-        player.setPlayerListName(TitleManager.getTitleTabTag(player) + nickname);
+        TitleManager.refreshPlayerDisplayName(player);
     }
 
     private void updateNicknameStats(Player player, String nickname) {

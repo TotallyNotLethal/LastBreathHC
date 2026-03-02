@@ -97,15 +97,13 @@ public class NickCommand implements BasicCommand {
     private void clearNickname(Player player) {
         player.getPersistentDataContainer().remove(nicknameKey);
         NicknameStorage.save(player.getUniqueId(), null);
-        player.setDisplayName(player.getName());
-        TitleManager.refreshPlayerTabTitle(player);
+        TitleManager.refreshPlayerDisplayName(player);
         updateNicknameStats(player, null);
         player.sendMessage("§aNickname cleared.");
     }
 
     private void applyNickname(Player player, String nickname) {
-        player.setDisplayName(nickname);
-        player.setPlayerListName(TitleManager.getTitleTabTag(player) + nickname);
+        TitleManager.refreshPlayerDisplayName(player);
     }
 
     private void updateNicknameStats(Player player, String nickname) {
