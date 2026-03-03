@@ -37,7 +37,7 @@ public class ApiClient implements Closeable {
         });
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.ALWAYS)
                 .executor(scheduler)
                 .build();
 
@@ -153,6 +153,8 @@ public class ApiClient implements Closeable {
             normalized = "https://www.lastbreath.net";
         }
 
+        normalized = normalizeKnownLastBreathHost(normalized);
+
         while (normalized.endsWith("/")) {
             normalized = normalized.substring(0, normalized.length() - 1);
         }
@@ -162,6 +164,18 @@ public class ApiClient implements Closeable {
         }
 
         return URI.create(normalized + "/api/plugin/event");
+    }
+
+    private static String normalizeKnownLastBreathHost(String baseUrl) {
+        if (baseUrl.equalsIgnoreCase("https://lastbreath.net")) {
+            return "https://www.lastbreath.net";
+        }
+
+        if (baseUrl.equalsIgnoreCase("http://lastbreath.net")) {
+            return "http://www.lastbreath.net";
+        }
+
+        return baseUrl;
     }
 
     private static boolean shouldRetry(int statusCode) {
