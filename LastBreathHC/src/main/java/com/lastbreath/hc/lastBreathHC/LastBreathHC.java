@@ -622,6 +622,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("chat", new FakeChatCommand(this));
                     event.registrar().register("list", new ListCommand(this));
                     event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService, territoryPressureService, structureFootprintRepository, captainHabitatService, dialogueEngine, nemesisAdminWarbandService));
+                    event.registrar().register("lbapi", new ApiBulkSyncCommand());
                 }
         );
     }
@@ -841,6 +842,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     public CaptainRegistry getCaptainRegistry() {
         return captainRegistry;
+    }
+
+    public ApiEventListener getApiEventListener() {
+        return apiEventListener;
     }
 
     private void scheduleNextAsteroid() {

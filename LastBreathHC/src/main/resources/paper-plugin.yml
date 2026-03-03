@@ -16,6 +16,9 @@ permissions:
   lastbreathhc.fake.chat:
     description: Allows use of /chat fake message command.
     default: false
+  lastbreathhc.api.bulkstats:
+    description: Allows manually pushing full player stats bulk sync to LastBreath API.
+    default: op
 
   lastbreathhc.nemesis:
     description: Allows player nemesis command usage.
