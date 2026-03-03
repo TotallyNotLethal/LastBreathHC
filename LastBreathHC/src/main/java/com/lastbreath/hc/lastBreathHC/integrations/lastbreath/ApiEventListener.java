@@ -20,9 +20,11 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public class ApiEventListener implements Listener {
@@ -65,9 +67,14 @@ public class ApiEventListener implements Listener {
 
     public void sendBulkStatsStartup() {
         Map<UUID, PlayerStats> snapshot = StatsManager.getAllStatsSnapshot();
-        List<ApiClient.PlayerStatsPayload> payload = snapshot.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> toPayload(entry.getKey(), entry.getValue()))
+        Set<UUID> knownPlayerIds = new HashSet<>(snapshot.keySet());
+        for (OfflinePlayer offlinePlayer : Bukkit.getOfflinePlayers()) {
+            knownPlayerIds.add(offlinePlayer.getUniqueId());
+        }
+
+        List<ApiClient.PlayerStatsPayload> payload = knownPlayerIds.stream()
+                .sorted()
+                .map(uuid -> toPayload(uuid, snapshot.getOrDefault(uuid, StatsManager.get(uuid))))
                 .toList();
         apiClient.sendBulkStats(payload);
     }
@@ -85,6 +92,8 @@ public class ApiEventListener implements Listener {
             Player online = Bukkit.getPlayer(uuid);
             username = online != null ? online.getName() : uuid.toString();
         }
+
+        boolean isBanned = offlinePlayer.isBanned();
 
         return new ApiClient.PlayerStatsPayload(
                 uuid,
@@ -110,7 +119,8 @@ public class ApiEventListener implements Listener {
                 stats.equippedAura == null ? null : stats.equippedAura.name(),
                 mapNames(stats.unlockedKillMessages),
                 stats.equippedKillMessage == null ? null : stats.equippedKillMessage.name(),
-                !offlinePlayer.isBanned()
+                !isBanned,
+                isBanned
         );
     }
 

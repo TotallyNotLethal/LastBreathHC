@@ -269,6 +269,7 @@ public class ApiClient implements Closeable {
         payload.append(",\"equipped_kill_message\":");
         appendNullableString(payload, player.equippedKillMessage());
         payload.append(",\"is_alive\":").append(player.isAlive())
+                .append(",\"is_banned\":").append(player.isBanned())
                 .append('}');
     }
 
@@ -316,7 +317,8 @@ public class ApiClient implements Closeable {
             String equippedAura,
             List<String> unlockedKillMessages,
             String equippedKillMessage,
-            boolean isAlive
+            boolean isAlive,
+            boolean isBanned
     ) {
     }
 
