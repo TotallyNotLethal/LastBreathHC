@@ -449,6 +449,7 @@ public final class LastBreathHC extends JavaPlugin {
         getLogger().info("LastBreath API startup self-test: resolved event URL = " + apiClient.getResolvedPluginEventUrl());
         apiEventListener = new ApiEventListener(apiClient);
         getServer().getPluginManager().registerEvents(apiEventListener, this);
+        getServer().getScheduler().runTaskAsynchronously(this, () -> apiEventListener.sendBulkStatsStartup());
         scheduleApiStatsUpdates();
         getServer().getPluginManager().registerEvents(
                 new BloodMoonListener(bloodMoonManager), this
