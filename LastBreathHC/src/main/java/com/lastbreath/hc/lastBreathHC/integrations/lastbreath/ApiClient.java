@@ -9,6 +9,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
@@ -59,6 +62,21 @@ public class ApiClient implements Closeable {
 
     public void sendStats(UUID uuid, long survivalMinutes, int kills) {
         postEvent("stats", "{\"event\":\"stats\",\"uuid\":\"" + uuid + "\",\"survival_time\":" + survivalMinutes + ",\"kills\":" + kills + "}");
+    }
+
+    public void sendBulkStats(Collection<PlayerStatsPayload> players) {
+        List<PlayerStatsPayload> entries = new ArrayList<>(players);
+        entries.sort((left, right) -> left.uuid().compareTo(right.uuid()));
+
+        StringBuilder payload = new StringBuilder("{\"event\":\"bulk_stats\",\"players\":[");
+        for (int i = 0; i < entries.size(); i++) {
+            if (i > 0) {
+                payload.append(',');
+            }
+            appendPlayerJson(payload, entries.get(i));
+        }
+        payload.append("]}");
+        postEvent("bulk_stats", payload.toString());
     }
 
     public void sendDragon(Optional<UUID> uuid) {
@@ -209,6 +227,97 @@ public class ApiClient implements Closeable {
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
+    }
+
+    private static void appendPlayerJson(StringBuilder payload, PlayerStatsPayload player) {
+        payload.append("{\"uuid\":\"").append(player.uuid())
+                .append("\",\"username\":\"").append(escapeJson(player.username()))
+                .append("\",\"nickname\":");
+
+        if (player.nickname() == null || player.nickname().isBlank()) {
+            payload.append("null");
+        } else {
+            payload.append("\"").append(escapeJson(player.nickname())).append("\"");
+        }
+
+        payload.append(",\"time_alive\":").append(player.timeAlive())
+                .append(",\"deaths\":").append(player.deaths())
+                .append(",\"revives\":").append(player.revives())
+                .append(",\"mobs_killed\":").append(player.mobsKilled())
+                .append(",\"asteroid_loots\":").append(player.asteroidLoots())
+                .append(",\"crops_harvested\":").append(player.cropsHarvested())
+                .append(",\"blocks_mined\":").append(player.blocksMined())
+                .append(",\"blocks_placed\":").append(player.blocksPlaced())
+                .append(",\"fish_caught\":").append(player.fishCaught())
+                .append(",\"player_kills\":").append(player.playerKills())
+                .append(",\"rare_ores_mined\":").append(player.rareOresMined())
+                .append(",\"world_scaler_enabled\":").append(player.worldScalerEnabled())
+                .append(",\"unlocked_titles\":");
+        appendStringArray(payload, player.unlockedTitles());
+        payload.append(",\"equipped_title\":");
+        appendNullableString(payload, player.equippedTitle());
+        payload.append(",\"unlocked_prefixes\":");
+        appendStringArray(payload, player.unlockedPrefixes());
+        payload.append(",\"equipped_prefix\":");
+        appendNullableString(payload, player.equippedPrefix());
+        payload.append(",\"unlocked_auras\":");
+        appendStringArray(payload, player.unlockedAuras());
+        payload.append(",\"equipped_aura\":");
+        appendNullableString(payload, player.equippedAura());
+        payload.append(",\"unlocked_kill_messages\":");
+        appendStringArray(payload, player.unlockedKillMessages());
+        payload.append(",\"equipped_kill_message\":");
+        appendNullableString(payload, player.equippedKillMessage());
+        payload.append(",\"is_alive\":").append(player.isAlive())
+                .append('}');
+    }
+
+    private static void appendNullableString(StringBuilder payload, String value) {
+        if (value == null || value.isBlank()) {
+            payload.append("null");
+            return;
+        }
+
+        payload.append("\"").append(escapeJson(value)).append("\"");
+    }
+
+    private static void appendStringArray(StringBuilder payload, List<String> values) {
+        payload.append('[');
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) {
+                payload.append(',');
+            }
+            payload.append("\"").append(escapeJson(values.get(i))).append("\"");
+        }
+        payload.append(']');
+    }
+
+    public record PlayerStatsPayload(
+            UUID uuid,
+            String username,
+            String nickname,
+            long timeAlive,
+            int deaths,
+            int revives,
+            int mobsKilled,
+            int asteroidLoots,
+            int cropsHarvested,
+            int blocksMined,
+            int blocksPlaced,
+            int fishCaught,
+            int playerKills,
+            int rareOresMined,
+            boolean worldScalerEnabled,
+            List<String> unlockedTitles,
+            String equippedTitle,
+            List<String> unlockedPrefixes,
+            String equippedPrefix,
+            List<String> unlockedAuras,
+            String equippedAura,
+            List<String> unlockedKillMessages,
+            String equippedKillMessage,
+            boolean isAlive
+    ) {
     }
 
     @Override

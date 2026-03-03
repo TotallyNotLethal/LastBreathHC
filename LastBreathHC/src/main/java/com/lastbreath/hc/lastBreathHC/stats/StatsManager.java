@@ -132,6 +132,14 @@ public class StatsManager {
         return new StatsSummary(deathsByPlayer.size(), totalDeaths, totalPlaytimeTicks);
     }
 
+    public static Map<UUID, PlayerStats> getAllStatsSnapshot() {
+        Map<UUID, PlayerStats> merged = loadAllFromDisk();
+        for (Map.Entry<UUID, PlayerStats> entry : stats.entrySet()) {
+            merged.put(entry.getKey(), cloneStats(entry.getValue()));
+        }
+        return merged;
+    }
+
     private static PlayerStats loadFromDisk(UUID uuid) {
         PlayerStats playerStats = new PlayerStats(uuid);
 
@@ -370,7 +378,94 @@ public class StatsManager {
         playerStats.playerKills = config.getInt(base + ".playerKills", 0);
         playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
         playerStats.nickname = config.getString(base + ".nickname");
+        List<String> unlocked = config.getStringList(base + ".unlockedTitles");
+        Set<Title> titles = new HashSet<>();
+        for (String titleName : unlocked) {
+            Title title = Title.fromInput(titleName);
+            if (title != null) {
+                titles.add(title);
+            }
+        }
+        playerStats.unlockedTitles = titles;
+
+        String equippedName = config.getString(base + ".equippedTitle");
+        if (equippedName != null && !equippedName.isBlank()) {
+            playerStats.equippedTitle = Title.fromInput(equippedName);
+        }
+
+        playerStats.worldScalerEnabled = config.getBoolean(base + ".worldScalerEnabled", false);
+
+        List<String> unlockedPrefixes = config.getStringList(base + ".unlockedPrefixes");
+        Set<BossPrefix> prefixSet = new HashSet<>();
+        for (String prefixName : unlockedPrefixes) {
+            BossPrefix prefix = BossPrefix.fromInput(prefixName);
+            if (prefix != null) {
+                prefixSet.add(prefix);
+            }
+        }
+        playerStats.unlockedPrefixes = prefixSet;
+
+        String equippedPrefixName = config.getString(base + ".equippedPrefix");
+        if (equippedPrefixName != null && !equippedPrefixName.isBlank()) {
+            playerStats.equippedPrefix = BossPrefix.fromInput(equippedPrefixName);
+        }
+
+        List<String> unlockedAuras = config.getStringList(base + ".unlockedAuras");
+        Set<BossAura> auraSet = new HashSet<>();
+        for (String auraName : unlockedAuras) {
+            BossAura aura = BossAura.fromInput(auraName);
+            if (aura != null) {
+                auraSet.add(aura);
+            }
+        }
+        playerStats.unlockedAuras = auraSet;
+
+        String equippedAuraName = config.getString(base + ".equippedAura");
+        if (equippedAuraName != null && !equippedAuraName.isBlank()) {
+            playerStats.equippedAura = BossAura.fromInput(equippedAuraName);
+        }
+
+        List<String> unlockedKillMessages = config.getStringList(base + ".unlockedKillMessages");
+        Set<BossKillMessage> killMessageSet = new HashSet<>();
+        for (String messageName : unlockedKillMessages) {
+            BossKillMessage message = BossKillMessage.fromInput(messageName);
+            if (message != null) {
+                killMessageSet.add(message);
+            }
+        }
+        playerStats.unlockedKillMessages = killMessageSet;
+
+        String equippedKillMessageName = config.getString(base + ".equippedKillMessage");
+        if (equippedKillMessageName != null && !equippedKillMessageName.isBlank()) {
+            playerStats.equippedKillMessage = BossKillMessage.fromInput(equippedKillMessageName);
+        }
         return playerStats;
+    }
+
+    private static PlayerStats cloneStats(PlayerStats original) {
+        PlayerStats copy = new PlayerStats(original.uuid);
+        copy.timeAlive = original.timeAlive;
+        copy.deaths = original.deaths;
+        copy.revives = original.revives;
+        copy.mobsKilled = original.mobsKilled;
+        copy.asteroidLoots = original.asteroidLoots;
+        copy.cropsHarvested = original.cropsHarvested;
+        copy.blocksMined = original.blocksMined;
+        copy.blocksPlaced = original.blocksPlaced;
+        copy.fishCaught = original.fishCaught;
+        copy.playerKills = original.playerKills;
+        copy.rareOresMined = original.rareOresMined;
+        copy.nickname = original.nickname;
+        copy.unlockedTitles = new HashSet<>(original.unlockedTitles);
+        copy.equippedTitle = original.equippedTitle;
+        copy.worldScalerEnabled = original.worldScalerEnabled;
+        copy.unlockedPrefixes = new HashSet<>(original.unlockedPrefixes);
+        copy.equippedPrefix = original.equippedPrefix;
+        copy.unlockedAuras = new HashSet<>(original.unlockedAuras);
+        copy.equippedAura = original.equippedAura;
+        copy.unlockedKillMessages = new HashSet<>(original.unlockedKillMessages);
+        copy.equippedKillMessage = original.equippedKillMessage;
+        return copy;
     }
 
     private static String resolveDisplayName(UUID uuid, PlayerStats playerStats) {
