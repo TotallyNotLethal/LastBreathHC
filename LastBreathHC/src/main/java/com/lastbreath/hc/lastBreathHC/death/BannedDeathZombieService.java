@@ -33,9 +33,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
@@ -50,20 +51,22 @@ public class BannedDeathZombieService implements Listener {
     private static final long ACTIVE_WINDOW_MS = 7L * 24L * 60L * 60L * 1000L;
     private static final long RECENT_CHUNK_WINDOW_MS = 7L * 24L * 60L * 60L * 1000L;
     private static final long PROTECTED_OWNER_CACHE_MS = 2L * 60L * 1000L;
-    private static final String STORAGE_PATH = "deathZombieLastSpawn";
     private static final String HEAD_CHUNK_CACHE_PATH = "protectedHeadChunkCache";
     private static final String REMNANT_TAG = "lastbreathhc.remnantZombie";
+    private static final String SPAWNED_OWNERS_PATH = "spawnedOwners";
 
     private final LastBreathHC plugin;
     private final HeadTrackingLogger headTrackingLogger;
     private final NamespacedKey remnantOwnerKey;
-    private final Map<UUID, LocalDate> lastSpawnDateByPlayer = new HashMap<>();
     private final Map<UUID, UUID> activeRemnantByOwner = new HashMap<>();
+    private final Set<UUID> spawnedRemnantOwners = new HashSet<>();
     private final Map<ChunkRef, Long> chunkLastLoadedAtMs = new HashMap<>();
     private final Map<UUID, HeadChunkSnapshot> headChunkSnapshots = new HashMap<>();
     private BukkitTask task;
     private long protectedOwnerCacheExpiresAtMs;
     private Set<UUID> cachedProtectedOwners = new HashSet<>();
+    private File spawnedRemnantsFile;
+    private YamlConfiguration spawnedRemnantsConfig;
 
     public BannedDeathZombieService(LastBreathHC plugin, HeadTrackingLogger headTrackingLogger) {
         this.plugin = plugin;
@@ -72,7 +75,7 @@ public class BannedDeathZombieService implements Listener {
     }
 
     public void start() {
-        loadState();
+        loadSpawnedRemnantOwners();
         loadHeadChunkSnapshots();
         seedLoadedChunkTimestamps();
         Bukkit.getPluginManager().registerEvents(this, plugin);
@@ -89,7 +92,7 @@ public class BannedDeathZombieService implements Listener {
         }
         HandlerList.unregisterAll(this);
         saveHeadChunkSnapshots();
-        saveState();
+        saveSpawnedRemnantOwners();
     }
 
     @EventHandler
@@ -118,6 +121,10 @@ public class BannedDeathZombieService implements Listener {
             activeRemnantByOwner.remove(ownerUuid);
         }
 
+        if (spawnedRemnantOwners.remove(ownerUuid)) {
+            saveSpawnedRemnantOwners();
+        }
+
         ItemStack ownerHead = createOwnedHead(Bukkit.getOfflinePlayer(ownerUuid));
         event.getDrops().removeIf(this::isStoredPlayerHead);
         event.getDrops().add(ownerHead);
@@ -134,7 +141,6 @@ public class BannedDeathZombieService implements Listener {
     }
 
     private void runSweep() {
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
         Set<UUID> protectedHeadOwners = resolveProtectedHeadOwners();
         rebuildActiveRemnantIndexFromLoadedWorlds();
 
@@ -162,11 +168,7 @@ public class BannedDeathZombieService implements Listener {
                 continue;
             }
 
-            if (hasActiveRemnant(playerId)) {
-                continue;
-            }
-
-            if (today.equals(lastSpawnDateByPlayer.get(playerId))) {
+            if (spawnedRemnantOwners.contains(playerId)) {
                 continue;
             }
 
@@ -176,11 +178,11 @@ public class BannedDeathZombieService implements Listener {
             }
 
             spawnZombieWithHead(bannedPlayer, deathLocation);
-            lastSpawnDateByPlayer.put(playerId, today);
+            spawnedRemnantOwners.add(playerId);
+            saveSpawnedRemnantOwners();
         }
 
         saveHeadChunkSnapshots();
-        saveState();
     }
 
     private Location safeLastDeathLocation(OfflinePlayer player) {
@@ -225,31 +227,6 @@ public class BannedDeathZombieService implements Listener {
         }
     }
 
-    private boolean hasActiveRemnant(UUID ownerUuid) {
-        UUID remnantEntityId = activeRemnantByOwner.get(ownerUuid);
-        if (remnantEntityId == null) {
-            return false;
-        }
-
-        Entity tracked = Bukkit.getEntity(remnantEntityId);
-        if (!(tracked instanceof Zombie zombie) || !zombie.isValid() || zombie.isDead()) {
-            activeRemnantByOwner.remove(ownerUuid);
-            return false;
-        }
-
-        if (!zombie.getScoreboardTags().contains(REMNANT_TAG)) {
-            activeRemnantByOwner.remove(ownerUuid);
-            return false;
-        }
-
-        UUID remnantOwner = getRemnantOwner(zombie);
-        if (!ownerUuid.equals(remnantOwner)) {
-            activeRemnantByOwner.remove(ownerUuid);
-            return false;
-        }
-
-        return true;
-    }
 
     private void indexOwnedRemnant(Zombie zombie) {
         if (!zombie.isValid() || zombie.isDead()) {
@@ -549,29 +526,39 @@ public class BannedDeathZombieService implements Listener {
         return skullMeta.getPersistentDataContainer().has(HeadManager.getKey(), PersistentDataType.STRING);
     }
 
-    private void loadState() {
-        lastSpawnDateByPlayer.clear();
-        if (!plugin.getConfig().isConfigurationSection(STORAGE_PATH)) {
+    private void loadSpawnedRemnantOwners() {
+        spawnedRemnantOwners.clear();
+        if (!plugin.getDataFolder().exists() && !plugin.getDataFolder().mkdirs()) {
+            plugin.getLogger().warning("Failed to create plugin data folder for spawned remnant storage.");
             return;
         }
 
-        for (String key : plugin.getConfig().getConfigurationSection(STORAGE_PATH).getKeys(false)) {
-            String rawDate = plugin.getConfig().getString(STORAGE_PATH + "." + key);
-            if (rawDate == null || rawDate.isBlank()) {
-                continue;
-            }
+        spawnedRemnantsFile = new File(plugin.getDataFolder(), "spawned-player-zombies.yml");
+        spawnedRemnantsConfig = YamlConfiguration.loadConfiguration(spawnedRemnantsFile);
+
+        for (String uuidRaw : spawnedRemnantsConfig.getStringList(SPAWNED_OWNERS_PATH)) {
             try {
-                lastSpawnDateByPlayer.put(UUID.fromString(key), LocalDate.parse(rawDate));
-            } catch (Exception ignored) {
+                spawnedRemnantOwners.add(UUID.fromString(uuidRaw));
+            } catch (IllegalArgumentException ignored) {
             }
         }
     }
 
-    private void saveState() {
-        plugin.getConfig().set(STORAGE_PATH, null);
-        for (Map.Entry<UUID, LocalDate> entry : lastSpawnDateByPlayer.entrySet()) {
-            plugin.getConfig().set(STORAGE_PATH + "." + entry.getKey(), entry.getValue().toString());
+    private void saveSpawnedRemnantOwners() {
+        if (spawnedRemnantsConfig == null || spawnedRemnantsFile == null) {
+            return;
         }
-        plugin.saveConfig();
+
+        spawnedRemnantsConfig.set(
+                SPAWNED_OWNERS_PATH,
+                spawnedRemnantOwners.stream().map(UUID::toString).toList()
+        );
+
+        try {
+            spawnedRemnantsConfig.save(spawnedRemnantsFile);
+        } catch (IOException ex) {
+            plugin.getLogger().warning("Failed to save spawned-player-zombies.yml: " + ex.getMessage());
+        }
     }
+
 }
