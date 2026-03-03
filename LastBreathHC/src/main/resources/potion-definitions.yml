@@ -859,3 +859,287 @@ potions:
       - maelstrom_stride
       - harvester_edge
       - soulflame_guard
+  - id: magma_treader
+    displayName: "§rPotion of Magma Treader"
+    craftingIngredient: MAGMA_BLOCK
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: FIRE_RESISTANCE
+        durationTicks: 1200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: SPEED
+        durationTicks: 600
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: SLOWNESS
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: lava_walker
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: frost_resist
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: cursed_steps
+        durationTicks: 700
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - soulflame_guard
+    branchBrews:
+      - crimson_guard
+      - molten_clarity
+  - id: spelunkers_grace
+    displayName: "§rPotion of Spelunker's Grace"
+    craftingIngredient: GLOW_INK_SAC
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: NIGHT_VISION
+        durationTicks: 2200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: HASTE
+        durationTicks: 900
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: crystal_luck
+        durationTicks: 1800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: extra_ore_chance
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: shaky_aim
+        durationTicks: 800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - seekers_draft
+    branchBrews:
+      - clear_mind
+      - copper_rush
+  - id: sentinels_heart
+    displayName: "§rPotion of Sentinel's Heart"
+    craftingIngredient: SHIELD
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: RESISTANCE
+        durationTicks: 800
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: ABSORPTION
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: SLOWNESS
+        durationTicks: 300
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: shielded_heart
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: steadfast
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: frail_skin
+        durationTicks: 700
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - amber_bulwark
+    branchBrews:
+      - honeyed_guard
+  - id: hunters_tempo
+    displayName: "§rPotion of Hunter's Tempo"
+    craftingIngredient: TARGET
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: SPEED
+        durationTicks: 1200
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: JUMP_BOOST
+        durationTicks: 800
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: HUNGER
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: hunter_focus
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: nimble_feet
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: restless_spirits
+        durationTicks: 900
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - forager_edge
+    branchBrews:
+      - warped_focus
+      - tidal_step
+  - id: warden_tonic
+    displayName: "§rPotion of Warden's Tonic"
+    craftingIngredient: MILK_BUCKET
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: RESISTANCE
+        durationTicks: 700
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: REGENERATION
+        durationTicks: 240
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: HUNGER
+        durationTicks: 600
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: poison_resist
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: iron_stomach
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: mana_leak
+        durationTicks: 700
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - radiant_warmth
+    branchBrews:
+      - glow_warmth
+  - id: stormcall_mix
+    displayName: "§rPotion of Stormcall Mix"
+    craftingIngredient: LIGHTNING_ROD
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: SPEED
+        durationTicks: 1000
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: RESISTANCE
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: WEAKNESS
+        durationTicks: 400
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: thunder_guard
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: quake_guard
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: gloom
+        durationTicks: 800
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - soulflame_guard
+    branchBrews:
+      - honeyed_guard
+      - crimson_guard
+  - id: beastmasters_brew
+    displayName: "§rPotion of Beastmaster's Brew"
+    craftingIngredient: BONE_BLOCK
+    allowFromAwkward: true
+    scaryToDrink: false
+    baseEffects:
+      - type: LUCK
+        durationTicks: 1000
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - type: SPEED
+        durationTicks: 700
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    drawbacks:
+      - type: HUNGER
+        durationTicks: 500
+        amplifier: 0
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    afterEffects: []
+    customEffects:
+      - id: beast_tamer
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: lucky_salvage
+        durationTicks: 1200
+        trigger: ON_DRINK
+        cooldownTicks: 0
+      - id: exp_drain
+        durationTicks: 700
+        trigger: ON_DRINK
+        cooldownTicks: 0
+    branches:
+      - harvester_edge
+    branchBrews:
+      - forager_edge
