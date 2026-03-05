@@ -69,14 +69,25 @@ public class RtpCommand implements BasicCommand {
         int minHeight = world.getMinHeight();
 
         for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-            double x = (random.nextDouble() * 2.0 - 1.0) * RTP_RANGE;
-            double z = (random.nextDouble() * 2.0 - 1.0) * RTP_RANGE;
-            int y = world.getHighestBlockYAt((int) Math.floor(x), (int) Math.floor(z));
+            int blockX = (int) Math.floor((random.nextDouble() * 2.0 - 1.0) * RTP_RANGE);
+            int blockZ = (int) Math.floor((random.nextDouble() * 2.0 - 1.0) * RTP_RANGE);
+            int chunkX = blockX >> 4;
+            int chunkZ = blockZ >> 4;
+
+            if (!world.isChunkGenerated(chunkX, chunkZ)) {
+                continue;
+            }
+
+            if (!world.isChunkLoaded(chunkX, chunkZ) && !world.loadChunk(chunkX, chunkZ, false)) {
+                continue;
+            }
+
+            int y = world.getHighestBlockYAt(blockX, blockZ);
             if (y <= minHeight + 1) {
                 continue;
             }
 
-            Block ground = world.getBlockAt((int) Math.floor(x), y, (int) Math.floor(z));
+            Block ground = world.getBlockAt(blockX, y, blockZ);
             if (!ground.getType().isSolid() || ground.getType() == Material.LAVA) {
                 continue;
             }

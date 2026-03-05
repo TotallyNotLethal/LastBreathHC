@@ -245,7 +245,14 @@ public class AsteroidManager {
 
     public static void clearAllAsteroids() {
         for (Location location : ASTEROIDS.keySet().toArray(new Location[0])) {
-            location.getBlock().setType(Material.AIR);
+            World world = location.getWorld();
+            if (world != null) {
+                int chunkX = location.getBlockX() >> 4;
+                int chunkZ = location.getBlockZ() >> 4;
+                if (world.isChunkLoaded(chunkX, chunkZ)) {
+                    location.getBlock().setType(Material.AIR);
+                }
+            }
             removeAsteroidMarker(location, ASTEROIDS.get(location));
         }
         ASTEROIDS.clear();
@@ -279,10 +286,11 @@ public class AsteroidManager {
             int baseChunkZ = asteroidLoc.getBlockZ() >> 4;
             for (int x = baseChunkX - chunkRadius; x <= baseChunkX + chunkRadius; x++) {
                 for (int z = baseChunkZ - chunkRadius; z <= baseChunkZ + chunkRadius; z++) {
-                    Chunk chunk = world.getChunkAt(x, z);
-                    if (!chunk.isLoaded()) {
-                        chunk.load();
+                    if (!world.isChunkLoaded(x, z)) {
+                        continue;
                     }
+
+                    Chunk chunk = world.getChunkAt(x, z);
                     for (Entity entity : chunk.getEntities()) {
                         if (entity instanceof LivingEntity living && living.getScoreboardTags().contains(ASTEROID_MOB_TAG)) {
                             living.remove();
@@ -298,9 +306,6 @@ public class AsteroidManager {
 
     public static int clearAsteroidMobsForShutdown() {
         int removed = 0;
-        int leashRadius = getMobLeashRadius();
-        int chunkRadius = Math.max(1, (int) Math.ceil(leashRadius / 16.0));
-        Set<String> processedChunks = new HashSet<>();
 
         for (Map.Entry<Location, AsteroidEntry> asteroid : ASTEROIDS.entrySet()) {
             Location asteroidLoc = asteroid.getKey();
@@ -308,50 +313,53 @@ public class AsteroidManager {
             if (entry != null) {
                 entry.mobs().clear();
             }
+
             World world = asteroidLoc.getWorld();
             if (world == null) {
                 continue;
             }
 
-            String keyTag = ASTEROID_KEY_TAG_PREFIX + asteroidKey(asteroidLoc);
+            String key = asteroidKey(asteroidLoc);
+            String keyTag = ASTEROID_KEY_TAG_PREFIX + key;
             int baseChunkX = asteroidLoc.getBlockX() >> 4;
             int baseChunkZ = asteroidLoc.getBlockZ() >> 4;
-            for (int x = baseChunkX - chunkRadius; x <= baseChunkX + chunkRadius; x++) {
-                for (int z = baseChunkZ - chunkRadius; z <= baseChunkZ + chunkRadius; z++) {
-                    String chunkKey = world.getUID() + ":" + x + ":" + z;
-                    if (!processedChunks.add(chunkKey)) {
-                        continue;
-                    }
+            List<int[]> loadedChunks = new ArrayList<>(9);
 
-                    boolean wasForceLoaded = world.isChunkForceLoaded(x, z);
-                    boolean wasLoaded = world.isChunkLoaded(x, z);
-                    if (!wasForceLoaded) {
-                        world.setChunkForceLoaded(x, z, true);
+            for (int x = baseChunkX - 1; x <= baseChunkX + 1; x++) {
+                for (int z = baseChunkZ - 1; z <= baseChunkZ + 1; z++) {
+                    if (world.loadChunk(x, z, false)) {
+                        loadedChunks.add(new int[]{x, z});
                     }
+                }
+            }
 
-                    Chunk chunk = world.getChunkAt(x, z);
-                    if (!chunk.isLoaded()) {
-                        chunk.load();
-                    }
+            for (int[] chunkCoords : loadedChunks) {
+                int chunkX = chunkCoords[0];
+                int chunkZ = chunkCoords[1];
+                Chunk chunk = world.getChunkAt(chunkX, chunkZ);
 
-                    for (Entity entity : chunk.getEntities()) {
-                        if (!(entity instanceof LivingEntity living)) {
-                            continue;
-                        }
+                for (Entity entity : chunk.getEntities()) {
+                    if (entity instanceof LivingEntity living) {
                         Set<String> tags = living.getScoreboardTags();
                         if (tags.contains(ASTEROID_MOB_TAG) && tags.contains(keyTag)) {
                             living.remove();
                             removed++;
                         }
+                        continue;
                     }
-
-                    if (!wasForceLoaded) {
-                        world.setChunkForceLoaded(x, z, false);
-                    }
-                    if (!wasLoaded) {
-                        world.unloadChunkRequest(x, z);
+                    if (entity instanceof ArmorStand stand
+                            && stand.getScoreboardTags().contains(ASTEROID_MARKER_TAG)
+                            && stand.getScoreboardTags().contains(ASTEROID_MARKER_KEY_PREFIX + key)) {
+                        stand.remove();
                     }
                 }
+            }
+
+            asteroidLoc.getBlock().setType(Material.AIR);
+            removeMarkersByKey(world, key);
+
+            for (int[] chunkCoords : loadedChunks) {
+                world.unloadChunkRequest(chunkCoords[0], chunkCoords[1]);
             }
         }
 
@@ -712,7 +720,13 @@ public class AsteroidManager {
             World world = location.getWorld();
             removeTaggedMobsForKey(world, ASTEROID_KEY_TAG_PREFIX + asteroidKey(location));
             removeMarkersByKey(world, asteroidKey(location));
-            location.getBlock().setType(Material.AIR);
+            if (world != null) {
+                int chunkX = location.getBlockX() >> 4;
+                int chunkZ = location.getBlockZ() >> 4;
+                if (world.isChunkLoaded(chunkX, chunkZ)) {
+                    location.getBlock().setType(Material.AIR);
+                }
+            }
         }
 
         config.set("asteroids", List.of());
