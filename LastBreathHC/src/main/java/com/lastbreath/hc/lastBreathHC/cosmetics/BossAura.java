@@ -20,7 +20,17 @@ public enum BossAura {
     EMBER_HAZE("Ember Haze", Particle.SMOKE, ChatColor.DARK_GRAY, Material.BLACK_DYE, false),
     CINDER_SPARK("Cinder Spark", Particle.FLAME, ChatColor.RED, Material.BLAZE_POWDER, false),
     STELLAR_CRIT("Stellar Crit", Particle.CRIT, ChatColor.YELLOW, Material.GLOWSTONE_DUST, false),
-    STATIC_PULSE("Static Pulse", Particle.ELECTRIC_SPARK, ChatColor.AQUA, Material.AMETHYST_SHARD, false);
+    STATIC_PULSE("Static Pulse", Particle.ELECTRIC_SPARK, ChatColor.AQUA, Material.AMETHYST_SHARD, false),
+    COSMIC_BLOOM("Cosmic Bloom", Particle.PORTAL, ChatColor.LIGHT_PURPLE, Material.CHORUS_FLOWER, false),
+    AMETHYST_GLITTER("Amethyst Glitter", Particle.GLOW, ChatColor.DARK_PURPLE, Material.AMETHYST_CLUSTER, false),
+    VOID_WHISPER("Void Whisper", Particle.REVERSE_PORTAL, ChatColor.DARK_PURPLE, Material.OBSIDIAN, false),
+    WITCHLIGHT("Witchlight", Particle.WITCH, ChatColor.LIGHT_PURPLE, Material.PURPLE_CANDLE, false),
+    DRAGON_VEIL("Dragon Veil", Particle.DRAGON_BREATH, ChatColor.DARK_PURPLE, Material.DRAGON_BREATH, false),
+    TWILIGHT_MOTES("Twilight Motes", Particle.ENCHANT, ChatColor.BLUE, Material.LAPIS_LAZULI, false),
+    VERDANT_SPARKLE("Verdant Sparkle", Particle.HAPPY_VILLAGER, ChatColor.GREEN, Material.MOSS_BLOCK, false),
+    FROST_GLINT("Frost Glint", Particle.SNOWFLAKE, ChatColor.AQUA, Material.PACKED_ICE, false),
+    SUNSHARD("Sunshard", Particle.WAX_ON, ChatColor.GOLD, Material.HONEYCOMB, false),
+    ROSE_QUARTZ("Rose Quartz", Particle.CHERRY_LEAVES, ChatColor.LIGHT_PURPLE, Material.PINK_PETALS, false);
 
     private final String displayName;
     private final Particle particle;

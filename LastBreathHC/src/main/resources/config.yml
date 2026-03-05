@@ -177,6 +177,16 @@ asteroid:
           - CINDER_SPARK
           - STELLAR_CRIT
           - STATIC_PULSE
+          - COSMIC_BLOOM
+          - AMETHYST_GLITTER
+          - VOID_WHISPER
+          - WITCHLIGHT
+          - DRAGON_VEIL
+          - TWILIGHT_MOTES
+          - VERDANT_SPARKLE
+          - FROST_GLINT
+          - SUNSHARD
+          - ROSE_QUARTZ
     enchantPages:
       tier1Chance: 25
       tier2Chance: 50
