@@ -25,7 +25,7 @@ public enum BossAura {
     AMETHYST_GLITTER("Amethyst Glitter", Particle.GLOW, ChatColor.DARK_PURPLE, Material.AMETHYST_CLUSTER, false),
     VOID_WHISPER("Void Whisper", Particle.REVERSE_PORTAL, ChatColor.DARK_PURPLE, Material.OBSIDIAN, false),
     WITCHLIGHT("Witchlight", Particle.WITCH, ChatColor.LIGHT_PURPLE, Material.PURPLE_CANDLE, false),
-    DRAGON_VEIL("Dragon Veil", Particle.DRAGON_BREATH, ChatColor.DARK_PURPLE, Material.DRAGON_BREATH, false),
+    DRAGON_VEIL("Dragon Veil", Particle.ENCHANT, ChatColor.DARK_PURPLE, Material.DRAGON_BREATH, false),
     TWILIGHT_MOTES("Twilight Motes", Particle.ENCHANT, ChatColor.BLUE, Material.LAPIS_LAZULI, false),
     VERDANT_SPARKLE("Verdant Sparkle", Particle.HAPPY_VILLAGER, ChatColor.GREEN, Material.MOSS_BLOCK, false),
     FROST_GLINT("Frost Glint", Particle.SNOWFLAKE, ChatColor.AQUA, Material.PACKED_ICE, false),

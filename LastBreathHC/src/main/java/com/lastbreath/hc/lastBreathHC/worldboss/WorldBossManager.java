@@ -452,7 +452,25 @@ public class WorldBossManager implements Listener {
         if (blocks == null || blocks.isEmpty()) {
             return;
         }
-        if (!blocks.contains(blockLocation)) {
+        if (!blocks.contains(blockLocation) && !isWithinPortalBounds(to)) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long last = portalCooldowns.getOrDefault(event.getPlayer().getUniqueId(), 0L);
+        if (now - last < 3000L) {
+            return;
+        }
+        portalCooldowns.put(event.getPlayer().getUniqueId(), now);
+        teleportViaPortal(event.getPlayer());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onPortalInteract(PlayerInteractEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND || event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+        Block clicked = event.getClickedBlock();
+        if (clicked == null || !isPortalStructureBlock(clicked.getLocation())) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -727,6 +745,9 @@ public class WorldBossManager implements Listener {
     }
 
     private void attemptRandomSpawn() {
+        if (!enabled) {
+            return;
+        }
         List<World> worlds = getEligibleWorlds();
         if (worlds.isEmpty()) {
             plugin.getLogger().warning("World boss spawn skipped because no worlds are configured.");
@@ -739,6 +760,9 @@ public class WorldBossManager implements Listener {
     }
 
     private Location trySpawnTriggeredBoss(World world, Location origin, TriggerType triggerType) {
+        if (!enabled) {
+            return null;
+        }
         if (!isTriggerOffCooldown(world, triggerType)) {
             return null;
         }
@@ -769,6 +793,9 @@ public class WorldBossManager implements Listener {
     }
 
     private boolean spawnWorldBoss(World world, Location origin) {
+        if (!enabled) {
+            return false;
+        }
         if (!activeBosses.isEmpty()) {
             return false;
         }
@@ -792,6 +819,9 @@ public class WorldBossManager implements Listener {
     }
 
     private boolean spawnBossInArena(World sourceWorld, Location base, WorldBossType bossType) {
+        if (!enabled) {
+            return false;
+        }
         BossSettings settings = getBossSettings(bossType);
         World arenaWorld = createArenaWorld();
         if (arenaWorld == null) {
@@ -1229,6 +1259,54 @@ public class WorldBossManager implements Listener {
         }
         Set<Location> anchors = portalAnchors.computeIfAbsent(world, ignored -> new HashSet<>());
         anchors.add(resolvePortalAnchor(base));
+    }
+
+    private boolean isWithinPortalBounds(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        Set<Location> anchors = portalAnchors.get(location.getWorld());
+        if (anchors == null || anchors.isEmpty()) {
+            return false;
+        }
+        for (Location anchor : anchors) {
+            if (Math.abs(location.getX() - anchor.getX()) <= 1.6
+                    && Math.abs(location.getY() - anchor.getY()) <= 2.6
+                    && Math.abs(location.getZ() - anchor.getZ()) <= 0.9) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isPortalStructureBlock(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        Set<Location> inner = portalBlocks.get(location.getWorld());
+        if (inner != null && inner.contains(location.getBlock().getLocation())) {
+            return true;
+        }
+        int x = location.getBlockX();
+        int y = location.getBlockY();
+        int z = location.getBlockZ();
+        String worldName = location.getWorld().getName();
+        for (PortalBase base : persistedPortalBases) {
+            if (!base.worldName.equals(worldName)) {
+                continue;
+            }
+            if (z != base.z) {
+                continue;
+            }
+            if (x < base.x || x > base.x + PORTAL_WIDTH - 1) {
+                continue;
+            }
+            if (y < base.y || y > base.y + PORTAL_HEIGHT - 1) {
+                continue;
+            }
+            return true;
+        }
+        return false;
     }
 
     private void removePortalAnchor(World world, int baseX, int baseY, int baseZ) {
