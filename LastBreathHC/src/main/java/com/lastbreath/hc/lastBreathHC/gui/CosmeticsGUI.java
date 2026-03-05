@@ -8,6 +8,7 @@ import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticManager;
 import com.lastbreath.hc.lastBreathHC.daily.DailyCosmeticType;
 import com.lastbreath.hc.lastBreathHC.daily.DailyRewardManager;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -35,6 +36,11 @@ public class CosmeticsGUI implements Listener {
     private static final String TYPE_DAILY = "daily";
     private static final String PAGE_BOSS = "boss";
     private static final String PAGE_ASTEROID = "asteroid";
+    private static final int[] BOSS_PREFIX_SLOTS = createRange(9, 17);
+    private static final int[] BOSS_AURA_SLOTS = createRange(18, 26);
+    private static final int[] BOSS_KILL_SLOTS = createRange(27, 35);
+    private static final int[] ASTEROID_AURA_SLOTS = createRange(9, 35);
+    private static final int[] ASTEROID_DAILY_SLOTS = createRange(36, 44);
 
     private final NamespacedKey typeKey;
     private final NamespacedKey idKey;
@@ -65,34 +71,27 @@ public class CosmeticsGUI implements Listener {
         ));
 
         if (bossPage) {
-            int prefixSlot = 9;
-            for (BossPrefix prefix : BossPrefix.values()) {
-                inventory.setItem(prefixSlot++, buildPrefixItem(player, prefix));
-            }
+            placeItems(inventory, BOSS_PREFIX_SLOTS, Arrays.stream(BossPrefix.values())
+                    .map(prefix -> buildPrefixItem(player, prefix))
+                    .toList());
 
-            int auraSlot = 18;
-            for (BossAura aura : BossAura.values()) {
-                if (aura.isBossUnlock()) {
-                    inventory.setItem(auraSlot++, buildAuraItem(player, aura));
-                }
-            }
+            placeItems(inventory, BOSS_AURA_SLOTS, Arrays.stream(BossAura.values())
+                    .filter(BossAura::isBossUnlock)
+                    .map(aura -> buildAuraItem(player, aura))
+                    .toList());
 
-            int killSlot = 27;
-            for (BossKillMessage message : BossKillMessage.values()) {
-                inventory.setItem(killSlot++, buildKillMessageItem(player, message));
-            }
+            placeItems(inventory, BOSS_KILL_SLOTS, Arrays.stream(BossKillMessage.values())
+                    .map(message -> buildKillMessageItem(player, message))
+                    .toList());
         } else {
-            int auraSlot = 9;
-            for (BossAura aura : BossAura.values()) {
-                if (!aura.isBossUnlock()) {
-                    inventory.setItem(auraSlot++, buildAuraItem(player, aura));
-                }
-            }
+            placeItems(inventory, ASTEROID_AURA_SLOTS, Arrays.stream(BossAura.values())
+                    .filter(aura -> !aura.isBossUnlock())
+                    .map(aura -> buildAuraItem(player, aura))
+                    .toList());
 
-            int dailySlot = 27;
-            for (DailyCosmeticType cosmetic : DailyCosmeticType.values()) {
-                inventory.setItem(dailySlot++, buildDailyCosmeticItem(player, cosmetic));
-            }
+            placeItems(inventory, ASTEROID_DAILY_SLOTS, Arrays.stream(DailyCosmeticType.values())
+                    .map(cosmetic -> buildDailyCosmeticItem(player, cosmetic))
+                    .toList());
         }
 
         player.openInventory(inventory);
@@ -313,5 +312,20 @@ public class CosmeticsGUI implements Listener {
             return PAGE_ASTEROID;
         }
         return PAGE_BOSS;
+    }
+
+    private void placeItems(Inventory inventory, int[] slots, List<ItemStack> items) {
+        int limit = Math.min(slots.length, items.size());
+        for (int i = 0; i < limit; i++) {
+            inventory.setItem(slots[i], items.get(i));
+        }
+    }
+
+    private static int[] createRange(int start, int endInclusive) {
+        int[] slots = new int[endInclusive - start + 1];
+        for (int i = 0; i < slots.length; i++) {
+            slots[i] = start + i;
+        }
+        return slots;
     }
 }
