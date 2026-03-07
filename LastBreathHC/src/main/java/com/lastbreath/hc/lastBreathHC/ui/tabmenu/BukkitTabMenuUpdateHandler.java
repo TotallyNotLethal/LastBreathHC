@@ -144,15 +144,33 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
 
     private String padStyled(String value, int width) {
         String safe = value == null ? "" : value;
-        int visibleLength = visibleLength(safe);
-        if (visibleLength >= width) {
-            return safe + ' ';
-        }
-        return safe + " ".repeat(width - visibleLength + 1);
+        String bounded = truncateStyled(safe, width);
+        int visibleLength = visibleLength(bounded);
+        return bounded + " ".repeat(Math.max(1, width - visibleLength + 1));
     }
 
     private int visibleLength(String value) {
         String plain = ChatColor.stripColor(value);
         return plain == null ? 0 : plain.length();
+    }
+
+    private String truncateStyled(String value, int maxVisibleLength) {
+        if (maxVisibleLength <= 0 || value == null || value.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder output = new StringBuilder(value.length());
+        int visible = 0;
+
+        for (int i = 0; i < value.length() && visible < maxVisibleLength; i++) {
+            char current = value.charAt(i);
+            if (current == ChatColor.COLOR_CHAR && i + 1 < value.length()) {
+                output.append(current).append(value.charAt(++i));
+                continue;
+            }
+            output.append(current);
+            visible++;
+        }
+        return output.toString();
     }
 }
