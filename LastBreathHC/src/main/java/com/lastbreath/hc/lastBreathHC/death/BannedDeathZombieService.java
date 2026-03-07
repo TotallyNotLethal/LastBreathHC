@@ -16,13 +16,18 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Container;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ChestedHorse;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Llama;
 import org.bukkit.entity.Mule;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.ItemDespawnEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -134,9 +139,42 @@ public class BannedDeathZombieService implements Listener {
     public void onChunkLoad(ChunkLoadEvent event) {
         chunkLastLoadedAtMs.put(ChunkRef.from(event.getChunk()), System.currentTimeMillis());
         for (Entity entity : event.getChunk().getEntities()) {
+            if (entity instanceof Item item) {
+                protectStoredHeadItem(item);
+            }
             if (entity instanceof Zombie zombie) {
                 indexOwnedRemnant(zombie);
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onHeadItemSpawn(ItemSpawnEvent event) {
+        protectStoredHeadItem(event.getEntity());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onStoredHeadDespawn(ItemDespawnEvent event) {
+        if (isStoredPlayerHeadEntity(event.getEntity())) {
+            event.setCancelled(true);
+            protectStoredHeadItem(event.getEntity());
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onStoredHeadDamage(EntityDamageEvent event) {
+        if (!isStoredPlayerHeadEntity(event.getEntity())) {
+            return;
+        }
+
+        EntityDamageEvent.DamageCause cause = event.getCause();
+        if (cause == EntityDamageEvent.DamageCause.LAVA
+                || cause == EntityDamageEvent.DamageCause.FIRE
+                || cause == EntityDamageEvent.DamageCause.FIRE_TICK
+                || cause == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION
+                || cause == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) {
+            event.setCancelled(true);
+            protectStoredHeadItem((Item) event.getEntity());
         }
     }
 
@@ -524,6 +562,24 @@ public class BannedDeathZombieService implements Listener {
         }
 
         return skullMeta.getPersistentDataContainer().has(HeadManager.getKey(), PersistentDataType.STRING);
+    }
+
+    private boolean isStoredPlayerHeadEntity(Entity entity) {
+        if (!(entity instanceof Item item)) {
+            return false;
+        }
+
+        return isStoredPlayerHead(item.getItemStack());
+    }
+
+    private void protectStoredHeadItem(Item item) {
+        if (!isStoredPlayerHead(item.getItemStack())) {
+            return;
+        }
+
+        item.setPersistent(true);
+        item.setUnlimitedLifetime(true);
+        item.setInvulnerable(true);
     }
 
     private void loadSpawnedRemnantOwners() {
