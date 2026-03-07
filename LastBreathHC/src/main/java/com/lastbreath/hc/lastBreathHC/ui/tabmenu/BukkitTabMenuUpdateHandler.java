@@ -17,7 +17,7 @@ import org.bukkit.entity.Player;
 public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
     private static final int META_COLUMN_WIDTH = 12;
     private static final int NAME_COLUMN_WIDTH = 16;
-    private static final int PING_COLUMN_WIDTH = 7;
+    private static final int PING_COLUMN_WIDTH = 6;
 
     private final Map<String, String> lastPlayerNames = new HashMap<>();
     private final Set<UUID> lastAudience = new HashSet<>();
@@ -116,12 +116,10 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
         String metaColumn = buildMetaColumn(row);
         String nameColumn = buildNameColumn(row);
         String pingMsColumn = String.format("§7%4dms", Math.max(0, row.pingMillis()));
-        String pingBarsColumn = "§a" + pingBarGlyphs(row.pingBars());
 
         return padStyled(metaColumn, META_COLUMN_WIDTH)
                 + padStyled(nameColumn, NAME_COLUMN_WIDTH)
-                + padStyled(pingMsColumn, PING_COLUMN_WIDTH)
-                + pingBarsColumn;
+                + padStyled(pingMsColumn, PING_COLUMN_WIDTH);
     }
 
     private String buildMetaColumn(PlayerRowFields row) {
@@ -156,14 +154,5 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
     private int visibleLength(String value) {
         String plain = ChatColor.stripColor(value);
         return plain == null ? 0 : plain.length();
-    }
-
-    private String pingBarGlyphs(int bars) {
-        int normalizedBars = Math.max(1, Math.min(5, bars));
-        StringBuilder builder = new StringBuilder(5);
-        for (int idx = 1; idx <= 5; idx++) {
-            builder.append(idx <= normalizedBars ? '▮' : '▯');
-        }
-        return builder.toString();
     }
 }
