@@ -6,7 +6,6 @@ import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenHelper;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantPage;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstone;
-import com.lastbreath.hc.lastBreathHC.items.Gracestone;
 import com.lastbreath.hc.lastBreathHC.items.RebirthStone;
 import com.lastbreath.hc.lastBreathHC.items.TotemOfLife;
 import net.kyori.adventure.text.Component;
@@ -123,9 +122,6 @@ public class AsteroidLoot {
         }
         if (random.nextInt(100) < getTierChance(config, tier, "customItems.totemOfLifeChance", 5, 10)) {
             inv.addItem(TotemOfLife.create());
-        }
-        if (random.nextInt(100) < getTierChance(config, tier, "customItems.gracestoneChance", 5, 10)) {
-            inv.addItem(Gracestone.create());
         }
         if (random.nextInt(100) < getTierChance(config, tier, "customItems.enhancedGrindstoneChance", 5, 10)) {
             inv.addItem(EnhancedGrindstone.create());

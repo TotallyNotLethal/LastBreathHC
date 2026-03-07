@@ -6,6 +6,10 @@ import com.lastbreath.hc.lastBreathHC.cosmetics.BossKillMessage;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossPrefix;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticManager;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenHelper;
+import com.lastbreath.hc.lastBreathHC.items.AshenRelic;
+import com.lastbreath.hc.lastBreathHC.items.ColossusFragment;
+import com.lastbreath.hc.lastBreathHC.items.GravewardenCore;
+import com.lastbreath.hc.lastBreathHC.items.StormSigil;
 import com.lastbreath.hc.lastBreathHC.items.WorldBossPortalCompass;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
@@ -629,6 +633,8 @@ public class WorldBossManager implements Listener {
             event.getDrops().add(new ItemStack(material, amount));
         }
 
+        addRequiredBossDrop(event, type);
+
         ConfigurationSection cosmeticsSection =
                 plugin.getConfig().getConfigurationSection(basePath + ".cosmetics");
 
@@ -664,6 +670,51 @@ public class WorldBossManager implements Listener {
                 TitleManager.unlockTitle(killer, title, title.requirementDescription());
             }
         }
+    }
+
+    private void addRequiredBossDrop(EntityDeathEvent event, WorldBossType type) {
+        String basePath = CONFIG_ROOT + ".requiredDrops." + type.getConfigKey();
+        double chance = plugin.getConfig().getDouble(basePath + ".chance", 1.0);
+        if (chance <= 0 || random.nextDouble() > chance) {
+            return;
+        }
+
+        int min = plugin.getConfig().getInt(basePath + ".min", 1);
+        int max = plugin.getConfig().getInt(basePath + ".max", min);
+        if (max < min) {
+            int tmp = min;
+            min = max;
+            max = tmp;
+        }
+        int amount = min + random.nextInt(max - min + 1);
+
+        String configuredItemId = plugin.getConfig().getString(basePath + ".itemId", "");
+        ItemStack drop = createBossComponentDrop(type, configuredItemId);
+        if (drop == null) {
+            return;
+        }
+        drop.setAmount(Math.max(1, amount));
+        event.getDrops().add(drop);
+    }
+
+    private ItemStack createBossComponentDrop(WorldBossType type, String configuredItemId) {
+        String normalizedId = configuredItemId == null ? "" : configuredItemId.trim().toLowerCase(Locale.ROOT);
+        if (!normalizedId.isBlank()) {
+            return switch (normalizedId) {
+                case "gravewarden_core", "gravewardencore" -> GravewardenCore.create();
+                case "storm_sigil", "stormsigil" -> StormSigil.create();
+                case "colossus_fragment", "colossusfragment" -> ColossusFragment.create();
+                case "ashen_relic", "ashenrelic" -> AshenRelic.create();
+                default -> null;
+            };
+        }
+
+        return switch (type) {
+            case GRAVEWARDEN -> GravewardenCore.create();
+            case STORM_HERALD -> StormSigil.create();
+            case HOLLOW_COLOSSUS -> ColossusFragment.create();
+            case ASHEN_ORACLE -> AshenRelic.create();
+        };
     }
 
     private double parseDouble(Object value, double fallback) {
