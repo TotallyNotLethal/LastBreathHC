@@ -141,7 +141,6 @@ asteroid:
       customItems:
         rebirthStoneChance: 5
         totemOfLifeChance: 5
-        gracestoneChance: 1
         enhancedGrindstoneChance: 5
     tier3:
       ironIngot:
@@ -162,7 +161,6 @@ asteroid:
       customItems:
         rebirthStoneChance: 5
         totemOfLifeChance: 5
-        gracestoneChance: 5
         enhancedGrindstoneChance: 10
       cosmetics:
         chance: 2
@@ -489,6 +487,28 @@ worldBoss:
         killMessages:
           - ASHEN_ORACLE
       title: ASHEN_ORACLE
+
+  requiredDrops:
+    Gravewarden:
+      itemId: gravewarden_core
+      min: 1
+      max: 1
+      chance: 1.0
+    StormHerald:
+      itemId: storm_sigil
+      min: 1
+      max: 1
+      chance: 1.0
+    HollowColossus:
+      itemId: colossus_fragment
+      min: 1
+      max: 1
+      chance: 1.0
+    AshenOracle:
+      itemId: ashen_relic
+      min: 1
+      max: 1
+      chance: 1.0
 
 customEnchants:
   rarity: rare

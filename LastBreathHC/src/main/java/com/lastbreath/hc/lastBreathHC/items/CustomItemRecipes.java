@@ -125,23 +125,20 @@ public class CustomItemRecipes {
         ShapedRecipe recipe = new ShapedRecipe(key, Gracestone.create());
 
         recipe.shape(
-                "ABA",
-                "ACA",
-                "DED"
+                "GSC",
+                "TDR",
+                "AHN"
         );
 
-        recipe.setIngredient('A', Material.HEAVY_CORE);
-        recipe.setIngredient('B', Material.ELYTRA);
-
-        // ✅ REQUIRE Totem of Life
-        recipe.setIngredient('C',
-                new RecipeChoice.ExactChoice(TotemOfLife.create()));
-
-        recipe.setIngredient('D', Material.NETHER_STAR);
-
-        // ✅ REQUIRE Rebirth Stone
-        recipe.setIngredient('E',
-                new RecipeChoice.ExactChoice(RebirthStone.create()));
+        recipe.setIngredient('G', new RecipeChoice.ExactChoice(GravewardenCore.create()));
+        recipe.setIngredient('S', new RecipeChoice.ExactChoice(StormSigil.create()));
+        recipe.setIngredient('C', new RecipeChoice.ExactChoice(ColossusFragment.create()));
+        recipe.setIngredient('T', new RecipeChoice.ExactChoice(TotemOfLife.create()));
+        recipe.setIngredient('D', Material.DRAGON_EGG);
+        recipe.setIngredient('R', new RecipeChoice.ExactChoice(RebirthStone.create()));
+        recipe.setIngredient('A', new RecipeChoice.ExactChoice(AshenRelic.create()));
+        recipe.setIngredient('H', Material.HEAVY_CORE);
+        recipe.setIngredient('N', Material.NETHER_STAR);
 
         Bukkit.addRecipe(recipe);
     }
