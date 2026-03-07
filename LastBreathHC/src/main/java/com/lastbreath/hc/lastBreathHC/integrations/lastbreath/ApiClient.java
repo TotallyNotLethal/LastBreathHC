@@ -44,8 +44,6 @@ public class ApiClient implements Closeable {
                 .executor(scheduler)
                 .build();
 
-        plugin.getLogger().info("LastBreath API client initialized. configuredBaseUrl=" + baseUrl
-                + " resolvedPluginEventUrl=" + this.pluginEventUri);
     }
 
     public void sendJoin(UUID uuid, String username) {
@@ -96,10 +94,6 @@ public class ApiClient implements Closeable {
 
     private void postWithRetry(String eventType, String payload, int attempt) {
         String requestUrl = pluginEventUri.toString();
-        plugin.getLogger().info("LastBreath API POST attempt=" + attempt
-                + " url=" + requestUrl
-                + " event=" + eventType
-                + " payload=" + summarizePayload(payload));
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(pluginEventUri)
@@ -120,12 +114,6 @@ public class ApiClient implements Closeable {
                     int statusCode = response.statusCode();
                     String responseBody = response.body() == null ? "" : response.body();
                     if (statusCode >= 200 && statusCode < 300) {
-                        plugin.getLogger().info("LastBreath API success"
-                                + " attempt=" + attempt
-                                + " url=" + requestUrl
-                                + " event=" + eventType
-                                + " status=" + statusCode
-                                + " body=" + summarizePayload(responseBody));
                         return;
                     }
 
