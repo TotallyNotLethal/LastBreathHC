@@ -11,9 +11,14 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 
 public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
+    private static final int META_COLUMN_WIDTH = 12;
+    private static final int NAME_COLUMN_WIDTH = 16;
+    private static final int PING_COLUMN_WIDTH = 7;
+
     private final Map<String, String> lastPlayerNames = new HashMap<>();
     private final Set<UUID> lastAudience = new HashSet<>();
     private final FakePlayerService fakePlayerService;
@@ -108,6 +113,18 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
     }
 
     private String formatPlayerListName(PlayerRowFields row) {
+        String metaColumn = buildMetaColumn(row);
+        String nameColumn = buildNameColumn(row);
+        String pingMsColumn = String.format("§7%4dms", Math.max(0, row.pingMillis()));
+        String pingBarsColumn = "§a" + pingBarGlyphs(row.pingBars());
+
+        return padStyled(metaColumn, META_COLUMN_WIDTH)
+                + padStyled(nameColumn, NAME_COLUMN_WIDTH)
+                + padStyled(pingMsColumn, PING_COLUMN_WIDTH)
+                + pingBarsColumn;
+    }
+
+    private String buildMetaColumn(PlayerRowFields row) {
         StringBuilder builder = new StringBuilder();
         if (row.rankIcon() != null && !row.rankIcon().isBlank()) {
             builder.append(row.rankIcon()).append(' ');
@@ -115,11 +132,38 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
         if (row.prefix() != null && !row.prefix().isBlank()) {
             builder.append(row.prefix());
         }
-        String displayName = row.displayName();
-        builder.append(displayName != null && !displayName.isBlank() ? displayName : row.username());
-        if (row.suffix() != null && !row.suffix().isBlank()) {
-            builder.append(row.suffix());
-        }
         return builder.toString().trim();
+    }
+
+    private String buildNameColumn(PlayerRowFields row) {
+        String displayName = row.displayName();
+        String baseName = displayName != null && !displayName.isBlank() ? displayName : row.username();
+        if (row.suffix() != null && !row.suffix().isBlank()) {
+            return baseName + row.suffix();
+        }
+        return baseName;
+    }
+
+    private String padStyled(String value, int width) {
+        String safe = value == null ? "" : value;
+        int visibleLength = visibleLength(safe);
+        if (visibleLength >= width) {
+            return safe + ' ';
+        }
+        return safe + " ".repeat(width - visibleLength + 1);
+    }
+
+    private int visibleLength(String value) {
+        String plain = ChatColor.stripColor(value);
+        return plain == null ? 0 : plain.length();
+    }
+
+    private String pingBarGlyphs(int bars) {
+        int normalizedBars = Math.max(1, Math.min(5, bars));
+        StringBuilder builder = new StringBuilder(5);
+        for (int idx = 1; idx <= 5; idx++) {
+            builder.append(idx <= normalizedBars ? '▮' : '▯');
+        }
+        return builder.toString();
     }
 }
