@@ -35,6 +35,7 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
                     null,
                     prefix != null && !prefix.isBlank() ? prefix : null,
                     null,
+                    player.getPing(),
                     pingBarsFor(player.getPing())
             ));
         }
@@ -51,6 +52,7 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
                         null,
                         prefix,
                         null,
+                        record.getTabPingMillis(),
                         pingBarsFor(record.getTabPingMillis())
                 ));
             }
