@@ -117,9 +117,9 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
         String nameColumn = buildNameColumn(row);
         String pingMsColumn = String.format("§7%4dms", Math.max(0, row.pingMillis()));
 
-        return padStyled(metaColumn, META_COLUMN_WIDTH)
-                + padStyled(nameColumn, NAME_COLUMN_WIDTH)
-                + padStyled(pingMsColumn, PING_COLUMN_WIDTH);
+        return padStyledLeft(metaColumn, META_COLUMN_WIDTH)
+                + padStyledLeft(nameColumn, NAME_COLUMN_WIDTH)
+                + padStyledRight(pingMsColumn, PING_COLUMN_WIDTH);
     }
 
     private String buildMetaColumn(PlayerRowFields row) {
@@ -142,11 +142,18 @@ public final class BukkitTabMenuUpdateHandler implements TabMenuUpdateHandler {
         return baseName;
     }
 
-    private String padStyled(String value, int width) {
+    private String padStyledLeft(String value, int width) {
         String safe = value == null ? "" : value;
         String bounded = truncateStyled(safe, width);
         int visibleLength = visibleLength(bounded);
         return bounded + " ".repeat(Math.max(1, width - visibleLength + 1));
+    }
+
+    private String padStyledRight(String value, int width) {
+        String safe = value == null ? "" : value;
+        String bounded = truncateStyled(safe, width);
+        int visibleLength = visibleLength(bounded);
+        return " ".repeat(Math.max(1, width - visibleLength + 1)) + bounded;
     }
 
     private int visibleLength(String value) {
