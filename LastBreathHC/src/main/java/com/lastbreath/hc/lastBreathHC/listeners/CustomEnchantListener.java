@@ -325,6 +325,14 @@ public class CustomEnchantListener implements Listener {
         }
     }
 
+    private ItemStack getAutoPickupFallbackDrop(Block block) {
+        Material type = block.getType();
+        if (Tag.BEDS.isTagged(type)) {
+            return new ItemStack(type, 1);
+        }
+        return null;
+    }
+
     private List<ItemStack> smeltDrops(List<ItemStack> drops) {
         List<ItemStack> updated = new ArrayList<>();
         for (ItemStack drop : drops) {
@@ -533,6 +541,12 @@ public class CustomEnchantListener implements Listener {
             return false;
         }
         List<ItemStack> drops = new ArrayList<>(block.getDrops(tool, player));
+        if (autoPickup && drops.isEmpty()) {
+            ItemStack fallbackDrop = getAutoPickupFallbackDrop(block);
+            if (fallbackDrop != null) {
+                drops.add(fallbackDrop);
+            }
+        }
         if (smelter && isOre(block.getType()) && !isCoalOre(block.getType())) {
             drops = smeltDrops(drops);
         }
