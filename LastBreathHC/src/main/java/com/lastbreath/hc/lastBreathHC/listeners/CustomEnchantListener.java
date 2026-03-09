@@ -330,7 +330,32 @@ public class CustomEnchantListener implements Listener {
         if (Tag.BEDS.isTagged(type)) {
             return new ItemStack(type, 1);
         }
+        if (shouldDropBlockItselfForAutoPickup(type)) {
+            return new ItemStack(type, 1);
+        }
         return null;
+    }
+
+    private boolean shouldDropBlockItselfForAutoPickup(Material type) {
+        if (!type.isBlock() || !type.isItem()) {
+            return false;
+        }
+        return switch (type) {
+            case SPAWNER,
+                 END_PORTAL,
+                 END_GATEWAY,
+                 NETHER_PORTAL,
+                 LIGHT,
+                 FIRE,
+                 SOUL_FIRE,
+                 TRIAL_SPAWNER,
+                 VAULT,
+                 REINFORCED_DEEPSLATE,
+                 BUDDING_AMETHYST,
+                 WATER,
+                 LAVA -> false;
+            default -> true;
+        };
     }
 
     private List<ItemStack> smeltDrops(List<ItemStack> drops) {
@@ -566,6 +591,10 @@ public class CustomEnchantListener implements Listener {
             drops = consumeSeedForReplant(drops, block.getType());
             scheduleReplant(block, block.getBlockData());
         }
+        if (drops.isEmpty() && !(autoReplant && isMatureCrop(block))) {
+            return false;
+        }
+
         giveDrops(player, dropLocation, drops, autoPickup);
         return true;
     }

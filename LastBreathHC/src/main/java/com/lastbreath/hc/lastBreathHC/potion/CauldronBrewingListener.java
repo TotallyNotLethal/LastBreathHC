@@ -26,7 +26,9 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class CauldronBrewingListener implements Listener {
@@ -40,6 +42,7 @@ public class CauldronBrewingListener implements Listener {
     private final JavaPlugin plugin;
     private final PotionHandler potionHandler;
     private final PotionDefinitionRegistry definitionRegistry;
+    private final Set<Location> brewingCauldrons = ConcurrentHashMap.newKeySet();
 
     public CauldronBrewingListener(JavaPlugin plugin, PotionHandler potionHandler, PotionDefinitionRegistry definitionRegistry) {
         this.plugin = plugin;
@@ -158,7 +161,16 @@ public class CauldronBrewingListener implements Listener {
             return false;
         }
 
-        brewOne(cauldron, potionEntity.get(), ingredientEntity.get());
+        Location cauldronLocation = cauldron.getLocation();
+        if (!brewingCauldrons.add(cauldronLocation)) {
+            return false;
+        }
+
+        try {
+            brewOne(cauldron, potionEntity.get(), ingredientEntity.get());
+        } finally {
+            brewingCauldrons.remove(cauldronLocation);
+        }
         return true;
     }
 
