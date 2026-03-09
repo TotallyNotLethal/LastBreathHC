@@ -278,6 +278,10 @@ public class PotionHandler implements Listener {
         if (meta == null) {
             return null;
         }
+        PersistentDataContainer existingContainer = meta.getPersistentDataContainer();
+        if (existingContainer.has(purifiedKey, PersistentDataType.BYTE)) {
+            return null;
+        }
         List<PotionEffect> effects = getPotionEffects(meta);
 
         List<PotionEffect> filtered = new ArrayList<>();
@@ -288,7 +292,6 @@ public class PotionHandler implements Listener {
         }
         boolean removedNegativePotionEffects = filtered.size() != effects.size();
 
-        PersistentDataContainer existingContainer = meta.getPersistentDataContainer();
         String customId = existingContainer.get(customIdKey, PersistentDataType.STRING);
         boolean removedNegativeCustomEffects = false;
         int remainingCustomEffects = existingContainer.getOrDefault(customEffectsKey, PersistentDataType.INTEGER, 0);
