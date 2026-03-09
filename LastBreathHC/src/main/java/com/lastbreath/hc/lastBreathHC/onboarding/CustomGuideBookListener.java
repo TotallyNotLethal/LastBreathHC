@@ -104,8 +104,8 @@ public class CustomGuideBookListener implements Listener {
             return book;
         }
 
-        meta.setTitle(String.valueOf(Component.text("Custom Features", NamedTextColor.GOLD)));
-        meta.setAuthor(String.valueOf(Component.text("Last Breath HC", NamedTextColor.GOLD)));
+        meta.setTitle("Custom Features");
+        meta.setAuthor("Last Breath HC");
         meta.lore(List.of(
                 Component.text("Custom Features guide", NamedTextColor.DARK_PURPLE),
                 Component.text("Your lore-bound handbook.", NamedTextColor.GRAY)
