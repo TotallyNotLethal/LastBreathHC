@@ -1,14 +1,17 @@
 package com.lastbreath.hc.lastBreathHC.gui;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.death.DeathMarkerManager;
 import com.lastbreath.hc.lastBreathHC.team.JoinOutcome;
 import com.lastbreath.hc.lastBreathHC.team.LeaveOutcome;
 import com.lastbreath.hc.lastBreathHC.team.TeamManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -35,15 +38,19 @@ public class TeamManagementGUI implements Listener {
     private static final String TITLE_BASE = "Team Manager";
 
     private final TeamManager teamManager;
+    private final DeathMarkerManager deathMarkerManager;
     private final NamespacedKey teamKey;
     private final NamespacedKey memberKey;
     private final NamespacedKey actionKey;
+    private final NamespacedKey deathTrailKey;
 
-    public TeamManagementGUI(LastBreathHC plugin, TeamManager teamManager) {
+    public TeamManagementGUI(LastBreathHC plugin, TeamManager teamManager, DeathMarkerManager deathMarkerManager) {
         this.teamManager = teamManager;
+        this.deathMarkerManager = deathMarkerManager;
         this.teamKey = new NamespacedKey(plugin, "team-name");
         this.memberKey = new NamespacedKey(plugin, "team-member");
         this.actionKey = new NamespacedKey(plugin, "team-action");
+        this.deathTrailKey = new NamespacedKey(plugin, "team-death-trail");
     }
 
     public void open(Player player) {
@@ -110,6 +117,23 @@ public class TeamManagementGUI implements Listener {
                         ChatColor.GRAY + "Owner: " + getOwnerName(team),
                         ChatColor.GRAY + "Joining: " + (teamManager.isJoinLocked(team) ? "Locked" : "Open"))));
 
+        List<DeadTeammateEntry> deadTeammates = resolveDeadTeammates(team, player.getUniqueId());
+        int[] deadSlots = new int[]{46, 47, 48, 50, 51, 52};
+        for (int i = 0; i < deadSlots.length && i < deadTeammates.size(); i++) {
+            inventory.setItem(deadSlots[i], buildDeadTeammateItem(deadTeammates.get(i)));
+        }
+
+        if (deadTeammates.isEmpty()) {
+            inventory.setItem(53, buildInfoItem(Material.LIME_DYE,
+                    ChatColor.GREEN + "No dead teammates",
+                    List.of(ChatColor.GRAY + "Everyone on your team is alive.")));
+        } else {
+            inventory.setItem(53, buildInfoItem(Material.COMPASS,
+                    ChatColor.GOLD + "Dead teammate trail",
+                    List.of(ChatColor.GRAY + "Click a dead teammate head",
+                            ChatColor.GRAY + "to start a guidance trail.")));
+        }
+
         player.openInventory(inventory);
     }
 
@@ -151,6 +175,12 @@ public class TeamManagementGUI implements Listener {
         String memberId = container.get(memberKey, PersistentDataType.STRING);
         if (memberId != null) {
             handleKick(player, memberId);
+            return;
+        }
+
+        String deathTrailPayload = container.get(deathTrailKey, PersistentDataType.STRING);
+        if (deathTrailPayload != null) {
+            handleDeadTeammateTrail(player, deathTrailPayload);
         }
     }
 
@@ -230,6 +260,38 @@ public class TeamManagementGUI implements Listener {
         }
     }
 
+    private void handleDeadTeammateTrail(Player player, String payload) {
+        String[] parts = payload.split("\\|", 5);
+        if (parts.length != 5) {
+            player.sendMessage(ChatColor.RED + "That death trail entry is no longer valid.");
+            return;
+        }
+
+        String targetName = parts[0];
+        World world = Bukkit.getWorld(parts[1]);
+        if (world == null) {
+            player.sendMessage(ChatColor.RED + "That world is currently unavailable.");
+            return;
+        }
+
+        double x;
+        double y;
+        double z;
+        try {
+            x = Double.parseDouble(parts[2]);
+            y = Double.parseDouble(parts[3]);
+            z = Double.parseDouble(parts[4]);
+        } catch (NumberFormatException ex) {
+            player.sendMessage(ChatColor.RED + "That death trail entry is corrupted.");
+            return;
+        }
+
+        Location location = new Location(world, x, y, z);
+        deathMarkerManager.startPersonalTrail(player, targetName, location, 120);
+        player.sendMessage(ChatColor.AQUA + "Trail started to " + targetName + "'s death location.");
+        player.closeInventory();
+    }
+
     private ItemStack buildTeamItem(Team team) {
         ItemStack item = new ItemStack(Material.NAME_TAG);
         ItemMeta meta = item.getItemMeta();
@@ -271,6 +333,63 @@ public class TeamManagementGUI implements Listener {
         meta.setLore(lore);
         item.setItemMeta(meta);
         return item;
+    }
+
+    private ItemStack buildDeadTeammateItem(DeadTeammateEntry entry) {
+        ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta meta = item.getItemMeta();
+        if (meta instanceof SkullMeta skullMeta) {
+            skullMeta.setOwningPlayer(entry.player());
+            meta = skullMeta;
+        }
+
+        String playerName = entry.player().getName() == null ? "Unknown" : entry.player().getName();
+        meta.setDisplayName(ChatColor.RED + playerName + " (Dead)");
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "Death location:");
+        lore.add(ChatColor.DARK_GRAY + entry.location().getWorld().getName()
+                + " " + entry.location().getBlockX()
+                + ", " + entry.location().getBlockY()
+                + ", " + entry.location().getBlockZ());
+        lore.add(ChatColor.YELLOW + "Click to start guidance trail.");
+        meta.setLore(lore);
+
+        String payload = playerName + "|"
+                + entry.location().getWorld().getName() + "|"
+                + entry.location().getX() + "|"
+                + entry.location().getY() + "|"
+                + entry.location().getZ();
+        meta.getPersistentDataContainer().set(deathTrailKey, PersistentDataType.STRING, payload);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private List<DeadTeammateEntry> resolveDeadTeammates(Team team, UUID viewerId) {
+        List<DeadTeammateEntry> entries = new ArrayList<>();
+        for (String member : team.getEntries()) {
+            OfflinePlayer teammate = Bukkit.getOfflinePlayer(member);
+            if (teammate.getUniqueId().equals(viewerId) || !teammate.isBanned()) {
+                continue;
+            }
+            Location deathLocation = safeLastDeathLocation(teammate);
+            if (deathLocation == null || deathLocation.getWorld() == null) {
+                continue;
+            }
+            entries.add(new DeadTeammateEntry(teammate, deathLocation));
+        }
+        entries.sort(Comparator.comparing(entry -> {
+            String name = entry.player().getName();
+            return name == null ? "" : name.toLowerCase(Locale.ROOT);
+        }));
+        return entries;
+    }
+
+    private Location safeLastDeathLocation(OfflinePlayer player) {
+        try {
+            return player.getLastDeathLocation();
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private ItemStack buildActionItem(Material material, String title, String action, List<String> lore) {
@@ -315,5 +434,8 @@ public class TeamManagementGUI implements Listener {
                 .map(requester.getServer()::getPlayer)
                 .ifPresent(owner -> owner.sendMessage(ChatColor.YELLOW + requester.getName()
                         + " requested to join your team. Use /team accept " + requester.getName() + " or /team deny " + requester.getName() + "."));
+    }
+
+    private record DeadTeammateEntry(OfflinePlayer player, Location location) {
     }
 }

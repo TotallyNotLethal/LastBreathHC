@@ -360,9 +360,9 @@ public final class LastBreathHC extends JavaPlugin {
         discordWebhookService = new DiscordWebhookService(this);
         teamWaypointManager = new TeamWaypointManager(new java.io.File(getDataFolder(), "teams.yml"));
         teamWaypointManager.load();
-        TeamManagementGUI teamManagementGUI = new TeamManagementGUI(this, teamManager);
         int deathMarkerDurationSeconds = getConfig().getInt("deathMarker.durationSeconds", 180);
         deathMarkerManager = new DeathMarkerManager(this, teamManager, deathMarkerDurationSeconds);
+        TeamManagementGUI teamManagementGUI = new TeamManagementGUI(this, teamManager, deathMarkerManager);
 
         FakePlayerDeathReactionHandler fakePlayerDeathReactionHandler = new FakePlayerDeathReactionHandler(this, fakePlayerService);
         PlayerLastMessageTracker playerLastMessageTracker = new PlayerLastMessageTracker();

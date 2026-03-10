@@ -34,6 +34,7 @@ public class DeathMarkerManager {
     private final int durationTicks;
     private final File dataFile;
     private final Map<UUID, ActiveMarker> activeMarkers = new HashMap<>();
+    private final Map<UUID, PersonalTrail> personalTrails = new HashMap<>();
 
     public DeathMarkerManager(LastBreathHC plugin, TeamManager teamManager, int durationSeconds) {
         this.plugin = plugin;
@@ -63,6 +64,55 @@ public class DeathMarkerManager {
         for (UUID markerId : ids) {
             removeMarker(markerId, false);
         }
+        clearPersonalTrails();
+    }
+
+    public void startPersonalTrail(Player player, String label, Location targetLocation, int durationSeconds) {
+        if (player == null || !player.isOnline() || targetLocation == null || targetLocation.getWorld() == null) {
+            return;
+        }
+
+        clearPersonalTrail(player.getUniqueId());
+
+        Location markerLocation = targetLocation.clone().add(0.0, 1.25, 0.0);
+        BossBar bossBar = Bukkit.createBossBar(
+                "§bTrail to " + label,
+                BarColor.BLUE,
+                BarStyle.SOLID
+        );
+        bossBar.setVisible(true);
+        bossBar.addPlayer(player);
+
+        BukkitTask tickTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    clearPersonalTrail(player.getUniqueId());
+                    return;
+                }
+                bossBar.addPlayer(player);
+                spawnDirectionalPath(player, markerLocation);
+                player.spawnParticle(
+                        Particle.END_ROD,
+                        markerLocation,
+                        8,
+                        0.45,
+                        0.45,
+                        0.45,
+                        0.0
+                );
+            }
+        }.runTaskTimer(plugin, 0L, 20L);
+
+        long trailTicks = Math.max(20L, durationSeconds * 20L);
+        BukkitTask expiryTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                clearPersonalTrail(player.getUniqueId());
+            }
+        }.runTaskLater(plugin, trailTicks);
+
+        personalTrails.put(player.getUniqueId(), new PersonalTrail(bossBar, tickTask, expiryTask));
     }
 
     private void removeMarker(UUID markerId) {
@@ -79,6 +129,23 @@ public class DeathMarkerManager {
         marker.bossBar.removeAll();
         if (persist) {
             saveMarkers();
+        }
+    }
+
+    private void clearPersonalTrail(UUID playerId) {
+        PersonalTrail trail = personalTrails.remove(playerId);
+        if (trail == null) {
+            return;
+        }
+        trail.tickTask.cancel();
+        trail.expiryTask.cancel();
+        trail.bossBar.removeAll();
+    }
+
+    private void clearPersonalTrails() {
+        Set<UUID> ids = new HashSet<>(personalTrails.keySet());
+        for (UUID id : ids) {
+            clearPersonalTrail(id);
         }
     }
 
@@ -228,5 +295,8 @@ public class DeathMarkerManager {
     }
 
     private record ActiveMarker(MarkerData data, BossBar bossBar, BukkitTask tickTask, BukkitTask expiryTask) {
+    }
+
+    private record PersonalTrail(BossBar bossBar, BukkitTask tickTask, BukkitTask expiryTask) {
     }
 }
