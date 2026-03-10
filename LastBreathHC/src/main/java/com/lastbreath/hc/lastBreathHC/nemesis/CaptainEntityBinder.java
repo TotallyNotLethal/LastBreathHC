@@ -64,7 +64,7 @@ public class CaptainEntityBinder {
             return Optional.of(upgradeCandidate);
         }
 
-        Location spawnLocation = buildLocation(record.origin());
+        Location spawnLocation = buildLocation(record);
         if (spawnLocation == null || spawnLocation.getWorld() == null) {
             transitionToDormantOrCooldown(record);
             return Optional.empty();
@@ -396,10 +396,20 @@ public class CaptainEntityBinder {
         return "§c[" + tier + "] §6" + baseName + " §7(Lv." + level + ")";
     }
 
-    private Location buildLocation(CaptainRecord.Origin origin) {
+    private Location buildLocation(CaptainRecord record) {
+        CaptainRecord.Origin origin = record.origin();
         World world = plugin.getServer().getWorld(origin.world());
         if (world == null) {
             return null;
+        }
+        if (record.habitat().isPresent()) {
+            CaptainRecord.Habitat habitat = record.habitat().get();
+            World habitatWorld = plugin.getServer().getWorld(habitat.anchorWorld());
+            if (habitatWorld != null) {
+                double x = habitat.anchorX() + ThreadLocalRandom.current().nextDouble(-4.0, 4.0);
+                double z = habitat.anchorZ() + ThreadLocalRandom.current().nextDouble(-4.0, 4.0);
+                return new Location(habitatWorld, x, habitat.anchorY(), z);
+            }
         }
         return new Location(world, origin.spawnX(), origin.spawnY(), origin.spawnZ());
     }
@@ -466,6 +476,13 @@ public class CaptainEntityBinder {
     private void transitionToDormantOrCooldown(CaptainRecord record) {
         if (record == null || record.state() == null || record.state().state() != CaptainState.ACTIVE) {
             return;
+        }
+
+        if (record.identity() != null) {
+            NemesisBuildingService buildingService = plugin.getNemesisBuildingService();
+            if (buildingService != null && buildingService.isConstructionInProgress(record.identity().captainId())) {
+                return;
+            }
         }
 
         long now = System.currentTimeMillis();

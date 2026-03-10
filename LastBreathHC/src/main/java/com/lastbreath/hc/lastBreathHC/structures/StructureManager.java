@@ -9,5 +9,7 @@ public interface StructureManager {
 
     Optional<StructureFootprint> spawnStructure(String templateId, Location anchor, SpawnContext context);
 
+    Optional<StructureFootprint> reserveStructure(String templateId, Location anchor, SpawnContext context);
+
     Optional<StructureFootprint> upgradeLatestStructureForOwner(String ownerCaptainId, int newTier, long lastUpgradeTimestamp);
 }
