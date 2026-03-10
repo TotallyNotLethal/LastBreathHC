@@ -66,6 +66,41 @@ public final class StructureManagerImpl implements StructureManager {
         return Optional.of(footprint);
     }
 
+
+    @Override
+    public Optional<StructureFootprint> reserveStructure(String templateId, Location anchor, SpawnContext context) {
+        StructureTemplateMetadata metadata = templates.get(templateId);
+        if (metadata == null || anchor.getWorld() == null) {
+            return Optional.empty();
+        }
+
+        BoundingBox absoluteBoundingBox = metadata.template().getRelativeBoundingBox().shift(anchor.toVector());
+        StructurePlacementValidator.ValidationResult validationResult =
+                placementValidator.validate(anchor, metadata, context, absoluteBoundingBox);
+        if (!validationResult.allowed()) {
+            return Optional.empty();
+        }
+
+        String structureId = templateId + "-" + UUID.randomUUID();
+        String anchorChunk = anchor.getChunk().getX() + "," + anchor.getChunk().getZ();
+        StructureFootprint footprint = new StructureFootprint(
+                structureId,
+                context.ownerCaptainId(),
+                context.region(),
+                absoluteBoundingBox,
+                metadata.template().getBlockPlacements().size(),
+                metadata.structureType(),
+                metadata.tier(),
+                anchorChunk,
+                context.lastUpgradeTimestamp(),
+                anchor.getWorld().getName()
+        );
+
+        footprintRepository.upsert(footprint);
+        footprintRepository.saveIfDirty();
+        return Optional.of(footprint);
+    }
+
     @Override
     public Optional<StructureFootprint> upgradeLatestStructureForOwner(String ownerCaptainId, int newTier, long lastUpgradeTimestamp) {
         Optional<StructureFootprint> latest = footprintRepository.findLatestByOwner(ownerCaptainId);

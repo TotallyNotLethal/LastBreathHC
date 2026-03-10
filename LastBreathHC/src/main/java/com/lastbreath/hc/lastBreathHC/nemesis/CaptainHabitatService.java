@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.nemesis;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.structures.StructureFootprint;
 import com.lastbreath.hc.lastBreathHC.structures.StructureFootprintRepository;
+import org.bukkit.Location;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,15 +28,47 @@ public final class CaptainHabitatService {
         String[] chunk = footprint.anchorChunk().split(",");
         int cx = chunk.length > 0 ? parseInt(chunk[0]) : 0;
         int cz = chunk.length > 1 ? parseInt(chunk[1]) : 0;
+        double anchorX = (footprint.boundingBox().getMinX() + footprint.boundingBox().getMaxX()) / 2.0;
+        double anchorY = footprint.boundingBox().getMinY();
+        double anchorZ = (footprint.boundingBox().getMinZ() + footprint.boundingBox().getMaxZ()) / 2.0;
         CaptainRecord.Habitat habitat = new CaptainRecord.Habitat(
                 footprint.structureId(),
                 footprint.region(),
                 footprint.worldName(),
                 cx,
                 cz,
-                record.origin().spawnX(),
-                record.origin().spawnY(),
-                record.origin().spawnZ()
+                anchorX,
+                anchorY,
+                anchorZ
+        );
+        CaptainRecord updated = new CaptainRecord(
+                record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(),
+                record.naming(), record.traits(), record.minionPack(), record.state(), record.telemetry(),
+                record.political(), record.social(), record.relationships(), record.memory(), record.persona(), Optional.of(habitat)
+        );
+        captainRegistry.upsert(updated);
+    }
+
+
+    public void linkCaptainToStructure(CaptainRecord record, Location anchor) {
+        if (record == null || anchor == null) {
+            return;
+        }
+        StructureFootprint footprint = footprintRepository.findLatestByOwner(record.identity().captainId().toString()).orElse(null);
+        if (footprint != null) {
+            linkCaptainToStructure(record, footprint);
+            return;
+        }
+
+        CaptainRecord.Habitat habitat = new CaptainRecord.Habitat(
+                "pending-" + record.identity().captainId(),
+                record.political().map(CaptainRecord.Political::region).orElse("unknown"),
+                anchor.getWorld() == null ? record.origin().world() : anchor.getWorld().getName(),
+                anchor.getBlockX() >> 4,
+                anchor.getBlockZ() >> 4,
+                anchor.getX(),
+                anchor.getY(),
+                anchor.getZ()
         );
         CaptainRecord updated = new CaptainRecord(
                 record.identity(), record.origin(), record.victims(), record.nemesisScores(), record.progression(),

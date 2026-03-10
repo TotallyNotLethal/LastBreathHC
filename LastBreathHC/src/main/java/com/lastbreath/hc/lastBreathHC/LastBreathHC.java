@@ -264,6 +264,7 @@ public final class LastBreathHC extends JavaPlugin {
         nemesisBuildingService.initialize();
         captainRegistry = new CaptainRegistry();
         captainHabitatService = new CaptainHabitatService(this, captainRegistry, structureFootprintRepository);
+        nemesisBuildingService.attachCaptainServices(captainRegistry, captainHabitatService);
         captainSerializer = new CaptainSerializer(this, new java.io.File(getDataFolder(), "nemesis-captains.yml"));
         captainRegistry.load(captainSerializer.load());
         armyGraphSerializer = new ArmyGraphSerializer(this, new java.io.File(getDataFolder(), "nemesis-army-graph.yml"));
@@ -842,6 +843,10 @@ public final class LastBreathHC extends JavaPlugin {
 
     public CaptainRegistry getCaptainRegistry() {
         return captainRegistry;
+    }
+
+    public NemesisBuildingService getNemesisBuildingService() {
+        return nemesisBuildingService;
     }
 
     public ApiEventListener getApiEventListener() {

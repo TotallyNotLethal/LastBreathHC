@@ -3,6 +3,7 @@ package com.lastbreath.hc.lastBreathHC.nemesis;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.structures.LitematicStructureTemplateLoader;
 import com.lastbreath.hc.lastBreathHC.structures.SpawnContext;
+import com.lastbreath.hc.lastBreathHC.structures.StructureBlockPlacement;
 import com.lastbreath.hc.lastBreathHC.structures.StructureManager;
 import com.lastbreath.hc.lastBreathHC.structures.StructureTemplate;
 import com.lastbreath.hc.lastBreathHC.structures.StructureTemplateMetadata;
@@ -18,8 +19,10 @@ import java.io.IOException;
 import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,12 +33,24 @@ public final class NemesisBuildingService {
     private final Map<Rank, RankBuildingDefinition> definitionsByRank = new EnumMap<>(Rank.class);
     private final Map<UUID, BukkitTask> pendingByCaptain = new ConcurrentHashMap<>();
     private final Map<UUID, PendingConstruction> queuedConstructions = new LinkedHashMap<>();
+    private final Set<UUID> activeBuilders = ConcurrentHashMap.newKeySet();
+    private CaptainRegistry captainRegistry;
+    private CaptainHabitatService captainHabitatService;
     private BukkitTask queueTask;
 
     public NemesisBuildingService(LastBreathHC plugin, StructureManager structureManager) {
         this.plugin = plugin;
         this.structureManager = structureManager;
         this.litematicLoader = new LitematicStructureTemplateLoader();
+    }
+
+    public void attachCaptainServices(CaptainRegistry captainRegistry, CaptainHabitatService captainHabitatService) {
+        this.captainRegistry = captainRegistry;
+        this.captainHabitatService = captainHabitatService;
+    }
+
+    public boolean isConstructionInProgress(UUID captainId) {
+        return captainId != null && activeBuilders.contains(captainId);
     }
 
     public void initialize() {
@@ -90,7 +105,7 @@ public final class NemesisBuildingService {
                 StructureTemplate template = litematicLoader.load(templateId, litematic);
                 structureManager.registerStructureTemplate(templateId,
                         new StructureTemplateMetadata(template, structureType, tier, spawnRadiusExclusion));
-                definitionsByRank.put(rank, new RankBuildingDefinition(templateId, displayName, schematicName, buildSeconds));
+                definitionsByRank.put(rank, new RankBuildingDefinition(templateId, displayName, schematicName, buildSeconds, template));
                 plugin.getLogger().info("Registered nemesis building template " + templateId + " for " + rank.name());
             } catch (IOException ex) {
                 plugin.getLogger().warning("Unable to register nemesis building template for " + rank.name()
@@ -137,9 +152,16 @@ public final class NemesisBuildingService {
 
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             pendingByCaptain.remove(captainId);
-            synchronized (queuedConstructions) {
-                queuedConstructions.put(captainId, new PendingConstruction(definition.templateId(), anchor, captainId.toString(), region, System.currentTimeMillis()));
-            }
+            SpawnContext context = new SpawnContext(captainId.toString(), region, System.currentTimeMillis());
+            structureManager.reserveStructure(definition.templateId(), anchor, context).ifPresent(footprint -> {
+                synchronized (queuedConstructions) {
+                    queuedConstructions.put(captainId, new PendingConstruction(
+                            anchor,
+                            captainId,
+                            definition.template().getBlockPlacements()
+                    ));
+                }
+            });
         }, delayTicks);
 
         pendingByCaptain.put(captainId, task);
@@ -150,6 +172,7 @@ public final class NemesisBuildingService {
             task.cancel();
         }
         pendingByCaptain.clear();
+        activeBuilders.clear();
         if (queueTask != null) {
             queueTask.cancel();
             queueTask = null;
@@ -163,7 +186,7 @@ public final class NemesisBuildingService {
         if (queueTask != null) {
             queueTask.cancel();
         }
-        long period = Math.max(20L, plugin.getConfig().getLong("nemesis.buildings.queue.tickPeriodTicks", 100L));
+        long period = Math.max(200L, plugin.getConfig().getLong("nemesis.buildings.queue.tickPeriodTicks", 200L));
         queueTask = Bukkit.getScheduler().runTaskTimer(plugin, this::processQueuedConstructions, period, period);
     }
 
@@ -182,7 +205,7 @@ public final class NemesisBuildingService {
     private boolean tryPlaceNow(PendingConstruction pending) {
         World world = pending.anchor().getWorld();
         if (world == null) {
-            return true;
+            return false;
         }
         int chunkX = pending.anchor().getBlockX() >> 4;
         int chunkZ = pending.anchor().getBlockZ() >> 4;
@@ -193,11 +216,15 @@ public final class NemesisBuildingService {
         }
         try {
             world.getChunkAt(chunkX, chunkZ).load(true);
-            return structureManager.spawnStructure(
-                    pending.templateId(),
-                    pending.anchor(),
-                    new SpawnContext(pending.ownerCaptainId(), pending.region(), pending.queuedAt())
-            ).isPresent();
+            if (pending.nextBlockIndex() >= pending.placements().size()) {
+                return onConstructionComplete(pending);
+            }
+            StructureBlockPlacement placement = pending.placements().get(pending.nextBlockIndex());
+            Location blockLocation = pending.anchor().clone().add(placement.relativeOffset());
+            world.getBlockAt(blockLocation).setBlockData(placement.blockData(), false);
+            activeBuilders.add(pending.captainId());
+            pending.advance();
+            return pending.nextBlockIndex() >= pending.placements().size() && onConstructionComplete(pending);
         } finally {
             if (!forceLoaded) {
                 world.setChunkForceLoaded(chunkX, chunkZ, false);
@@ -205,20 +232,58 @@ public final class NemesisBuildingService {
         }
     }
 
+    private boolean onConstructionComplete(PendingConstruction pending) {
+        activeBuilders.remove(pending.captainId());
+        if (captainRegistry != null && captainHabitatService != null) {
+            CaptainRecord record = captainRegistry.getByCaptainUuid(pending.captainId());
+            if (record != null) {
+                captainHabitatService.linkCaptainToStructure(record, pending.anchor());
+            }
+        }
+        return true;
+    }
+
     private record RankBuildingDefinition(
             String templateId,
             String displayName,
             String schematicName,
-            long buildSeconds
+            long buildSeconds,
+            StructureTemplate template
     ) {
     }
 
-    private record PendingConstruction(
-            String templateId,
-            Location anchor,
-            String ownerCaptainId,
-            String region,
-            long queuedAt
-    ) {
+    private static final class PendingConstruction {
+        private final Location anchor;
+        private final UUID captainId;
+        private final List<StructureBlockPlacement> placements;
+        private int nextBlockIndex;
+
+        private PendingConstruction(Location anchor,
+                                    UUID captainId,
+                                    List<StructureBlockPlacement> placements) {
+            this.anchor = anchor;
+            this.captainId = captainId;
+            this.placements = placements;
+        }
+
+        private Location anchor() {
+            return anchor;
+        }
+
+        private UUID captainId() {
+            return captainId;
+        }
+
+        private List<StructureBlockPlacement> placements() {
+            return placements;
+        }
+
+        private int nextBlockIndex() {
+            return nextBlockIndex;
+        }
+
+        private void advance() {
+            nextBlockIndex++;
+        }
     }
 }
