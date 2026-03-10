@@ -24,6 +24,9 @@ public class Gracestone {
             new NamespacedKey(LastBreathHC.getInstance(), "gracestone_lives");
     public static final NamespacedKey GRACESTONE_HEALTH_KEY =
             new NamespacedKey(LastBreathHC.getInstance(), "gracestone_health");
+    public static final NamespacedKey PVP_LAST_HIT_AT_KEY =
+            new NamespacedKey(LastBreathHC.getInstance(), "gracestone_pvp_last_hit_at");
+    public static final long PVP_GRACESTONE_DISABLE_DURATION_MS = 5L * 60L * 1000L;
     private static final PotionEffectType DISPLAY_EFFECT = PotionEffectType.LUCK;
 
     public static ItemStack create() {
@@ -73,6 +76,9 @@ public class Gracestone {
     }
 
     public static boolean consumeLife(Player player) {
+        if (isSuppressedByPvpCombat(player)) {
+            return false;
+        }
         int lives = getLives(player);
         if (lives <= 0) {
             return false;
@@ -83,13 +89,36 @@ public class Gracestone {
 
     public static void refreshDisplay(Player player) {
         int lives = getLives(player);
-        if (lives <= 0) {
+        if (lives <= 0 || isSuppressedByPvpCombat(player)) {
             clearDisplay(player);
-            applyHealthModifier(player, lives);
+            applyHealthModifier(player, 0);
             return;
         }
         applyDisplay(player, lives);
         applyHealthModifier(player, lives);
+    }
+
+    public static void markPvpCombat(Player player) {
+        player.getPersistentDataContainer().set(
+                PVP_LAST_HIT_AT_KEY,
+                PersistentDataType.LONG,
+                System.currentTimeMillis()
+        );
+    }
+
+    public static boolean isSuppressedByPvpCombat(Player player) {
+        Long lastHitAt = player.getPersistentDataContainer().get(
+                PVP_LAST_HIT_AT_KEY,
+                PersistentDataType.LONG
+        );
+        if (lastHitAt == null) {
+            return false;
+        }
+        if (System.currentTimeMillis() - lastHitAt >= PVP_GRACESTONE_DISABLE_DURATION_MS) {
+            player.getPersistentDataContainer().remove(PVP_LAST_HIT_AT_KEY);
+            return false;
+        }
+        return true;
     }
 
     private static void setLives(Player player, int lives) {
