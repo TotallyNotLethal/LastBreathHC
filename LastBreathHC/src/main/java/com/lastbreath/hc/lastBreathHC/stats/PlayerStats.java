@@ -6,6 +6,8 @@ import com.lastbreath.hc.lastBreathHC.cosmetics.BossPrefix;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 
 import java.util.HashSet;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
@@ -32,6 +34,7 @@ public class PlayerStats {
     public BossAura equippedAura;
     public Set<BossKillMessage> unlockedKillMessages = new HashSet<>();
     public BossKillMessage equippedKillMessage;
+    public List<String> pendingTitleNotifications = new ArrayList<>();
 
     public PlayerStats(UUID uuid) {
         this.uuid = uuid;

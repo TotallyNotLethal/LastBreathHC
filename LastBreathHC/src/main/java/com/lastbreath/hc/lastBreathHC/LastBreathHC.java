@@ -165,6 +165,7 @@ public final class LastBreathHC extends JavaPlugin {
     private BukkitTask bloodMoonTask;
     private BukkitTask titleEffectTask;
     private BukkitTask nicknamePermissionTask;
+    private BukkitTask leaderboardTopTitleTask;
     private BukkitTask statsAutosaveTask;
     private BukkitTask captainFlushTask;
     private BukkitTask apiStatsTask;
@@ -593,6 +594,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleBloodMoonChecks();
         scheduleTitleEffects();
         scheduleNicknamePermissionChecks();
+        scheduleLeaderboardTopTitleChecks();
         scheduleStatsAutosave();
         scheduleTabMenuRefresh();
         cosmeticAuraService.start(this);
@@ -657,6 +659,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (tabMenuRefreshScheduler != null) {
             tabMenuRefreshScheduler.stop();
             tabMenuRefreshScheduler = null;
+        }
+        if (leaderboardTopTitleTask != null) {
+            leaderboardTopTitleTask.cancel();
+            leaderboardTopTitleTask = null;
         }
         if (statsAutosaveTask != null) {
             statsAutosaveTask.cancel();
@@ -920,6 +926,15 @@ public final class LastBreathHC extends JavaPlugin {
                 monitor.run();
             }
         }.runTaskTimer(this, 20L, 100L);
+    }
+
+
+    private void scheduleLeaderboardTopTitleChecks() {
+        if (leaderboardTopTitleTask != null) {
+            leaderboardTopTitleTask.cancel();
+        }
+        leaderboardTopTitleTask = getServer().getScheduler().runTaskTimer(this,
+                TitleManager::reconcileLeaderboardTopTitles, 20L, 20L * 60L);
     }
 
     private void scheduleStatsAutosave() {
