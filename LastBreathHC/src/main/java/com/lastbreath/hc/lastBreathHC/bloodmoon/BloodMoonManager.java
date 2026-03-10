@@ -35,12 +35,11 @@ public class BloodMoonManager {
     private static final int EXTRA_SPAWN_ATTEMPTS_PER_PLAYER = 2;
     private static final int EXTRA_SPAWN_RADIUS = 28;
     private static final int MIN_PLAYER_DISTANCE_FOR_SPAWN = 12;
-    private static final int MAX_SPAWN_BLOCK_LIGHT = 7;
+    private static final int MAX_SPAWN_BLOCK_LIGHT = 2;
     private static final List<EntityType> BLOOD_MOON_MONSTER_POOL = List.of(
             EntityType.ZOMBIE,
             EntityType.SKELETON,
             EntityType.SPIDER,
-            EntityType.CREEPER,
             EntityType.HUSK,
             EntityType.DROWNED
     );
