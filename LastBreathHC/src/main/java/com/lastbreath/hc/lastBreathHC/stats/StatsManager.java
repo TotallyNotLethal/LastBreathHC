@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -27,8 +28,8 @@ import java.util.stream.Collectors;
 
 public class StatsManager {
 
-    private static final Map<UUID, PlayerStats> stats = new HashMap<>();
-    private static final Set<UUID> dirtyStats = new HashSet<>();
+    private static final Map<UUID, PlayerStats> stats = new ConcurrentHashMap<>();
+    private static final Set<UUID> dirtyStats = ConcurrentHashMap.newKeySet();
     private static final String FILE_NAME = "player-stats.yml";
 
     public static PlayerStats get(UUID uuid) {
