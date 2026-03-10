@@ -138,6 +138,12 @@ public class PotionHandler implements Listener {
         if (ingredient == Material.GHAST_TEAR) {
             return applyPurification(potion);
         }
+        if (ingredient == Material.GUNPOWDER) {
+            return convertPotionType(potion, Material.SPLASH_POTION);
+        }
+        if (ingredient == Material.DRAGON_BREATH) {
+            return convertPotionType(potion, Material.LINGERING_POTION);
+        }
         HardcorePotionDefinition definition = definitionRegistry.getByIngredient(ingredient);
         if (definition != null) {
             return applyCustomPotion(potion, definition);
@@ -336,6 +342,15 @@ public class PotionHandler implements Listener {
         updateLore(updatedMeta);
 
         potion.setItemMeta(updatedMeta);
+        return potion;
+    }
+
+    private ItemStack convertPotionType(ItemStack potion, Material targetType) {
+        if (potion.getType() == targetType) {
+            return null;
+        }
+
+        potion.setType(targetType);
         return potion;
     }
 
