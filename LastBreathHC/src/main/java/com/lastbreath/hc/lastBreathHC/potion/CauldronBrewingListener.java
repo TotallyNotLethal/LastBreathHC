@@ -252,6 +252,8 @@ public class CauldronBrewingListener implements Listener {
         return material == Material.REDSTONE
                 || material == Material.GLOWSTONE_DUST
                 || material == Material.GHAST_TEAR
+                || material == Material.GUNPOWDER
+                || material == Material.DRAGON_BREATH
                 || definitionRegistry.getByIngredient(material) != null;
     }
 
@@ -337,7 +339,7 @@ public class CauldronBrewingListener implements Listener {
                 .map(def -> def.craftingIngredient().name() + " -> " + def.displayName())
                 .collect(Collectors.joining(", "));
 
-        String defaults = "REDSTONE -> extend duration, GLOWSTONE_DUST -> concentrate, GHAST_TEAR -> purify";
+        String defaults = "REDSTONE -> extend duration, GLOWSTONE_DUST -> concentrate, GHAST_TEAR -> purify, GUNPOWDER -> splash, DRAGON_BREATH -> lingering";
 
         if (custom.isBlank()) {
             return defaults;
@@ -381,6 +383,12 @@ public class CauldronBrewingListener implements Listener {
         }
         if (ingredient == Material.GHAST_TEAR) {
             return "purifies negative effects";
+        }
+        if (ingredient == Material.GUNPOWDER) {
+            return "converts potion to splash type";
+        }
+        if (ingredient == Material.DRAGON_BREATH) {
+            return "converts potion to lingering type";
         }
         HardcorePotionDefinition definition = definitionRegistry.getByIngredient(ingredient);
         if (definition == null) {
