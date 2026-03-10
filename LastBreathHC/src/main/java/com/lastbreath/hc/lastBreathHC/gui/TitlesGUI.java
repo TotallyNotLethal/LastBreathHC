@@ -178,7 +178,8 @@ public class TitlesGUI implements Listener {
         addFilterButton(inventory, 1, TitleCategory.ALL, Material.COMPASS, activeCategory);
         addFilterButton(inventory, 2, TitleCategory.COMBAT, Material.IRON_SWORD, activeCategory);
         addFilterButton(inventory, 3, TitleCategory.PROGRESSION, Material.CLOCK, activeCategory);
-        addFilterButton(inventory, 4, TitleCategory.BOSSES, Material.NETHER_STAR, activeCategory);
+        addFilterButton(inventory, 4, TitleCategory.LEADERBOARD, Material.PAPER, activeCategory);
+        addFilterButton(inventory, 5, TitleCategory.BOSSES, Material.NETHER_STAR, activeCategory);
     }
 
     private void addFilterButton(Inventory inventory, int slot, TitleCategory category, Material material, TitleCategory activeCategory) {
