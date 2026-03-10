@@ -220,6 +220,7 @@ public class StatsManager {
             if (equippedKillMessageName != null && !equippedKillMessageName.isBlank()) {
                 playerStats.equippedKillMessage = BossKillMessage.fromInput(equippedKillMessageName);
             }
+            playerStats.pendingTitleNotifications = new ArrayList<>(config.getStringList(base + ".pendingTitleNotifications"));
         }
 
         TitleManager.initialize(playerStats);
@@ -277,6 +278,7 @@ public class StatsManager {
                 .sorted()
                 .collect(Collectors.toList()));
         config.set(base + ".equippedKillMessage", playerStats.equippedKillMessage != null ? playerStats.equippedKillMessage.name() : null);
+        config.set(base + ".pendingTitleNotifications", playerStats.pendingTitleNotifications);
     }
 
     private static File getFile() {
@@ -439,6 +441,7 @@ public class StatsManager {
         if (equippedKillMessageName != null && !equippedKillMessageName.isBlank()) {
             playerStats.equippedKillMessage = BossKillMessage.fromInput(equippedKillMessageName);
         }
+        playerStats.pendingTitleNotifications = new ArrayList<>(config.getStringList(base + ".pendingTitleNotifications"));
         return playerStats;
     }
 
@@ -465,6 +468,7 @@ public class StatsManager {
         copy.equippedAura = original.equippedAura;
         copy.unlockedKillMessages = new HashSet<>(original.unlockedKillMessages);
         copy.equippedKillMessage = original.equippedKillMessage;
+        copy.pendingTitleNotifications = new ArrayList<>(original.pendingTitleNotifications);
         return copy;
     }
 

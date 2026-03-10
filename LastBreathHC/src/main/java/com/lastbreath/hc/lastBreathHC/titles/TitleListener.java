@@ -23,8 +23,10 @@ public class TitleListener implements Listener {
         TitleManager.initialize(stats);
         TitleManager.checkTimeBasedTitles(event.getPlayer());
         TitleManager.checkProgressTitles(event.getPlayer());
+        TitleManager.reconcileLeaderboardTopTitles();
         TitleManager.applyEquippedTitleEffects(event.getPlayer(), stats.equippedTitle);
         TitleManager.refreshPlayerTabTitle(event.getPlayer());
+        TitleManager.deliverPendingTitleNotifications(event.getPlayer());
         event.getPlayer().sendMessage("§7Current title: §b" + stats.equippedTitle.displayName());
     }
 }

@@ -71,6 +71,17 @@ public class TitleManager {
             Map.entry(Title.SKYBOUND, List.of("Custom: Movement speed +2%", "Custom: Knockback resistance +6%")),
             Map.entry(Title.STARFORGED, List.of("Custom: Armor +2", "Custom: Attack speed +4%")),
             Map.entry(Title.AGELESS, List.of("Custom: Max health +2", "Custom: Movement speed +2%")),
+            Map.entry(Title.ETERNAL_PARAGON, List.of("Custom: Max health +4", "Custom: Movement speed +4%", "Custom: Luck +2")),
+            Map.entry(Title.WARLORD_ASCENDANT, List.of("Custom: Attack damage +2", "Custom: Attack speed +8%", "Custom: Max health +2")),
+            Map.entry(Title.ABYSSAL_REAPER, List.of("Custom: Attack damage +1.5", "Custom: Armor +2", "Custom: Knockback resistance +8%")),
+            Map.entry(Title.PHOENIX_SOVEREIGN, List.of("Custom: Max health +3", "Custom: Luck +1.5", "Custom: Movement speed +2%")),
+            Map.entry(Title.DOOMSPEAKER, List.of("Custom: Attack damage +2", "Custom: Armor toughness +2", "Custom: Knockback resistance +5%")),
+            Map.entry(Title.DEEPSTONE_TYRANT, List.of("Custom: Armor +3", "Custom: Max health +2", "Custom: Attack speed +4%")),
+            Map.entry(Title.ARCHITECT_PRIMORDIAL, List.of("Custom: Armor toughness +2", "Custom: Movement speed +3%", "Custom: Luck +1")),
+            Map.entry(Title.VEINBREAKER, List.of("Custom: Luck +2", "Custom: Attack damage +1", "Custom: Max health +1")),
+            Map.entry(Title.VERDANT_MONARCH, List.of("Custom: Max health +2", "Custom: Movement speed +3%", "Custom: Luck +1")),
+            Map.entry(Title.LEVIATHAN_ANGLER, List.of("Custom: Luck +2", "Custom: Knockback resistance +8%", "Custom: Max health +1")),
+            Map.entry(Title.STARBORN_OVERLORD, List.of("Custom: Attack damage +2", "Custom: Armor +2", "Custom: Movement speed +2%")),
             Map.entry(Title.GRAVEWARDEN_BANE, List.of("Custom: Max health +3", "Custom: Armor +2", "Custom: Boss landing aura")),
             Map.entry(Title.STORM_HERALD, List.of("Custom: Movement speed +5%", "Custom: Attack speed +5%", "Custom: Boss landing aura")),
             Map.entry(Title.HOLLOW_COLOSSUS, List.of("Custom: Armor +3", "Custom: Knockback resistance +10%", "Custom: Boss landing aura")),
@@ -192,6 +203,94 @@ public class TitleManager {
                     new AttributeModifierSpec(Attribute.MOVEMENT_SPEED, UUID.fromString("dcf8cb9c-e9f7-4f88-97fe-bf3ef2ee2d89"),
                             "title_ageless_speed", 0.02, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
             )),
+            Map.entry(Title.ETERNAL_PARAGON, List.of(
+                    new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("80ea2c96-7d8c-4d4d-8ce6-9f147f4d4ecb"),
+                            "title_eternal_paragon_health", 4.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.MOVEMENT_SPEED, UUID.fromString("bb2c165b-3cd0-4f1f-9b9f-f3a2ad2e6618"),
+                            "title_eternal_paragon_speed", 0.04, AttributeModifier.Operation.MULTIPLY_SCALAR_1),
+                    new AttributeModifierSpec(Attribute.LUCK, UUID.fromString("8455fd95-a5a8-41ff-ae7f-3a477752f7fc"),
+                            "title_eternal_paragon_luck", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.WARLORD_ASCENDANT, List.of(
+                    new AttributeModifierSpec(Attribute.ATTACK_DAMAGE, UUID.fromString("d0995ac1-7e76-4e27-98f1-77f6a06f70a3"),
+                            "title_warlord_ascendant_damage", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.ATTACK_SPEED, UUID.fromString("c5b7b78a-2769-4b43-a36e-3003aa03798a"),
+                            "title_warlord_ascendant_speed", 0.08, AttributeModifier.Operation.MULTIPLY_SCALAR_1),
+                    new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("5fe8a9c5-f617-4541-82fd-d18cb19ebd95"),
+                            "title_warlord_ascendant_health", 2.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.ABYSSAL_REAPER, List.of(
+                    new AttributeModifierSpec(Attribute.ATTACK_DAMAGE, UUID.fromString("7e2d32ca-f0c5-43ec-94a5-f9eb5b617a95"),
+                            "title_abyssal_reaper_damage", 1.5, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.ARMOR, UUID.fromString("30f9a2f3-f3f8-4869-9b3d-cb880f73237e"),
+                            "title_abyssal_reaper_armor", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.KNOCKBACK_RESISTANCE, UUID.fromString("2837c7cd-a1f1-44e2-b4b3-143be1eb7e47"),
+                            "title_abyssal_reaper_knockback", 0.08, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.PHOENIX_SOVEREIGN, List.of(
+                    new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("f2a8f26f-5a1f-4f08-90da-22f5d63d4bc6"),
+                            "title_phoenix_sovereign_health", 3.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.LUCK, UUID.fromString("6a0ef5a0-5f42-498a-8ee2-f42c2f63f6ab"),
+                            "title_phoenix_sovereign_luck", 1.5, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.MOVEMENT_SPEED, UUID.fromString("4581f642-6ace-4fe9-9f6d-a830db496e1e"),
+                            "title_phoenix_sovereign_speed", 0.02, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
+            )),
+            Map.entry(Title.DOOMSPEAKER, List.of(
+                    new AttributeModifierSpec(Attribute.ATTACK_DAMAGE, UUID.fromString("1a5ac84e-1062-45fc-8c5f-85989297395a"),
+                            "title_doomspeaker_damage", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.ARMOR_TOUGHNESS, UUID.fromString("664c4dd5-42b9-4320-b6d0-1535044ded04"),
+                            "title_doomspeaker_toughness", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.KNOCKBACK_RESISTANCE, UUID.fromString("5055efcc-d6e6-4419-95d0-1b0893672f84"),
+                            "title_doomspeaker_knockback", 0.05, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.DEEPSTONE_TYRANT, List.of(
+                    new AttributeModifierSpec(Attribute.ARMOR, UUID.fromString("29fcae16-4960-43ef-b9be-7d42689f5f6f"),
+                            "title_deepstone_tyrant_armor", 3.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("38a9dd5e-f204-4cc7-8343-f9f4f27f1b8b"),
+                            "title_deepstone_tyrant_health", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.ATTACK_SPEED, UUID.fromString("f15204b3-5c68-452d-a068-b7f258a1f2b0"),
+                            "title_deepstone_tyrant_speed", 0.04, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
+            )),
+            Map.entry(Title.ARCHITECT_PRIMORDIAL, List.of(
+                    new AttributeModifierSpec(Attribute.ARMOR_TOUGHNESS, UUID.fromString("2489a7be-d9de-4866-b81d-ebccf8ca3e92"),
+                            "title_architect_primordial_toughness", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.MOVEMENT_SPEED, UUID.fromString("0fdf4f35-2595-4509-b406-11bc69a6f242"),
+                            "title_architect_primordial_speed", 0.03, AttributeModifier.Operation.MULTIPLY_SCALAR_1),
+                    new AttributeModifierSpec(Attribute.LUCK, UUID.fromString("09f10999-9c07-4cf6-9e1b-f1e25f8ef80b"),
+                            "title_architect_primordial_luck", 1.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.VEINBREAKER, List.of(
+                    new AttributeModifierSpec(Attribute.LUCK, UUID.fromString("42f16c22-fc26-4d36-b31f-12ff728d4f03"),
+                            "title_veinbreaker_luck", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.ATTACK_DAMAGE, UUID.fromString("e9f0ec91-4ba4-4710-b6de-c9a55fd83a2f"),
+                            "title_veinbreaker_damage", 1.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("b2cfefe4-a8bd-4bbf-bec9-1f1f4d9d8eb3"),
+                            "title_veinbreaker_health", 1.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.VERDANT_MONARCH, List.of(
+                    new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("bf6b95ca-2c39-4fcd-ba52-fc57fd47e909"),
+                            "title_verdant_monarch_health", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.MOVEMENT_SPEED, UUID.fromString("17f18dc5-8441-4a34-b437-f45779fe58b4"),
+                            "title_verdant_monarch_speed", 0.03, AttributeModifier.Operation.MULTIPLY_SCALAR_1),
+                    new AttributeModifierSpec(Attribute.LUCK, UUID.fromString("67a0829f-4700-4d11-87a8-1e3456a5d6db"),
+                            "title_verdant_monarch_luck", 1.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.LEVIATHAN_ANGLER, List.of(
+                    new AttributeModifierSpec(Attribute.LUCK, UUID.fromString("c2005f26-f49a-43ff-9381-4f58f336dfab"),
+                            "title_leviathan_angler_luck", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.KNOCKBACK_RESISTANCE, UUID.fromString("a61d8f36-5a4f-4fca-8bf4-8bd38ed7fa57"),
+                            "title_leviathan_angler_knockback", 0.08, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("98309f4c-86da-43c9-8a5f-c354a47cb642"),
+                            "title_leviathan_angler_health", 1.0, AttributeModifier.Operation.ADD_NUMBER)
+            )),
+            Map.entry(Title.STARBORN_OVERLORD, List.of(
+                    new AttributeModifierSpec(Attribute.ATTACK_DAMAGE, UUID.fromString("d137f5f5-5a70-43a9-ae9c-ea3404f5fc53"),
+                            "title_starborn_overlord_damage", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.ARMOR, UUID.fromString("f7f76f2d-45cb-41f8-a739-14156f9471cb"),
+                            "title_starborn_overlord_armor", 2.0, AttributeModifier.Operation.ADD_NUMBER),
+                    new AttributeModifierSpec(Attribute.MOVEMENT_SPEED, UUID.fromString("d6544448-f90d-4207-a81f-f65fd09b3259"),
+                            "title_starborn_overlord_speed", 0.02, AttributeModifier.Operation.MULTIPLY_SCALAR_1)
+            )),
             Map.entry(Title.GRAVEWARDEN_BANE, List.of(
                     new AttributeModifierSpec(Attribute.MAX_HEALTH, UUID.fromString("e4cbf3c7-4a69-4f6b-8d5a-0ea72df99c2b"),
                             "title_gravewarden_bane_health", 3.0, AttributeModifier.Operation.ADD_NUMBER),
@@ -224,6 +323,20 @@ public class TitleManager {
             Title.ASHEN_ORACLE, BossAura.CINDER_VEIL
     );
     private static final Set<UUID> TITLE_MODIFIER_IDS = collectModifierIds();
+
+    private static final List<LeaderboardTopTitleRule> LEADERBOARD_TOP_TITLE_RULES = List.of(
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.PLAYTIME, Title.ETERNAL_PARAGON),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.PLAYER_KILLS, Title.WARLORD_ASCENDANT),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.MOBS_KILLED, Title.ABYSSAL_REAPER),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.REVIVES, Title.PHOENIX_SOVEREIGN),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.DEATHS, Title.DOOMSPEAKER),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.BLOCKS_MINED, Title.DEEPSTONE_TYRANT),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.BLOCKS_PLACED, Title.ARCHITECT_PRIMORDIAL),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.RARE_ORES_MINED, Title.VEINBREAKER),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.CROPS_HARVESTED, Title.VERDANT_MONARCH),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.FISH_CAUGHT, Title.LEVIATHAN_ANGLER),
+            new LeaderboardTopTitleRule(StatsManager.LeaderboardMetric.ASTEROIDS_LOOTED, Title.STARBORN_OVERLORD)
+    );
 
     private TitleManager() {
     }
@@ -428,6 +541,96 @@ public class TitleManager {
         stats.unlockedTitles.add(Title.WORLD_SCALER);
         StatsManager.markDirty(stats.uuid);
         return true;
+    }
+
+    public static void reconcileLeaderboardTopTitles() {
+        for (LeaderboardTopTitleRule rule : LEADERBOARD_TOP_TITLE_RULES) {
+            reconcileLeaderboardTopTitle(rule);
+        }
+    }
+
+    public static void deliverPendingTitleNotifications(Player player) {
+        if (player == null) {
+            return;
+        }
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        initialize(stats);
+        if (stats.pendingTitleNotifications.isEmpty()) {
+            return;
+        }
+        for (String message : List.copyOf(stats.pendingTitleNotifications)) {
+            player.sendMessage(message);
+        }
+        stats.pendingTitleNotifications.clear();
+        StatsManager.markDirty(player.getUniqueId());
+    }
+
+    private static void reconcileLeaderboardTopTitle(LeaderboardTopTitleRule rule) {
+        UUID winnerUuid = StatsManager.getLeaderboard(rule.metric(), 1).stream()
+                .findFirst()
+                .map(StatsManager.LeaderboardEntry::uuid)
+                .orElse(null);
+
+        for (Map.Entry<UUID, PlayerStats> entry : StatsManager.getAllStatsSnapshot().entrySet()) {
+            UUID uuid = entry.getKey();
+            PlayerStats snapshot = entry.getValue();
+            if (!snapshot.unlockedTitles.contains(rule.title()) || uuid.equals(winnerUuid)) {
+                continue;
+            }
+
+            PlayerStats stats = StatsManager.get(uuid);
+            if (!stats.unlockedTitles.remove(rule.title())) {
+                continue;
+            }
+
+            boolean revertedToWanderer = false;
+            if (stats.equippedTitle == rule.title()) {
+                stats.unlockedTitles.add(DEFAULT_TITLE);
+                stats.equippedTitle = DEFAULT_TITLE;
+                revertedToWanderer = true;
+            }
+
+            Player online = Bukkit.getPlayer(uuid);
+            if (online != null) {
+                applyEquippedTitleEffects(online, stats.equippedTitle);
+                refreshPlayerTabTitle(online);
+            }
+
+            String lossMessage = "§cYou lost §6" + rule.title().displayName() + "§c because you are no longer #1 in "
+                    + rule.metric().displayName() + "§c.";
+            sendOrQueueTitleNotification(uuid, lossMessage);
+            if (revertedToWanderer) {
+                sendOrQueueTitleNotification(uuid, "§7Your title has been reset to §b" + DEFAULT_TITLE.displayName() + "§7.");
+            }
+            StatsManager.markDirty(uuid);
+        }
+
+        if (winnerUuid == null) {
+            return;
+        }
+
+        PlayerStats winnerStats = StatsManager.get(winnerUuid);
+        initialize(winnerStats);
+        if (winnerStats.unlockedTitles.add(rule.title())) {
+            sendOrQueueTitleNotification(winnerUuid, "§6You claimed #1 in " + rule.metric().displayName()
+                    + "§6 and unlocked §e" + rule.title().displayName() + "§6!");
+            StatsManager.markDirty(winnerUuid);
+        }
+    }
+
+    private static void sendOrQueueTitleNotification(UUID uuid, String message) {
+        Player online = Bukkit.getPlayer(uuid);
+        if (online != null) {
+            online.sendMessage(message);
+            return;
+        }
+        PlayerStats stats = StatsManager.get(uuid);
+        initialize(stats);
+        stats.pendingTitleNotifications.add(message);
+        StatsManager.markDirty(uuid);
+    }
+
+    private record LeaderboardTopTitleRule(StatsManager.LeaderboardMetric metric, Title title) {
     }
 
     public static void applyEquippedTitleEffects(Player player, Title title) {
