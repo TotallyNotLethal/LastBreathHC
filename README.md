@@ -339,6 +339,9 @@ Registered command set (non-spectator):
 - `/list`
 - `/nemesis ...`
 
+Player-friendly command guide:
+- Team system guide: `LastBreathHC/docs/player/team-guide.md`
+
 ---
 
 ## 5) Permissions
