@@ -131,6 +131,7 @@ public class AsteroidListener implements Listener {
                 }
 
                 TitleManager.checkProgressTitles(player);
+                AsteroidLootBoxGUI.tryOpen(player);
             }
 
             AsteroidManager.AsteroidEntry asteroidEntry = AsteroidManager.getEntry(asteroidLoc);

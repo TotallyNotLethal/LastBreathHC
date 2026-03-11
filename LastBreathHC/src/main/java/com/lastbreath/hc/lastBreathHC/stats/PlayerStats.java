@@ -24,6 +24,7 @@ public class PlayerStats {
     public int fishCaught;
     public int playerKills;
     public int rareOresMined;
+    public int asteroidLootBoxClaims;
     public String nickname;
     public Set<Title> unlockedTitles = new HashSet<>();
     public Title equippedTitle;

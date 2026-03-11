@@ -159,6 +159,7 @@ public class StatsManager {
             playerStats.fishCaught = config.getInt(base + ".fishCaught", 0);
             playerStats.playerKills = config.getInt(base + ".playerKills", 0);
             playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
+            playerStats.asteroidLootBoxClaims = config.getInt(base + ".asteroidLootBoxClaims", 0);
             playerStats.nickname = config.getString(base + ".nickname");
 
             List<String> unlocked = config.getStringList(base + ".unlockedTitles");
@@ -257,6 +258,7 @@ public class StatsManager {
         config.set(base + ".fishCaught", playerStats.fishCaught);
         config.set(base + ".playerKills", playerStats.playerKills);
         config.set(base + ".rareOresMined", playerStats.rareOresMined);
+        config.set(base + ".asteroidLootBoxClaims", playerStats.asteroidLootBoxClaims);
         config.set(base + ".nickname", playerStats.nickname);
         config.set(base + ".unlockedTitles", playerStats.unlockedTitles.stream()
                 .map(Title::name)
@@ -380,6 +382,7 @@ public class StatsManager {
         playerStats.fishCaught = config.getInt(base + ".fishCaught", 0);
         playerStats.playerKills = config.getInt(base + ".playerKills", 0);
         playerStats.rareOresMined = config.getInt(base + ".rareOresMined", 0);
+        playerStats.asteroidLootBoxClaims = config.getInt(base + ".asteroidLootBoxClaims", 0);
         playerStats.nickname = config.getString(base + ".nickname");
         List<String> unlocked = config.getStringList(base + ".unlockedTitles");
         Set<Title> titles = new HashSet<>();
@@ -459,6 +462,7 @@ public class StatsManager {
         copy.fishCaught = original.fishCaught;
         copy.playerKills = original.playerKills;
         copy.rareOresMined = original.rareOresMined;
+        copy.asteroidLootBoxClaims = original.asteroidLootBoxClaims;
         copy.nickname = original.nickname;
         copy.unlockedTitles = new HashSet<>(original.unlockedTitles);
         copy.equippedTitle = original.equippedTitle;
