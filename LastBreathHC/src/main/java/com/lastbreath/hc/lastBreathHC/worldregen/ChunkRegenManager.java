@@ -279,7 +279,7 @@ public final class ChunkRegenManager {
     }
 
 
-    public SingleChunkResult regenerateCurrentChunk(Player player) {
+    public SingleChunkResult regenerateCurrentChunk(Player player, boolean forceRegenerate) {
         ChunkRegenSettings settings = ChunkRegenSettings.fromConfig(plugin.getConfig());
         if (!settings.enabled()) {
             return new SingleChunkResult("§cworld-regen.enabled is false in config.");
@@ -290,18 +290,20 @@ public final class ChunkRegenManager {
             return new SingleChunkResult("§cCannot regenerate while other players are seeing this chunk.");
         }
 
-        if (settings.detectPlayerBlocks()
-                && playerPlacedBlockIndex.hasPlayerPlacedBlockInChunk(chunk.getWorld().getName(), chunk.getX(), chunk.getZ())) {
-            chunksScanned.incrementAndGet();
-            chunksSkipped.incrementAndGet();
-            return new SingleChunkResult("§eSkipped: player-placed block index marks this chunk as modified.");
-        }
+        if (!forceRegenerate) {
+            if (settings.detectPlayerBlocks()
+                    && playerPlacedBlockIndex.hasPlayerPlacedBlockInChunk(chunk.getWorld().getName(), chunk.getX(), chunk.getZ())) {
+                chunksScanned.incrementAndGet();
+                chunksSkipped.incrementAndGet();
+                return new SingleChunkResult("§eSkipped: player-placed block index marks this chunk as modified. Use /lbhc regen chunk force to override.");
+            }
 
-        ChunkRegenScanner.ScanResult scanResult = new ChunkRegenScanner(chunk).scan(Integer.MAX_VALUE);
-        chunksScanned.incrementAndGet();
-        if (scanResult.state() != ChunkRegenScanner.State.SAFE) {
-            chunksSkipped.incrementAndGet();
-            return new SingleChunkResult("§eSkipped: " + scanResult.reason());
+            ChunkRegenScanner.ScanResult scanResult = new ChunkRegenScanner(chunk).scan(Integer.MAX_VALUE);
+            chunksScanned.incrementAndGet();
+            if (scanResult.state() != ChunkRegenScanner.State.SAFE) {
+                chunksSkipped.incrementAndGet();
+                return new SingleChunkResult("§eSkipped: " + scanResult.reason() + " Use /lbhc regen chunk force to override.");
+            }
         }
 
         backupChunk(chunk);
@@ -312,6 +314,9 @@ public final class ChunkRegenManager {
         }
 
         chunksRegenerated.incrementAndGet();
+        if (forceRegenerate) {
+            return new SingleChunkResult("§aForce regenerated chunk " + chunk.getX() + "," + chunk.getZ() + " and saved backup.");
+        }
         return new SingleChunkResult("§aRegenerated chunk " + chunk.getX() + "," + chunk.getZ() + " and saved backup.");
     }
 
