@@ -83,6 +83,9 @@ import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.titles.WorldScalerDamageListener;
 import com.lastbreath.hc.lastBreathHC.team.TeamChatListener;
 import com.lastbreath.hc.lastBreathHC.team.TeamChatService;
+import com.lastbreath.hc.lastBreathHC.worldregen.ChunkRegenCommand;
+import com.lastbreath.hc.lastBreathHC.worldregen.ChunkRegenManager;
+import com.lastbreath.hc.lastBreathHC.worldregen.ChunkRegenSettings;
 import com.lastbreath.hc.lastBreathHC.team.TeamManager;
 import com.lastbreath.hc.lastBreathHC.team.TeamWaypointManager;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.BukkitTabMenuPlayerSource;
@@ -227,6 +230,7 @@ public final class LastBreathHC extends JavaPlugin {
     private DiscordWebhookService discordWebhookService;
     private ApiClient apiClient;
     private ApiEventListener apiEventListener;
+    private ChunkRegenManager chunkRegenManager;
 
 
     @Override
@@ -257,6 +261,7 @@ public final class LastBreathHC extends JavaPlugin {
         structureFootprintRepository.load();
         playerPlacedBlockIndex = new PlayerPlacedBlockIndex(this, new java.io.File(getDataFolder(), "player-placed-blocks.yml"));
         playerPlacedBlockIndex.load();
+        chunkRegenManager = new ChunkRegenManager(this, playerPlacedBlockIndex);
         StructurePlacementValidator structurePlacementValidator = new StructurePlacementValidator(
                 structureFootprintRepository,
                 new StructurePlacementValidator.NoOpProtectedRegionAdapter(),
@@ -634,6 +639,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("list", new ListCommand(this));
                     event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService, territoryPressureService, structureFootprintRepository, captainHabitatService, dialogueEngine, nemesisAdminWarbandService));
                     event.registrar().register("lbapi", new ApiBulkSyncCommand());
+                    event.registrar().register("lbhc", new ChunkRegenCommand(chunkRegenManager, ChunkRegenSettings.fromConfig(getConfig())));
                 }
         );
     }
@@ -734,6 +740,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (playerPlacedBlockIndex != null) {
             playerPlacedBlockIndex.saveIfDirty();
             playerPlacedBlockIndex = null;
+        }
+        if (chunkRegenManager != null) {
+            chunkRegenManager.shutdown();
+            chunkRegenManager = null;
         }
         structureManager = null;
         structureEventOrchestrator = null;
