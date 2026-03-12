@@ -48,6 +48,9 @@ public final class ChunkRegenCommand implements BasicCommand {
         if (args.length >= 3 && "rollback".equalsIgnoreCase(args[1])) {
             return filter(args[args.length - 1], List.of("radius"));
         }
+        if (args.length >= 3 && "reloadchunk".equalsIgnoreCase(args[1])) {
+            return filter(args[args.length - 1], List.of("force"));
+        }
         return List.of();
     }
 
@@ -86,7 +89,8 @@ public final class ChunkRegenCommand implements BasicCommand {
                 player.sendMessage(result.message());
             }
             case "reloadchunk" -> {
-                ChunkRegenManager.SingleChunkResult result = manager.reloadCurrentChunk(player);
+                boolean force = containsToken(args, "force");
+                ChunkRegenManager.SingleChunkResult result = manager.reloadCurrentChunk(player, force);
                 player.sendMessage(result.message());
             }
             case "rollback" -> handleRollback(player, args);
@@ -181,13 +185,22 @@ public final class ChunkRegenCommand implements BasicCommand {
         return matches;
     }
 
+    private boolean containsToken(String[] args, String token) {
+        for (String arg : args) {
+            if (token.equalsIgnoreCase(arg)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void sendUsage(Player player) {
         player.sendMessage("§cUsage:");
         player.sendMessage("§7/lbhc regen start [radius <blocks>] [aroundop] [unloadedonly]");
         player.sendMessage("§7/lbhc regen stop");
         player.sendMessage("§7/lbhc regen status");
         player.sendMessage("§7/lbhc regen chunk");
-        player.sendMessage("§7/lbhc regen reloadchunk");
+        player.sendMessage("§7/lbhc regen reloadchunk [force]");
         player.sendMessage("§7/lbhc regen rollback [radius <blocks>]");
         player.sendMessage("§7/lbhc regen purge");
     }

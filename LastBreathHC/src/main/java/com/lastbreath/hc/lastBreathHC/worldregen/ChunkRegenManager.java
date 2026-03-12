@@ -239,7 +239,7 @@ public final class ChunkRegenManager {
             } else {
                 if (canRegenerate(chunk)) {
                     backupChunk(chunk);
-                    if (world.regenerateChunk(coord.chunkX(), coord.chunkZ())) {
+                    if (tryRegenerateChunk(world, coord.chunkX(), coord.chunkZ())) {
                         chunksRegenerated.incrementAndGet();
                     } else {
                         chunksSkipped.incrementAndGet();
@@ -305,17 +305,17 @@ public final class ChunkRegenManager {
         }
 
         backupChunk(chunk);
-        boolean success = chunk.getWorld().regenerateChunk(chunk.getX(), chunk.getZ());
+        boolean success = tryRegenerateChunk(chunk.getWorld(), chunk.getX(), chunk.getZ());
         if (!success) {
             chunksSkipped.incrementAndGet();
-            return new SingleChunkResult("§cRegeneration failed for chunk " + chunk.getX() + "," + chunk.getZ() + ".");
+            return new SingleChunkResult("§cRegeneration failed for chunk " + chunk.getX() + "," + chunk.getZ() + ". Server version does not expose chunk regeneration API.");
         }
 
         chunksRegenerated.incrementAndGet();
         return new SingleChunkResult("§aRegenerated chunk " + chunk.getX() + "," + chunk.getZ() + " and saved backup.");
     }
 
-    public SingleChunkResult reloadCurrentChunk(Player player) {
+    public SingleChunkResult reloadCurrentChunk(Player player, boolean forceRegenerate) {
         Chunk chunk = player.getLocation().getChunk();
         if (hasOtherPlayersSeeing(chunk, player.getUniqueId())) {
             return new SingleChunkResult("§cCannot reload while other players are seeing this chunk.");
@@ -323,13 +323,35 @@ public final class ChunkRegenManager {
 
         File backup = latestBackup(chunk.getWorld().getName(), chunk.getX(), chunk.getZ());
         if (backup == null) {
-            return new SingleChunkResult("§eNo backup found for chunk " + chunk.getX() + "," + chunk.getZ() + ".");
+            if (forceRegenerate) {
+                boolean success = tryRegenerateChunk(chunk.getWorld(), chunk.getX(), chunk.getZ());
+                if (success) {
+                    chunksRegenerated.incrementAndGet();
+                    return new SingleChunkResult("§aForce regenerated chunk " + chunk.getX() + "," + chunk.getZ() + " without backup.");
+                }
+                chunksSkipped.incrementAndGet();
+                return new SingleChunkResult("§cNo backup exists and forced regeneration is not available on this server version.");
+            }
+            return new SingleChunkResult("§eNo backup found for chunk " + chunk.getX() + "," + chunk.getZ() + ". Use /lbhc regen reloadchunk force to attempt direct regeneration.");
         }
 
         if (!restoreChunkBackup(backup)) {
             return new SingleChunkResult("§cFailed to reload backup for chunk " + chunk.getX() + "," + chunk.getZ() + ".");
         }
         return new SingleChunkResult("§aReloaded chunk " + chunk.getX() + "," + chunk.getZ() + " from backup.");
+    }
+
+
+    private boolean tryRegenerateChunk(World world, int chunkX, int chunkZ) {
+        try {
+            return world.regenerateChunk(chunkX, chunkZ);
+        } catch (UnsupportedOperationException ex) {
+            plugin.getLogger().warning("[WorldRegen] Chunk regeneration is unsupported by this server version/API.");
+            return false;
+        } catch (Exception ex) {
+            plugin.getLogger().warning("[WorldRegen] Failed to regenerate chunk " + chunkX + "," + chunkZ + ": " + ex.getMessage());
+            return false;
+        }
     }
 
     private boolean canRegenerate(Chunk chunk) {
