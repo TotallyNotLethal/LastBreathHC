@@ -93,15 +93,22 @@ public class AsteroidCommand implements BasicCommand {
                 return;
             }
 
-            if (stats.asteroidLootBoxClaims > 0) {
-                stats.asteroidLootBoxClaims--;
+            int accountedBoxes = Math.max(stats.asteroidLootBoxClaims, 0);
+            int missingBoxes = earnedBoxes - accountedBoxes;
+            if (missingBoxes <= 0) {
+                sender.sendMessage("§e" + target.getName() + " already has all eligible asteroid loot boxes accounted for.");
+                return;
             }
+
+            stats.asteroidLootBoxClaims = Math.max(0, stats.asteroidLootBoxClaims - missingBoxes);
             StatsManager.markDirty(target.getUniqueId());
             AsteroidLootBoxGUI.tryOpen(target);
 
-            sender.sendMessage("§aGranted one asteroid loot box claim to " + target.getName() + ".");
+            sender.sendMessage("§aGranted " + missingBoxes + " asteroid loot box claim"
+                    + (missingBoxes == 1 ? "" : "s") + " to " + target.getName() + ".");
             if (!sender.equals(target)) {
-                target.sendMessage("§d§lLoot Box §7» §fAn admin granted you an asteroid loot box claim.");
+                target.sendMessage("§d§lLoot Box §7» §fAn admin granted you " + missingBoxes
+                        + " asteroid loot box claim" + (missingBoxes == 1 ? "" : "s") + ".");
             }
             return;
         }
