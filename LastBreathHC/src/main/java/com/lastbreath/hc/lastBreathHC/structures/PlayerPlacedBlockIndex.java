@@ -88,6 +88,25 @@ public final class PlayerPlacedBlockIndex implements Listener {
                 .contains(pack(block.getX(), block.getY(), block.getZ()));
     }
 
+    public boolean hasPlayerPlacedBlockInChunk(String worldName, int chunkX, int chunkZ) {
+        Set<Long> values = coordinatesByWorld.get(worldName);
+        if (values == null || values.isEmpty()) {
+            return false;
+        }
+        int minX = chunkX << 4;
+        int maxX = minX + 15;
+        int minZ = chunkZ << 4;
+        int maxZ = minZ + 15;
+        for (long packed : values) {
+            int x = unpackX(packed);
+            int z = unpackZ(packed);
+            if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         Block block = event.getBlockPlaced();
@@ -115,5 +134,13 @@ public final class PlayerPlacedBlockIndex implements Listener {
         long lz = ((long) z & 0x3FFFFFFL) << 12;
         long ly = ((long) y & 0xFFFL);
         return lx | lz | ly;
+    }
+
+    private int unpackX(long packed) {
+        return (int) (packed >> 38);
+    }
+
+    private int unpackZ(long packed) {
+        return (int) ((packed << 26) >> 38);
     }
 }

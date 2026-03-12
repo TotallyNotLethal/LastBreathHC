@@ -26,3 +26,6 @@ permissions:
   lastbreathhc.nemesis.admin:
     description: Allows admin nemesis command usage.
     default: op
+  lastbreathhc.worldregen.admin:
+    description: Allows use of /lbhc regen world regeneration admin commands.
+    default: op

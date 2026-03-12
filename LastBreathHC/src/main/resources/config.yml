@@ -1744,3 +1744,11 @@ lastBreathApi:
   baseUrl: "https://www.lastbreath.net"
   apiKey: "LASTBREATH_PLUGIN_TEST_KEY_CHANGE_ME"
   statsIntervalTicks: 1200
+
+world-regen:
+  enabled: false
+  chunks-per-tick: 4
+  scan-blocks-per-tick: 5000
+  skip-loaded: true
+  scan-radius: 20000
+  detect-player-blocks: true
