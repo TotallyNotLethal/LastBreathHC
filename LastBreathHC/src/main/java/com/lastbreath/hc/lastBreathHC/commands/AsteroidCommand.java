@@ -1,9 +1,13 @@
 package com.lastbreath.hc.lastBreathHC.commands;
 
 import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
+import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidLootBoxGUI;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
+import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
@@ -20,15 +24,19 @@ public class AsteroidCommand implements BasicCommand {
         }
 
         if (args.length == 0) {
-            return List.of("<x>", "<z>", "clear-mobs", "cleanup", "stop");
+            return List.of("<x>", "<z>", "lootbox", "clear-mobs", "cleanup", "stop");
         }
 
         if (args.length == 1) {
-            return List.of("clear-mobs", "cleanup", "stop");
+            return List.of("lootbox", "clear-mobs", "cleanup", "stop");
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("cleanup")) {
             return List.of("stop");
+        }
+
+        if (args.length == 2 && args[0].equalsIgnoreCase("lootbox")) {
+            return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
         }
 
         return List.of();
@@ -71,6 +79,33 @@ public class AsteroidCommand implements BasicCommand {
             return;
         }
 
+        if (args.length == 2 && args[0].equalsIgnoreCase("lootbox")) {
+            Player target = Bukkit.getPlayerExact(args[1]);
+            if (target == null) {
+                sender.sendMessage("§cPlayer not found or not online: " + args[1]);
+                return;
+            }
+
+            PlayerStats stats = StatsManager.get(target.getUniqueId());
+            int earnedBoxes = stats.asteroidLoots / 100;
+            if (earnedBoxes <= 0) {
+                sender.sendMessage("§c" + target.getName() + " has not looted 100 asteroids yet.");
+                return;
+            }
+
+            if (stats.asteroidLootBoxClaims > 0) {
+                stats.asteroidLootBoxClaims--;
+            }
+            StatsManager.markDirty(target.getUniqueId());
+            AsteroidLootBoxGUI.tryOpen(target);
+
+            sender.sendMessage("§aGranted one asteroid loot box claim to " + target.getName() + ".");
+            if (!sender.equals(target)) {
+                target.sendMessage("§d§lLoot Box §7» §fAn admin granted you an asteroid loot box claim.");
+            }
+            return;
+        }
+
         if (args.length == 2) {
             int blockX;
             int blockZ;
@@ -78,7 +113,7 @@ public class AsteroidCommand implements BasicCommand {
                 blockX = Integer.parseInt(args[0]);
                 blockZ = Integer.parseInt(args[1]);
             } catch (Exception e) {
-                sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs|cleanup|stop]");
+                sender.sendMessage("§cUsage: /asteroid [x z|lootbox <player>|clear-mobs|cleanup|stop]");
                 return;
             }
             World world = (sender instanceof Player player) ? player.getWorld() : plugin.resolveAsteroidCommandWorld(sender);
@@ -114,7 +149,7 @@ public class AsteroidCommand implements BasicCommand {
         }
 
         if (args.length != 0) {
-            sender.sendMessage("§cUsage: /asteroid [x z|clear-mobs|cleanup|stop]");
+            sender.sendMessage("§cUsage: /asteroid [x z|lootbox <player>|clear-mobs|cleanup|stop]");
             return;
         }
 
