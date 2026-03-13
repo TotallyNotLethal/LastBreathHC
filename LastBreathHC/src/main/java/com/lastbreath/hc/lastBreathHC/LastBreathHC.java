@@ -21,6 +21,10 @@ import com.lastbreath.hc.lastBreathHC.daily.DailyRewardManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadTrackingLogger;
+import com.lastbreath.hc.lastBreathHC.holiday.HolidayEventManager;
+import com.lastbreath.hc.lastBreathHC.holiday.HolidayEventConfig;
+import com.lastbreath.hc.lastBreathHC.holiday.HolidayGameplayManager;
+import com.lastbreath.hc.lastBreathHC.holiday.HolidayJoinListener;
 import com.lastbreath.hc.lastBreathHC.gui.CosmeticsGUI;
 import com.lastbreath.hc.lastBreathHC.gui.DailyRewardGUI;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
@@ -231,6 +235,8 @@ public final class LastBreathHC extends JavaPlugin {
     private ApiClient apiClient;
     private ApiEventListener apiEventListener;
     private ChunkRegenManager chunkRegenManager;
+    private HolidayEventManager holidayEventManager;
+    private HolidayGameplayManager holidayGameplayManager;
 
 
     @Override
@@ -257,6 +263,9 @@ public final class LastBreathHC extends JavaPlugin {
                 fakePlayersSettings
         );
         fakePlayerService.startup();
+        holidayEventManager = new HolidayEventManager();
+        HolidayEventConfig holidayEventConfig = HolidayEventConfig.load(this);
+        holidayGameplayManager = new HolidayGameplayManager(this, holidayEventManager, holidayEventConfig);
         structureFootprintRepository = new StructureFootprintRepository(this, new java.io.File(getDataFolder(), "nemesis-structures.yml"));
         structureFootprintRepository.load();
         playerPlacedBlockIndex = new PlayerPlacedBlockIndex(this, new java.io.File(getDataFolder(), "player-placed-blocks.yml"));
@@ -581,6 +590,12 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new FakePlayerTabSyncListener(this, fakePlayerService), this
         );
+        getServer().getPluginManager().registerEvents(
+                new HolidayJoinListener(holidayEventManager), this
+        );
+        getServer().getPluginManager().registerEvents(
+                holidayGameplayManager, this
+        );
         worldBossManager = new WorldBossManager(this, bloodMoonManager);
         getServer().getPluginManager().registerEvents(
                 worldBossManager, this
@@ -614,6 +629,7 @@ public final class LastBreathHC extends JavaPlugin {
         worldBossManager.start();
         mobStackManager.start();
         dailyCosmeticListener.start();
+        holidayGameplayManager.start();
 
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS,
@@ -640,6 +656,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("nemesis", new NemesisCommands(captainRegistry, captainSpawner, nemesisCaptainListGUI, killerResolver, minionController, captainTraitRegistry, armyGraphService, territoryPressureService, structureFootprintRepository, captainHabitatService, dialogueEngine, nemesisAdminWarbandService));
                     event.registrar().register("lbapi", new ApiBulkSyncCommand());
                     event.registrar().register("lbhc", new ChunkRegenCommand(chunkRegenManager, ChunkRegenSettings.fromConfig(getConfig())));
+                    event.registrar().register("holiday", new HolidayCommand(holidayEventManager, holidayGameplayManager));
                 }
         );
     }
@@ -689,6 +706,10 @@ public final class LastBreathHC extends JavaPlugin {
         if (apiStatsTask != null) {
             apiStatsTask.cancel();
             apiStatsTask = null;
+        }
+        if (holidayGameplayManager != null) {
+            holidayGameplayManager.stop();
+            holidayGameplayManager = null;
         }
         if (cosmeticAuraService != null) {
             cosmeticAuraService.stop();
