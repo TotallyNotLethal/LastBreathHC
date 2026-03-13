@@ -17,12 +17,17 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.WorldCreator;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.stream.Stream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -48,6 +53,7 @@ public final class ChunkRegenManager {
     private BukkitTask tickTask;
     private BukkitTask producerTask;
     private volatile RegenRunOptions activeOptions;
+    private final Map<String, RegenTemplateWorld> regenTemplateWorlds = new HashMap<>();
 
     private final AtomicLong chunksScanned = new AtomicLong();
     private final AtomicLong chunksSkipped = new AtomicLong();
@@ -60,6 +66,7 @@ public final class ChunkRegenManager {
     }
 
     public void shutdown() {
+        shutdownTemplateWorlds();
         stop();
     }
 
@@ -104,6 +111,7 @@ public final class ChunkRegenManager {
         }
         pendingChunks.clear();
         activeScans.clear();
+        shutdownTemplateWorlds();
         plugin.getLogger().info("[WorldRegen] Stopped.");
     }
 
@@ -351,11 +359,168 @@ public final class ChunkRegenManager {
         try {
             return world.regenerateChunk(chunkX, chunkZ);
         } catch (UnsupportedOperationException ex) {
-            plugin.getLogger().warning("[WorldRegen] Chunk regeneration is unsupported by this server version/API.");
-            return false;
+            plugin.getLogger().warning("[WorldRegen] Native chunk regeneration is unsupported by this server version/API. Falling back to template world regeneration.");
+            return tryTemplateWorldRegeneration(world, chunkX, chunkZ);
         } catch (Exception ex) {
             plugin.getLogger().warning("[WorldRegen] Failed to regenerate chunk " + chunkX + "," + chunkZ + ": " + ex.getMessage());
+            return tryTemplateWorldRegeneration(world, chunkX, chunkZ);
+        }
+    }
+
+    private boolean tryTemplateWorldRegeneration(World world, int chunkX, int chunkZ) {
+        RegenTemplateWorld template = regenTemplateWorlds.computeIfAbsent(world.getName(), key -> createTemplateWorld(world));
+        if (template == null || template.world() == null) {
             return false;
+        }
+
+        World templateWorld = template.world();
+        try {
+            Chunk sourceChunk = templateWorld.getChunkAt(chunkX, chunkZ);
+            Chunk targetChunk = world.getChunkAt(chunkX, chunkZ);
+
+            removeNonPlayerEntities(targetChunk);
+            copyChunkBlocks(sourceChunk, targetChunk);
+            return true;
+        } catch (Exception ex) {
+            plugin.getLogger().warning("[WorldRegen] Template regeneration failed for chunk " + chunkX + "," + chunkZ + ": " + ex.getMessage());
+            return false;
+        }
+    }
+
+    private RegenTemplateWorld createTemplateWorld(World source) {
+        String sourceName = source.getName().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_-]", "_");
+        String tempWorldName = "lbhc_regen_" + sourceName + "_" + UUID.randomUUID().toString().substring(0, 8);
+        Path templateWorldFolder = Bukkit.getWorldContainer().toPath().resolve(tempWorldName);
+        try {
+            bootstrapTemplateWorldFolder(source, templateWorldFolder);
+
+            WorldCreator creator = new WorldCreator(tempWorldName)
+                    .environment(source.getEnvironment())
+                    .type(source.getWorldType());
+
+            if (source.getGenerator() != null) {
+                creator.generator(source.getGenerator());
+            }
+
+            World templateWorld = creator.createWorld();
+            if (templateWorld == null) {
+                plugin.getLogger().warning("[WorldRegen] Failed to create template world " + tempWorldName + ".");
+                return null;
+            }
+
+            templateWorld.setAutoSave(false);
+            Path folderPath = templateWorld.getWorldFolder().toPath();
+            plugin.getLogger().info("[WorldRegen] Created regeneration template world " + templateWorld.getName() + " for source world " + source.getName() + " using copied world metadata.");
+            return new RegenTemplateWorld(templateWorld, folderPath);
+        } catch (Exception ex) {
+            plugin.getLogger().warning("[WorldRegen] Failed to initialize template world for " + source.getName() + ": " + ex.getMessage());
+            deleteDirectory(templateWorldFolder);
+            return null;
+        }
+    }
+
+    private void bootstrapTemplateWorldFolder(World source, Path templateWorldFolder) throws IOException {
+        Path sourceWorldFolder = source.getWorldFolder().toPath();
+        Files.createDirectories(templateWorldFolder);
+
+        copyFileIfExists(sourceWorldFolder.resolve("level.dat"), templateWorldFolder.resolve("level.dat"));
+        copyFileIfExists(sourceWorldFolder.resolve("level.dat_old"), templateWorldFolder.resolve("level.dat_old"));
+        copyDirectoryIfExists(sourceWorldFolder.resolve("datapacks"), templateWorldFolder.resolve("datapacks"));
+    }
+
+    private void copyFileIfExists(Path source, Path target) throws IOException {
+        if (Files.exists(source)) {
+            Files.createDirectories(target.getParent());
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+        }
+    }
+
+    private void copyDirectoryIfExists(Path source, Path target) throws IOException {
+        if (Files.notExists(source)) {
+            return;
+        }
+
+        try (Stream<Path> walk = Files.walk(source)) {
+            walk.forEach(path -> {
+                Path relative = source.relativize(path);
+                Path destination = target.resolve(relative);
+                try {
+                    if (Files.isDirectory(path)) {
+                        Files.createDirectories(destination);
+                    } else {
+                        Files.createDirectories(destination.getParent());
+                        Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.COPY_ATTRIBUTES);
+                    }
+                } catch (IOException ex) {
+                    throw new IllegalStateException("Failed to copy template world metadata path " + path, ex);
+                }
+            });
+        } catch (IllegalStateException ex) {
+            if (ex.getCause() instanceof IOException ioException) {
+                throw ioException;
+            }
+            throw ex;
+        }
+    }
+
+    private void copyChunkBlocks(Chunk sourceChunk, Chunk targetChunk) {
+        int minY = sourceChunk.getWorld().getMinHeight();
+        int maxY = sourceChunk.getWorld().getMaxHeight() - 1;
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                for (int y = minY; y <= maxY; y++) {
+                    Block sourceBlock = sourceChunk.getBlock(x, y, z);
+                    Block targetBlock = targetChunk.getBlock(x, y, z);
+                    targetBlock.setBlockData(sourceBlock.getBlockData(), false);
+                }
+            }
+        }
+    }
+
+    private void removeNonPlayerEntities(Chunk chunk) {
+        for (Entity entity : chunk.getEntities()) {
+            if (entity instanceof Player) {
+                continue;
+            }
+            entity.remove();
+        }
+    }
+
+    private void shutdownTemplateWorlds() {
+        if (regenTemplateWorlds.isEmpty()) {
+            return;
+        }
+
+        for (RegenTemplateWorld template : new ArrayList<>(regenTemplateWorlds.values())) {
+            World templateWorld = template.world();
+            if (templateWorld != null) {
+                try {
+                    Bukkit.unloadWorld(templateWorld, false);
+                } catch (Exception ex) {
+                    plugin.getLogger().warning("[WorldRegen] Failed to unload template world " + templateWorld.getName() + ": " + ex.getMessage());
+                }
+            }
+            deleteDirectory(template.folderPath());
+        }
+        regenTemplateWorlds.clear();
+    }
+
+    private void deleteDirectory(Path directory) {
+        if (directory == null || Files.notExists(directory)) {
+            return;
+        }
+        try {
+            Files.walk(directory)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach(path -> {
+                        try {
+                            Files.deleteIfExists(path);
+                        } catch (IOException ex) {
+                            plugin.getLogger().warning("[WorldRegen] Failed to delete " + path + ": " + ex.getMessage());
+                        }
+                    });
+        } catch (IOException ex) {
+            plugin.getLogger().warning("[WorldRegen] Failed to cleanup template world directory " + directory + ": " + ex.getMessage());
         }
     }
 
@@ -574,6 +739,8 @@ public final class ChunkRegenManager {
     public record ChunkCoord(String worldName, int chunkX, int chunkZ) {}
 
     public record RegenRunOptions(World world, int centerX, int centerZ, int radiusBlocks, boolean unloadedOnly) {}
+
+    public record RegenTemplateWorld(World world, Path folderPath) {}
 
     public record RegenStatus(
             boolean running,
