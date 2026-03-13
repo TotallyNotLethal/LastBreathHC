@@ -135,7 +135,11 @@ public final class ChunkRegenCommand implements BasicCommand {
         World world = player.getWorld();
 
         if (aroundOp) {
-            Player opTarget = Bukkit.getOnlinePlayers().stream().filter(Player::isOp).findFirst().orElse(player);
+            Player opTarget = Bukkit.getOnlinePlayers().stream()
+                    .filter(Player::isOp)
+                    .map(Player.class::cast)
+                    .findFirst()
+                    .orElse(player);
             center = opTarget.getLocation();
             world = opTarget.getWorld();
         }

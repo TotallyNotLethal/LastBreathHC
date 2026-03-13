@@ -576,9 +576,6 @@ public final class ChunkRegenManager {
                     stateMap.put("z", z);
                     stateMap.put("blockData", block.getBlockData().getAsString());
                     BlockState state = block.getState(false);
-                    if (state != null) {
-                        stateMap.put("state", state.serialize());
-                    }
                     if (block.getState(false) instanceof Container container) {
                         stateMap.put("inventory", container.getInventory().getContents());
                     }
@@ -669,13 +666,19 @@ public final class ChunkRegenManager {
         }
 
         List<Map<?, ?>> blocks = yaml.getMapList("blocks");
+
         for (Map<?, ?> raw : blocks) {
-            int x = ((Number) raw.getOrDefault("x", 0)).intValue();
-            int y = ((Number) raw.getOrDefault("y", minY)).intValue();
-            int z = ((Number) raw.getOrDefault("z", 0)).intValue();
-            String blockData = Objects.toString(raw.get("blockData"), "minecraft:air");
+
+            int x = raw.containsKey("x") ? ((Number) raw.get("x")).intValue() : 0;
+            int y = raw.containsKey("y") ? ((Number) raw.get("y")).intValue() : minY;
+            int z = raw.containsKey("z") ? ((Number) raw.get("z")).intValue() : 0;
+
+            String blockData = raw.containsKey("blockData")
+                    ? raw.get("blockData").toString()
+                    : "minecraft:air";
 
             Block block = chunk.getBlock(x, y, z);
+
             try {
                 block.setBlockData(Bukkit.createBlockData(blockData), false);
             } catch (IllegalArgumentException ignored) {
@@ -683,10 +686,14 @@ public final class ChunkRegenManager {
             }
 
             Object inventoryObj = raw.get("inventory");
-            if (inventoryObj instanceof ItemStack[] inventory && block.getState(false) instanceof Container container) {
+
+            if (inventoryObj instanceof ItemStack[] inventory
+                    && block.getState(false) instanceof Container container) {
+
                 container.getInventory().setContents(inventory);
                 container.update(true, false);
             }
+
             BlockState blockState = block.getState(false);
             if (blockState != null) {
                 blockState.update(true, false);
@@ -700,25 +707,48 @@ public final class ChunkRegenManager {
         }
 
         List<Map<?, ?>> entities = yaml.getMapList("entities");
+
         for (Map<?, ?> raw : entities) {
-            EntityType type = EntityType.valueOf(Objects.toString(raw.get("type"), "ARMOR_STAND").toUpperCase(Locale.ROOT));
-            Location location = new Location(
-                    world,
-                    ((Number) raw.getOrDefault("x", 0.0D)).doubleValue(),
-                    ((Number) raw.getOrDefault("y", 64.0D)).doubleValue(),
-                    ((Number) raw.getOrDefault("z", 0.0D)).doubleValue(),
-                    ((Number) raw.getOrDefault("yaw", 0.0F)).floatValue(),
-                    ((Number) raw.getOrDefault("pitch", 0.0F)).floatValue()
-            );
+
+            String typeName = raw.containsKey("type")
+                    ? raw.get("type").toString()
+                    : "ARMOR_STAND";
+
+            EntityType type = EntityType.valueOf(typeName.toUpperCase(Locale.ROOT));
+
+            double x = raw.containsKey("x")
+                    ? ((Number) raw.get("x")).doubleValue()
+                    : 0.0D;
+
+            double y = raw.containsKey("y")
+                    ? ((Number) raw.get("y")).doubleValue()
+                    : 64.0D;
+
+            double z = raw.containsKey("z")
+                    ? ((Number) raw.get("z")).doubleValue()
+                    : 0.0D;
+
+            float yaw = raw.containsKey("yaw")
+                    ? ((Number) raw.get("yaw")).floatValue()
+                    : 0.0F;
+
+            float pitch = raw.containsKey("pitch")
+                    ? ((Number) raw.get("pitch")).floatValue()
+                    : 0.0F;
+
+            Location location = new Location(world, x, y, z, yaw, pitch);
 
             Entity restored = world.spawnEntity(location, type);
+
             if (restored instanceof ArmorStand armorStand) {
-                armorStand.setCustomName((String) raw.getOrDefault("customName", null));
+
+                armorStand.setCustomName((String) raw.get("customName"));
                 armorStand.setVisible(Boolean.TRUE.equals(raw.get("visible")));
                 armorStand.setArms(Boolean.TRUE.equals(raw.get("arms")));
                 armorStand.setBasePlate(Boolean.TRUE.equals(raw.get("basePlate")));
                 armorStand.setSmall(Boolean.TRUE.equals(raw.get("small")));
                 armorStand.setMarker(Boolean.TRUE.equals(raw.get("marker")));
+
                 if (armorStand.getEquipment() != null) {
                     armorStand.getEquipment().setHelmet((ItemStack) raw.get("helmet"));
                     armorStand.getEquipment().setChestplate((ItemStack) raw.get("chestplate"));
