@@ -27,4 +27,8 @@ public interface WorldBossController {
     void rebuildFromPersistent();
 
     void onArenaEmpty();
+
+    default String getPhaseDisplayName() {
+        return null;
+    }
 }

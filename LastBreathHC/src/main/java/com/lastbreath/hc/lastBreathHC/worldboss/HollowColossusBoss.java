@@ -103,6 +103,19 @@ public class HollowColossusBoss extends BaseWorldBossController {
         }
     }
 
+
+    @Override
+    public String getPhaseDisplayName() {
+        String phase = getPhase(PHASE_CLOSED);
+        if (PHASE_EXPOSED.equals(phase)) {
+            return "Exposed";
+        }
+        if (PHASE_RAMPAGING.equals(phase)) {
+            return "Rampaging";
+        }
+        return "Closed";
+    }
+
     @Override
     public void cleanup() {
         // no persistent blocks to clear for this boss

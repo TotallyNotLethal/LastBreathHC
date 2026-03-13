@@ -136,6 +136,19 @@ public class StormHeraldBoss extends BaseWorldBossController {
         return anchors.contains(block.getLocation());
     }
 
+
+    @Override
+    public String getPhaseDisplayName() {
+        String phase = getPhase(PHASE_SHIELDED);
+        if (PHASE_SHIELDED.equals(phase)) {
+            return "Shielded";
+        }
+        if (PHASE_TEMPEST.equals(phase)) {
+            return "Tempest";
+        }
+        return "Stormcaller";
+    }
+
     @Override
     public void cleanup() {
         for (Location location : anchors) {

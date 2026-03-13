@@ -152,6 +152,19 @@ public class GravewardenBoss extends BaseWorldBossController {
         return gravestones.contains(block.getLocation());
     }
 
+
+    @Override
+    public String getPhaseDisplayName() {
+        String phase = getPhase(PHASE_SHIELDED);
+        if (PHASE_SHIELDED.equals(phase)) {
+            return "Shielded";
+        }
+        if (PHASE_REVENANT.equals(phase)) {
+            return "Revenant";
+        }
+        return "Unsealed";
+    }
+
     @Override
     public void cleanup() {
         for (Location location : gravestones) {
