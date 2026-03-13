@@ -14,6 +14,11 @@ public class WorldScalerDamageListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
+        applyWorldScalerOutgoingDamage(event);
+        applyWorldScalerIncomingDamage(event);
+    }
+
+    private void applyWorldScalerOutgoingDamage(EntityDamageByEntityEvent event) {
         Player attacker = resolvePlayerAttacker(event.getDamager());
         if (attacker == null || !TitleManager.isWorldScalerEnabled(attacker)) {
             return;
@@ -30,6 +35,27 @@ public class WorldScalerDamageListener implements Listener {
         event.setDamage(event.getDamage() * scalingMultiplier);
     }
 
+    private void applyWorldScalerIncomingDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        if (!TitleManager.isWorldScalerEnabled(player)) {
+            return;
+        }
+
+        LivingEntity attacker = resolveLivingAttacker(event.getDamager());
+        if (attacker == null) {
+            return;
+        }
+
+        double damageMultiplier = MobScalingData.getDamageScalingMultiplier(attacker);
+        if (damageMultiplier <= 1.0) {
+            return;
+        }
+
+        event.setDamage(event.getDamage() / damageMultiplier);
+    }
+
     private Player resolvePlayerAttacker(Entity damager) {
         if (damager instanceof Player player) {
             return player;
@@ -38,6 +64,19 @@ public class WorldScalerDamageListener implements Listener {
             ProjectileSource shooter = projectile.getShooter();
             if (shooter instanceof Player player) {
                 return player;
+            }
+        }
+        return null;
+    }
+
+    private LivingEntity resolveLivingAttacker(Entity damager) {
+        if (damager instanceof LivingEntity livingEntity) {
+            return livingEntity;
+        }
+        if (damager instanceof Projectile projectile) {
+            ProjectileSource shooter = projectile.getShooter();
+            if (shooter instanceof LivingEntity livingEntity) {
+                return livingEntity;
             }
         }
         return null;
