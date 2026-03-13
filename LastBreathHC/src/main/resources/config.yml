@@ -1746,7 +1746,7 @@ lastBreathApi:
   statsIntervalTicks: 1200
 
 world-regen:
-  enabled: false
+  enabled: true
   chunks-per-tick: 4
   scan-blocks-per-tick: 5000
   skip-loaded: true
