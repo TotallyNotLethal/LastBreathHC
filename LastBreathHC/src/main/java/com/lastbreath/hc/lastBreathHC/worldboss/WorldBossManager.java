@@ -25,6 +25,9 @@ import org.bukkit.WorldType;
 import org.bukkit.GameRule;
 import org.bukkit.block.Block;
 import org.bukkit.block.Biome;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -91,6 +94,8 @@ public class WorldBossManager implements Listener {
     private final NamespacedKey returnLocationKey;
     private final Map<TriggerType, Map<UUID, Long>> lastTriggerTimes = new EnumMap<>(TriggerType.class);
     private final Map<UUID, WorldBossController> activeBosses = new HashMap<>();
+    private final Map<UUID, BossBar> bossHealthBars = new HashMap<>();
+    private final Map<UUID, BossBar> bossPhaseBars = new HashMap<>();
     private final WorldBossAntiCheese antiCheese;
     private BukkitTask randomSpawnTask;
     private BukkitTask bloodMoonCheckTask;
@@ -186,8 +191,12 @@ public class WorldBossManager implements Listener {
         for (WorldBossController controller : activeBosses.values()) {
             controller.cleanup();
             antiCheese.clear(controller.getBoss());
+            if (controller.getBoss() != null) {
+                removeBossBars(controller.getBoss().getUniqueId());
+            }
         }
         activeBosses.clear();
+        removeAllBossBars();
         removeAllPortals();
         portalCooldowns.clear();
     }
@@ -221,8 +230,12 @@ public class WorldBossManager implements Listener {
             }
             controller.cleanup();
             antiCheese.clear(controller.getBoss());
+            if (controller.getBoss() != null) {
+                removeBossBars(controller.getBoss().getUniqueId());
+            }
         }
         activeBosses.clear();
+        removeAllBossBars();
         removeAllPortals();
     }
 
@@ -401,6 +414,8 @@ public class WorldBossManager implements Listener {
             if (controller != null) {
                 controller.rebuildFromPersistent();
                 activeBosses.put(living.getUniqueId(), controller);
+                createBossBars(controller);
+                updateBossBars(controller);
             }
         }
 
@@ -507,6 +522,7 @@ public class WorldBossManager implements Listener {
         if (controller != null) {
             controller.cleanup();
             antiCheese.clear(event.getEntity());
+            removeBossBars(event.getEntity().getUniqueId());
             bossDefeated = true;
             WorldBossType type = getBossType(event.getEntity());
             Player killer = event.getEntity().getKiller();
@@ -779,10 +795,15 @@ public class WorldBossManager implements Listener {
                     LivingEntity boss = controller.getBoss();
                     if (boss == null || boss.isDead() || !boss.isValid()) {
                         controller.cleanup();
+                        if (boss != null) {
+                            removeBossBars(boss.getUniqueId());
+                        }
                         return true;
                     }
                     controller.tick();
+                    updateBossBars(controller);
                     if (antiCheese.tick(controller)) {
+                        removeBossBars(boss.getUniqueId());
                         return true;
                     }
                     return false;
@@ -900,6 +921,8 @@ public class WorldBossManager implements Listener {
         if (controller != null) {
             controller.rebuildFromPersistent();
             activeBosses.put(bossEntity.getUniqueId(), controller);
+            createBossBars(controller);
+            updateBossBars(controller);
         }
 
         if (settings.despawnTimeoutSeconds > 0) {
@@ -908,12 +931,111 @@ public class WorldBossManager implements Listener {
                 if (!bossEntity.isDead() && bossEntity.isValid()) {
                     bossEntity.remove();
                 }
+                removeBossBars(bossEntity.getUniqueId());
             }, timeoutTicks);
         }
 
         Bukkit.broadcastMessage("⚔ " + bossType.getConfigKey() + " rises from the shadows!");
         broadcastSpawnBiome(sourceWorld, base);
         return true;
+    }
+
+
+    private void createBossBars(WorldBossController controller) {
+        LivingEntity boss = controller.getBoss();
+        if (boss == null) {
+            return;
+        }
+        UUID bossId = boss.getUniqueId();
+        removeBossBars(bossId);
+
+        BossBar healthBar = Bukkit.createBossBar(
+                "§c" + controller.getType().getConfigKey(),
+                BarColor.RED,
+                BarStyle.SOLID
+        );
+        healthBar.setVisible(true);
+
+        BossBar phaseBar = Bukkit.createBossBar(
+                "§ePhase: " + resolvePhaseLabel(controller),
+                BarColor.YELLOW,
+                BarStyle.SOLID
+        );
+        phaseBar.setVisible(true);
+        phaseBar.setProgress(1.0);
+
+        bossHealthBars.put(bossId, healthBar);
+        bossPhaseBars.put(bossId, phaseBar);
+        updateBossBars(controller);
+    }
+
+    private void updateBossBars(WorldBossController controller) {
+        LivingEntity boss = controller.getBoss();
+        if (boss == null) {
+            return;
+        }
+        UUID bossId = boss.getUniqueId();
+        BossBar healthBar = bossHealthBars.get(bossId);
+        BossBar phaseBar = bossPhaseBars.get(bossId);
+        if (healthBar == null || phaseBar == null) {
+            return;
+        }
+
+        Set<Player> players = new HashSet<>(boss.getWorld().getPlayers());
+        for (Player player : players) {
+            if (!healthBar.getPlayers().contains(player)) {
+                healthBar.addPlayer(player);
+            }
+            if (!phaseBar.getPlayers().contains(player)) {
+                phaseBar.addPlayer(player);
+            }
+        }
+        for (Player player : new HashSet<>(healthBar.getPlayers())) {
+            if (!players.contains(player)) {
+                healthBar.removePlayer(player);
+            }
+        }
+        for (Player player : new HashSet<>(phaseBar.getPlayers())) {
+            if (!players.contains(player)) {
+                phaseBar.removePlayer(player);
+            }
+        }
+
+        double maxHealth = boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH) != null
+                ? boss.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue()
+                : boss.getHealth();
+        double progress = maxHealth <= 0.0 ? 0.0 : boss.getHealth() / maxHealth;
+        healthBar.setTitle("§c" + controller.getType().getConfigKey());
+        healthBar.setProgress(Math.max(0.0, Math.min(1.0, progress)));
+
+        phaseBar.setTitle("§ePhase: " + resolvePhaseLabel(controller));
+        phaseBar.setProgress(1.0);
+    }
+
+    private String resolvePhaseLabel(WorldBossController controller) {
+        String phase = controller.getPhaseDisplayName();
+        return phase == null || phase.isBlank() ? "Unknown" : phase;
+    }
+
+    private void removeBossBars(UUID bossId) {
+        BossBar healthBar = bossHealthBars.remove(bossId);
+        if (healthBar != null) {
+            healthBar.removeAll();
+            healthBar.setVisible(false);
+        }
+        BossBar phaseBar = bossPhaseBars.remove(bossId);
+        if (phaseBar != null) {
+            phaseBar.removeAll();
+            phaseBar.setVisible(false);
+        }
+    }
+
+    private void removeAllBossBars() {
+        Set<UUID> ids = new HashSet<>(bossHealthBars.keySet());
+        ids.addAll(bossPhaseBars.keySet());
+        for (UUID bossId : ids) {
+            removeBossBars(bossId);
+        }
     }
 
     private World resolveArenaWorld() {

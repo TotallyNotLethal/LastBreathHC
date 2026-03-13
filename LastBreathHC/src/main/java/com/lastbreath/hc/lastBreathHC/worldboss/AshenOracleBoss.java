@@ -148,6 +148,19 @@ public class AshenOracleBoss extends BaseWorldBossController {
         return relics.contains(block.getLocation());
     }
 
+
+    @Override
+    public String getPhaseDisplayName() {
+        String phase = getPhase(PHASE_RITUAL);
+        if (PHASE_PROPHECY.equals(phase)) {
+            return "Prophecy";
+        }
+        if (PHASE_CATACLYSM.equals(phase)) {
+            return "Cataclysm";
+        }
+        return "Ritual";
+    }
+
     @Override
     public void cleanup() {
         for (Location location : relics) {
