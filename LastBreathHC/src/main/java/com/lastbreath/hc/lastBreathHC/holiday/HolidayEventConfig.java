@@ -44,30 +44,50 @@ public class HolidayEventConfig {
             HolidayEventZone zone = readZone(section.getConfigurationSection("zone"), defaultZone);
 
             List<HolidayTaskDefinition> tasks = new ArrayList<>();
-            for (Map<?, ?> taskMap : section.getMapList("tasks")) {
+
+            for (Map<?, ?> raw : section.getMapList("tasks")) {
+                Map<String, Object> taskMap = (Map<String, Object>) raw;
+
                 String typeName = String.valueOf(taskMap.getOrDefault("type", ""));
                 String target = String.valueOf(taskMap.getOrDefault("target", ""));
                 int amount = parseInt(taskMap.get("amount"), 1);
+
                 if (typeName.isBlank() || target.isBlank() || amount <= 0) {
                     continue;
                 }
-                tasks.add(new HolidayTaskDefinition(HolidayTaskType.fromString(typeName), target.toUpperCase(Locale.ROOT), amount));
+
+                tasks.add(new HolidayTaskDefinition(
+                        HolidayTaskType.fromString(typeName),
+                        target.toUpperCase(Locale.ROOT),
+                        amount
+                ));
             }
 
             List<HolidayRewardDefinition> rewards = new ArrayList<>();
-            for (Map<?, ?> rewardMap : section.getMapList("rewards")) {
+
+            for (Map<?, ?> raw : section.getMapList("rewards")) {
+                Map<String, Object> rewardMap = (Map<String, Object>) raw;
+
                 String typeName = String.valueOf(rewardMap.getOrDefault("type", ""));
                 if (typeName.isBlank()) {
                     continue;
                 }
+
                 HolidayRewardType rewardType = HolidayRewardType.fromString(typeName);
                 String target = String.valueOf(rewardMap.getOrDefault("target", ""));
                 int amount = parseInt(rewardMap.get("amount"), 1);
                 String command = String.valueOf(rewardMap.getOrDefault("command", ""));
+
                 if (rewardType == HolidayRewardType.ITEM && Material.matchMaterial(target) == null) {
                     continue;
                 }
-                rewards.add(new HolidayRewardDefinition(rewardType, target.toUpperCase(Locale.ROOT), Math.max(1, amount), command));
+
+                rewards.add(new HolidayRewardDefinition(
+                        rewardType,
+                        target.toUpperCase(Locale.ROOT),
+                        Math.max(1, amount),
+                        command
+                ));
             }
 
             if (!tasks.isEmpty() && !rewards.isEmpty()) {
