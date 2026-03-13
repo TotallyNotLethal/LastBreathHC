@@ -64,6 +64,7 @@ public class MobScalingListener implements Listener {
                 damageMultiplier *= BLOOD_MOON_DAMAGE_MULTIPLIER;
             }
             attackDamage.setBaseValue(Math.max(0.0, baseDamage * damageMultiplier));
+            MobScalingData.setDamageScalingMultiplier(entity, damageMultiplier);
         }
 
         AttributeInstance maxHealth = entity.getAttribute(Attribute.MAX_HEALTH);

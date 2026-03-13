@@ -9,6 +9,7 @@ import org.bukkit.persistence.PersistentDataType;
 public final class MobScalingData {
 
     private static final String SCALING_KEY = "world_scaling_multiplier";
+    private static final String DAMAGE_SCALING_KEY = "world_scaling_damage_multiplier";
 
     private MobScalingData() {
     }
@@ -33,7 +34,31 @@ public final class MobScalingData {
         return value == null ? 1.0 : Math.max(1.0, value);
     }
 
+    public static void setDamageScalingMultiplier(LivingEntity entity, double multiplier) {
+        if (entity == null) {
+            return;
+        }
+        PersistentDataContainer container = entity.getPersistentDataContainer();
+        if (multiplier <= 1.0) {
+            container.remove(getDamageScalingKey());
+            return;
+        }
+        container.set(getDamageScalingKey(), PersistentDataType.DOUBLE, multiplier);
+    }
+
+    public static double getDamageScalingMultiplier(LivingEntity entity) {
+        if (entity == null) {
+            return 1.0;
+        }
+        Double value = entity.getPersistentDataContainer().get(getDamageScalingKey(), PersistentDataType.DOUBLE);
+        return value == null ? 1.0 : Math.max(1.0, value);
+    }
+
     private static NamespacedKey getScalingKey() {
         return new NamespacedKey(LastBreathHC.getInstance(), SCALING_KEY);
+    }
+
+    private static NamespacedKey getDamageScalingKey() {
+        return new NamespacedKey(LastBreathHC.getInstance(), DAMAGE_SCALING_KEY);
     }
 }
