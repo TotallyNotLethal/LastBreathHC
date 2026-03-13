@@ -336,6 +336,7 @@ worldBoss:
       entityType: WARDEN
       spawnRadius: 40
       despawnTimeoutSeconds: 600
+      maxHealth: 500.0
       safeRadius: 3.0
       gravestoneCount: 6
       archerCooldownTicks: 160
@@ -348,6 +349,7 @@ worldBoss:
       entityType: WITHER
       spawnRadius: 50
       despawnTimeoutSeconds: 600
+      maxHealth: 450.0
       lightningSafeRadius: 3.0
       tempestThreshold: 0.3
       lightningCooldownTicks: 120
@@ -365,6 +367,7 @@ worldBoss:
       entityType: RAVAGER
       spawnRadius: 45
       despawnTimeoutSeconds: 600
+      maxHealth: 420.0
       safeRadius: 3.0
       closedTicks: 240
       exposedTicks: 120
@@ -387,6 +390,7 @@ worldBoss:
       entityType: WITHER_SKELETON
       spawnRadius: 45
       despawnTimeoutSeconds: 600
+      maxHealth: 380.0
       omenSafeRadius: 4.0
       omenCooldownTicks: 160
       ashBurstRadius: 10.0

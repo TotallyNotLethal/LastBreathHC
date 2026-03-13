@@ -25,6 +25,8 @@ import org.bukkit.WorldType;
 import org.bukkit.GameRule;
 import org.bukkit.block.Block;
 import org.bukkit.block.Biome;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
@@ -913,6 +915,7 @@ public class WorldBossManager implements Listener {
             return false;
         }
 
+        applyBossHealth(settings, bossEntity);
         bossEntity.setCustomName(bossType.getConfigKey());
         bossEntity.setCustomNameVisible(true);
         bossEntity.getPersistentDataContainer().set(bossTypeKey, PersistentDataType.STRING, bossType.getConfigKey());
@@ -1036,6 +1039,16 @@ public class WorldBossManager implements Listener {
         for (UUID bossId : ids) {
             removeBossBars(bossId);
         }
+    }
+
+    private void applyBossHealth(BossSettings settings, LivingEntity bossEntity) {
+        AttributeInstance maxHealthAttribute = bossEntity.getAttribute(Attribute.MAX_HEALTH);
+        if (maxHealthAttribute == null) {
+            return;
+        }
+        double maxHealth = Math.max(1.0, settings.maxHealth());
+        maxHealthAttribute.setBaseValue(maxHealth);
+        bossEntity.setHealth(maxHealth);
     }
 
     private World resolveArenaWorld() {
@@ -2111,7 +2124,18 @@ public class WorldBossManager implements Listener {
         }
         double spawnRadius = plugin.getConfig().getDouble(basePath + ".spawnRadius", DEFAULT_FALLBACK_RADIUS);
         int despawnTimeoutSeconds = plugin.getConfig().getInt(basePath + ".despawnTimeoutSeconds", 600);
-        return new BossSettings(entityType, spawnRadius, despawnTimeoutSeconds);
+        double defaultMaxHealth = defaultBossMaxHealth(type);
+        double maxHealth = plugin.getConfig().getDouble(basePath + ".maxHealth", defaultMaxHealth);
+        return new BossSettings(entityType, spawnRadius, despawnTimeoutSeconds, maxHealth);
+    }
+
+    private double defaultBossMaxHealth(WorldBossType type) {
+        return switch (type) {
+            case GRAVEWARDEN -> 500.0;
+            case STORM_HERALD -> 450.0;
+            case HOLLOW_COLOSSUS -> 420.0;
+            case ASHEN_ORACLE -> 380.0;
+        };
     }
 
     private boolean isBiomeEligible(Biome biome) {
@@ -2204,6 +2228,6 @@ public class WorldBossManager implements Listener {
         }
     }
 
-    private record BossSettings(EntityType entityType, double spawnRadius, int despawnTimeoutSeconds) {
+    private record BossSettings(EntityType entityType, double spawnRadius, int despawnTimeoutSeconds, double maxHealth) {
     }
 }
