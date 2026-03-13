@@ -7,7 +7,7 @@
 
 
 fakePlayers:
-  autoRespawnActiveOnStartup: true
+  autoRespawnActiveOnStartup: false
   deathReactions:
     enabled: true
     maxReactionsPerMinute: 3
