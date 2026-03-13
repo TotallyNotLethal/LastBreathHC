@@ -1715,7 +1715,6 @@ public class WorldBossManager implements Listener {
         if (current.equals(arenaWorld)) {
             teleportPlayerToRespawn(player);
             if (bossDefeated) {
-                removeAllPortals();
                 markArenaForDeletionIfEmpty();
             }
             return;
