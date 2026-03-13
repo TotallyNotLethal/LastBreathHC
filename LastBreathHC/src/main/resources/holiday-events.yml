@@ -1,0 +1,147 @@
+defaultZone:
+  world: world
+  x: 0.0
+  y: 64.0
+  z: 0.0
+  radius: 300.0
+
+holidays:
+  new_year:
+    eventName: "Midnight Meteor Relay"
+    objective: "Hunt phantoms and collect gunpowder in the holiday zone."
+    tasks:
+      - type: KILL_ENTITY
+        target: PHANTOM
+        amount: 10
+      - type: COLLECT_ITEM
+        target: GUNPOWDER
+        amount: 64
+    rewards:
+      - type: ITEM
+        target: FIREWORK_ROCKET
+        amount: 64
+      - type: XP
+        amount: 500
+
+  valentines:
+    eventName: "Cupid's Lost Letters"
+    objective: "Collect roses and cocoa beans in the holiday zone."
+    tasks:
+      - type: BREAK_BLOCK
+        target: ROSE_BUSH
+        amount: 24
+      - type: COLLECT_ITEM
+        target: COCOA_BEANS
+        amount: 32
+    rewards:
+      - type: ITEM
+        target: GOLDEN_APPLE
+        amount: 8
+      - type: XP
+        amount: 400
+
+  st_patricks:
+    eventName: "Emerald Gremlin Hunt"
+    objective: "Kill cave spiders and gather emeralds from the event zone."
+    tasks:
+      - type: KILL_ENTITY
+        target: CAVE_SPIDER
+        amount: 20
+      - type: COLLECT_ITEM
+        target: EMERALD
+        amount: 16
+    rewards:
+      - type: ITEM
+        target: EMERALD
+        amount: 24
+      - type: XP
+        amount: 450
+
+  easter:
+    eventName: "Colossal Bunny Rampage"
+    objective: "Defeat giant bunnies (rabbits) and gather eggs for the Spring Totem."
+    tasks:
+      - type: KILL_ENTITY
+        target: RABBIT
+        amount: 30
+      - type: COLLECT_ITEM
+        target: EGG
+        amount: 64
+    rewards:
+      - type: ITEM
+        target: TOTEM_OF_UNDYING
+        amount: 1
+      - type: XP
+        amount: 700
+
+  independence_day:
+    eventName: "Powder Keg Convoy"
+    objective: "Collect TNT and gunpowder while defending the holiday zone."
+    tasks:
+      - type: COLLECT_ITEM
+        target: GUNPOWDER
+        amount: 64
+      - type: COLLECT_ITEM
+        target: TNT
+        amount: 16
+    rewards:
+      - type: ITEM
+        target: TNT
+        amount: 16
+      - type: ITEM
+        target: FIREWORK_ROCKET
+        amount: 64
+
+  halloween:
+    eventName: "Lanterns of the Hollow"
+    objective: "Eliminate undead and carve pumpkins in the holiday zone."
+    tasks:
+      - type: KILL_ENTITY
+        target: ZOMBIE
+        amount: 35
+      - type: BREAK_BLOCK
+        target: PUMPKIN
+        amount: 20
+    rewards:
+      - type: ITEM
+        target: JACK_O_LANTERN
+        amount: 16
+      - type: XP
+        amount: 600
+
+  thanksgiving:
+    eventName: "Harvest Guardian Feast"
+    objective: "Gather harvest crops from the event area."
+    tasks:
+      - type: COLLECT_ITEM
+        target: WHEAT
+        amount: 64
+      - type: COLLECT_ITEM
+        target: CARROT
+        amount: 64
+      - type: COLLECT_ITEM
+        target: POTATO
+        amount: 64
+    rewards:
+      - type: ITEM
+        target: GOLDEN_CARROT
+        amount: 32
+      - type: XP
+        amount: 500
+
+  christmas:
+    eventName: "Snowman Salvage Operation"
+    objective: "Recover snowman parts by collecting snow blocks and killing strays."
+    tasks:
+      - type: COLLECT_ITEM
+        target: SNOW_BLOCK
+        amount: 64
+      - type: KILL_ENTITY
+        target: STRAY
+        amount: 20
+    rewards:
+      - type: ITEM
+        target: DIAMOND
+        amount: 6
+      - type: XP
+        amount: 650
