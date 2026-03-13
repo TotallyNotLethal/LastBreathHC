@@ -1746,9 +1746,9 @@ lastBreathApi:
   statsIntervalTicks: 1200
 
 world-regen:
-  enabled: true
-  chunks-per-tick: 4
-  scan-blocks-per-tick: 5000
+  enabled: false
+  chunks-per-tick: 0
+  scan-blocks-per-tick: 0
   skip-loaded: true
-  scan-radius: 20000
-  detect-player-blocks: true
+  scan-radius: 0
+  detect-player-blocks: false
