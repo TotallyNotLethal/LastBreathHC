@@ -11,6 +11,7 @@ import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.Container;
 import org.bukkit.block.data.Ageable;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Leaves;
@@ -561,6 +562,11 @@ public class CustomEnchantListener implements Listener {
         boolean fertileHarvest = normalizedEnchantIds.contains(CustomEnchant.FERTILE_HARVEST.getId());
         boolean prospector = normalizedEnchantIds.contains(CustomEnchant.PROSPECTOR.getId());
         boolean prospectorOre = prospector && isOre(block.getType());
+
+        if (autoPickup && hasSpillableContainerInventory(block)) {
+            return false;
+        }
+
         boolean shouldHandleDrops = autoPickup || smelter || autoReplant || fertileHarvest || prospectorOre || forceOreDrops;
         if (!shouldHandleDrops) {
             return false;
@@ -597,6 +603,13 @@ public class CustomEnchantListener implements Listener {
 
         giveDrops(player, dropLocation, drops, autoPickup);
         return true;
+    }
+
+    private boolean hasSpillableContainerInventory(Block block) {
+        if (!(block.getState() instanceof Container container)) {
+            return false;
+        }
+        return !Tag.SHULKER_BOXES.isTagged(block.getType());
     }
 
     private void breakBlockWithPhysics(Block block) {
