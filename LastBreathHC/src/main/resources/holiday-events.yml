@@ -5,6 +5,13 @@ defaultZone:
   z: 0.0
   radius: 300.0
 
+# CUSTOM_ITEM inflation tuning defaults (Option B: weighted pools):
+# - Use the same `pool` for mutually exclusive CUSTOM_ITEM rewards.
+# - Keep `chance` conservative for rare pools (recommended 0.01-0.03 for high-impact items).
+# - Start with fallback:item weights around 6-10 and chase:item weights around 1-2.
+# - Example ratio 8:2:1 ~= 72.7% / 18.2% / 9.1% split after the pool chance succeeds.
+# - Set weight >= 1. `pool` and `weight` are ignored for non-CUSTOM_ITEM reward types.
+
 holidays:
   new_year:
     eventName: "Midnight Meteor Relay"
@@ -69,9 +76,17 @@ holidays:
         amount: 64
     rewards:
       - type: CUSTOM_ITEM
+        target: enhanced_grindstone
+        amount: 1
+        chance: 0.10
+        pool: spring_relics
+        weight: 7
+      - type: CUSTOM_ITEM
         target: totem_of_life
         amount: 1
         chance: 0.10
+        pool: spring_relics
+        weight: 2
       - type: XP
         amount: 700
 
@@ -108,9 +123,17 @@ holidays:
         target: JACK_O_LANTERN
         amount: 16
       - type: CUSTOM_ITEM
+        target: enhanced_grindstone
+        amount: 1
+        chance: 0.02
+        pool: spooky_relics
+        weight: 8
+      - type: CUSTOM_ITEM
         target: rebirth_stone
         amount: 1
         chance: 0.02
+        pool: spooky_relics
+        weight: 1
       - type: XP
         amount: 600
 
@@ -138,9 +161,17 @@ holidays:
         target: COOKED_BEEF
         amount: 8
       - type: CUSTOM_ITEM
+        target: enhanced_grindstone
+        amount: 1
+        chance: 0.05
+        pool: harvest_relics
+        weight: 6
+      - type: CUSTOM_ITEM
         target: gracestone
         amount: 1
         chance: 0.05
+        pool: harvest_relics
+        weight: 3
       - type: XP
         amount: 450
 
@@ -159,8 +190,16 @@ holidays:
         target: DIAMOND
         amount: 4
       - type: CUSTOM_ITEM
+        target: enhanced_grindstone
+        amount: 1
+        chance: 0.02
+        pool: winter_relics
+        weight: 7
+      - type: CUSTOM_ITEM
         target: rebirth_stone
         amount: 1
         chance: 0.02
+        pool: winter_relics
+        weight: 1
       - type: XP
         amount: 650

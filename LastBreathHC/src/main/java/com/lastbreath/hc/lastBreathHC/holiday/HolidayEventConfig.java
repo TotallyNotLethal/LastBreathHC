@@ -103,6 +103,8 @@ public class HolidayEventConfig {
                 int amount = parseInt(raw.get("amount"), 1);
                 String command = asString(raw.get("command"));
                 double chance = parseDouble(raw.get("chance"), 1.0D);
+                String pool = asString(raw.get("pool")).toLowerCase(Locale.ROOT);
+                int weight = parseInt(raw.get("weight"), 1);
 
                 if (amount <= 0) {
                     plugin.getLogger().warning("Skipping " + context + " because amount must be greater than 0.");
@@ -123,12 +125,24 @@ public class HolidayEventConfig {
                         ? target.trim().toLowerCase(Locale.ROOT)
                         : target.toUpperCase(Locale.ROOT);
 
+                if (!pool.isBlank() && rewardType.get() != HolidayRewardType.CUSTOM_ITEM) {
+                    plugin.getLogger().warning("Ignoring pool on " + context + " because pool support is only available for CUSTOM_ITEM rewards.");
+                    pool = "";
+                }
+
+                if (weight <= 0) {
+                    plugin.getLogger().warning("Skipping " + context + " because weight must be greater than 0.");
+                    continue;
+                }
+
                 rewards.add(new HolidayRewardDefinition(
                         rewardType.get(),
                         rewardTarget,
                         Math.max(1, amount),
                         command,
-                        chance
+                        chance,
+                        pool,
+                        weight
                 ));
             }
 
