@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC.asteroid;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BowTrailType;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenHelper;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantPage;
@@ -109,6 +110,7 @@ public class AsteroidLoot {
         addCustomItemLoot(inv, normalizedTier, config);
         addEnchantPageLoot(inv, normalizedTier);
         addCosmeticAuraLoot(inv, normalizedTier, config);
+        addBowTrailLoot(inv, normalizedTier, config);
 
         return inv;
     }
@@ -200,6 +202,29 @@ public class AsteroidLoot {
             case 2 -> config.getInt(basePath, tier2Default);
             default -> config.getInt(basePath, tier1Default);
         };
+    }
+
+
+    private static void addBowTrailLoot(Inventory inv, int tier, FileConfiguration config) {
+        if (tier < 2) {
+            return;
+        }
+        String basePath = "asteroid.loot.bowTrails";
+        int chance = tier == 2
+                ? config.getInt(basePath + ".tier2Chance", 6)
+                : config.getInt(basePath + ".tier3Chance", 10);
+        if (chance <= 0 || random.nextInt(100) >= chance) {
+            return;
+        }
+        java.util.List<BowTrailType> trailTypes = config.getStringList(basePath + ".ids").stream()
+                .map(BowTrailType::fromInput)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        if (trailTypes.isEmpty()) {
+            return;
+        }
+        BowTrailType selected = trailTypes.get(random.nextInt(trailTypes.size()));
+        inv.addItem(CosmeticTokenHelper.createBowTrailToken(selected));
     }
 
     private static void addCosmeticAuraLoot(Inventory inv, int tier, FileConfiguration config) {

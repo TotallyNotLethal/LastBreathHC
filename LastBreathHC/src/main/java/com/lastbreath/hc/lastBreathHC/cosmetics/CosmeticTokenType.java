@@ -5,7 +5,8 @@ import java.util.Locale;
 public enum CosmeticTokenType {
     PREFIX,
     AURA,
-    KILL_MESSAGE;
+    KILL_MESSAGE,
+    BOW_TRAIL;
 
     public static CosmeticTokenType fromInput(String input) {
         if (input == null || input.isBlank()) {

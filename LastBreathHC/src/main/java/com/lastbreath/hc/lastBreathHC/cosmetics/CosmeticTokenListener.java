@@ -55,9 +55,14 @@ public class CosmeticTokenListener implements Listener {
                 CosmeticManager.unlockKillMessage(player, message, "Equip it from /cosmetics.");
                 consumeOne(player, item);
             }
+            case BOW_TRAIL -> {
+                player.sendMessage(ChatColor.YELLOW + "Use a crafting bench: bow + applicator token to apply this bow trail.");
+            }
         }
         event.setCancelled(true);
-        player.sendMessage(ChatColor.GRAY + "Use /cosmetics to equip your new unlock.");
+        if (type != CosmeticTokenType.BOW_TRAIL) {
+            player.sendMessage(ChatColor.GRAY + "Use /cosmetics to equip your new unlock.");
+        }
     }
 
     private void consumeOne(Player player, ItemStack item) {

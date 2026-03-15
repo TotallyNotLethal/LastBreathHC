@@ -59,6 +59,23 @@ public final class CosmeticTokenHelper {
         return item;
     }
 
+
+    public static ItemStack createBowTrailToken(BowTrailType trailType) {
+        ItemStack item = new ItemStack(trailType.icon());
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(trailType.color() + "Bow Trail Applicator: " + ChatColor.WHITE + trailType.displayName());
+        meta.setLore(List.of(
+                ChatColor.GRAY + "Combine in a crafting bench with any bow",
+                ChatColor.GRAY + "to apply this arrow trail.",
+                ChatColor.DARK_GRAY + "Overwrites existing trail on the bow."
+        ));
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        container.set(TOKEN_TYPE_KEY, PersistentDataType.STRING, CosmeticTokenType.BOW_TRAIL.name());
+        container.set(TOKEN_ID_KEY, PersistentDataType.STRING, trailType.name());
+        item.setItemMeta(meta);
+        return item;
+    }
+
     public static CosmeticTokenType getTokenType(ItemStack item) {
         if (item == null || item.getItemMeta() == null) {
             return null;

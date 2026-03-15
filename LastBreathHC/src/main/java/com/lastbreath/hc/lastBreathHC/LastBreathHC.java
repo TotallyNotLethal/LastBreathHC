@@ -18,6 +18,7 @@ import com.lastbreath.hc.lastBreathHC.chat.ChatInventoryShareListener;
 import com.lastbreath.hc.lastBreathHC.chat.ChatPrefixListener;
 import com.lastbreath.hc.lastBreathHC.commands.*;
 import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BowTrailListener;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticAuraService;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenListener;
 import com.lastbreath.hc.lastBreathHC.daily.DailyCosmeticListener;
@@ -530,6 +531,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new CosmeticTokenListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new BowTrailListener(this), this
         );
         getServer().getPluginManager().registerEvents(
                 new ChatPrefixListener(), this
