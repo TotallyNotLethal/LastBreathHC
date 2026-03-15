@@ -102,9 +102,15 @@ public class HolidayEventConfig {
                 String target = asString(raw.get("target"));
                 int amount = parseInt(raw.get("amount"), 1);
                 String command = asString(raw.get("command"));
+                double chance = parseDouble(raw.get("chance"), 1.0D);
 
                 if (amount <= 0) {
                     plugin.getLogger().warning("Skipping " + context + " because amount must be greater than 0.");
+                    continue;
+                }
+
+                if (chance <= 0.0D || chance > 1.0D) {
+                    plugin.getLogger().warning("Skipping " + context + " because chance must be within (0.0, 1.0].");
                     continue;
                 }
 
@@ -121,7 +127,8 @@ public class HolidayEventConfig {
                         rewardType.get(),
                         rewardTarget,
                         Math.max(1, amount),
-                        command
+                        command,
+                        chance
                 ));
             }
 
@@ -154,6 +161,17 @@ public class HolidayEventConfig {
         }
         try {
             return Integer.parseInt(String.valueOf(raw));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    private static double parseDouble(Object raw, double fallback) {
+        if (raw == null) {
+            return fallback;
+        }
+        try {
+            return Double.parseDouble(String.valueOf(raw));
         } catch (NumberFormatException ignored) {
             return fallback;
         }

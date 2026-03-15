@@ -156,6 +156,9 @@ public class HolidayGameplayManager implements Listener {
     private void rewardPlayer(Player player, HolidayEventDefinition definition) {
         player.sendMessage(Component.text("Holiday objective complete! Rewards granted.", NamedTextColor.GOLD));
         for (HolidayRewardDefinition reward : definition.rewards()) {
+            if (!reward.shouldGrant()) {
+                continue;
+            }
             switch (reward.type()) {
                 case ITEM -> {
                     Material material = Material.matchMaterial(reward.target());
