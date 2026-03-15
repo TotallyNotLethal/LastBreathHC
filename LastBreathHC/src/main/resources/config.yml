@@ -185,6 +185,14 @@ asteroid:
           - FROST_GLINT
           - SUNSHARD
           - ROSE_QUARTZ
+    bowTrails:
+      tier2Chance: 6
+      tier3Chance: 10
+      ids:
+        - COSMIC_GLINT
+        - STARFALL
+        - SPORE_SWIRL
+        - VOID_DUST
     enchantPages:
       tier1Chance: 25
       tier2Chance: 50
@@ -417,13 +425,16 @@ worldBoss:
           max: 1
           chance: 0.05
       cosmetics:
-        chance: 0.08
+        chance: 0.10
         prefixes:
           - GRAVEBORN
         auras:
           - SOUL_FLAME
         killMessages:
           - GRAVEWARDEN
+        bowTrails:
+          - SOUL_STREAK
+          - MIST_GLYPH
       title: GRAVEWARDEN_BANE
     StormHerald:
       drops:
@@ -440,13 +451,16 @@ worldBoss:
           max: 1
           chance: 0.05
       cosmetics:
-        chance: 0.08
+        chance: 0.10
         prefixes:
           - STORMFORGED
         auras:
           - STORM_SPARK
         killMessages:
           - STORM_HERALD
+        bowTrails:
+          - THUNDER_SPARK
+          - STORM_FROST
       title: STORM_HERALD
     HollowColossus:
       drops:
@@ -463,13 +477,16 @@ worldBoss:
           max: 1
           chance: 0.08
       cosmetics:
-        chance: 0.08
+        chance: 0.10
         prefixes:
           - HOLLOWED
         auras:
           - DUSTVEIL
         killMessages:
           - HOLLOW_COLOSSUS
+        bowTrails:
+          - SAND_DUST
+          - GRAVEL_RAIN
       title: HOLLOW_COLOSSUS
     AshenOracle:
       drops:
@@ -486,13 +503,16 @@ worldBoss:
           max: 2
           chance: 0.12
       cosmetics:
-        chance: 0.08
+        chance: 0.10
         prefixes:
           - ASHEN
         auras:
           - CINDER_VEIL
         killMessages:
           - ASHEN_ORACLE
+        bowTrails:
+          - CINDER_WISP
+          - ORACLE_ASH
       title: ASHEN_ORACLE
 
   requiredDrops:

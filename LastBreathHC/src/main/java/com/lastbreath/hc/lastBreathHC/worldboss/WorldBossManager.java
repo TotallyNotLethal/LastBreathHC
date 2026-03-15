@@ -4,6 +4,7 @@ import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossKillMessage;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossPrefix;
+import com.lastbreath.hc.lastBreathHC.cosmetics.BowTrailType;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticManager;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenHelper;
 import com.lastbreath.hc.lastBreathHC.items.AshenRelic;
@@ -681,6 +682,13 @@ public class WorldBossManager implements Listener {
                 BossKillMessage message = BossKillMessage.fromInput(messageId);
                 if (message != null && random.nextDouble() <= cosmeticChance) {
                     event.getDrops().add(CosmeticTokenHelper.createKillMessageToken(message));
+                }
+            }
+
+            for (String trailId : cosmeticsSection.getStringList("bowTrails")) {
+                BowTrailType trailType = BowTrailType.fromInput(trailId);
+                if (trailType != null && random.nextDouble() <= cosmeticChance) {
+                    event.getDrops().add(CosmeticTokenHelper.createBowTrailToken(trailType));
                 }
             }
         }
