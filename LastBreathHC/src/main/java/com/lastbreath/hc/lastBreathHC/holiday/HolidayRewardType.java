@@ -4,6 +4,7 @@ import java.util.Optional;
 
 public enum HolidayRewardType {
     ITEM,
+    CUSTOM_ITEM,
     XP,
     COMMAND;
 

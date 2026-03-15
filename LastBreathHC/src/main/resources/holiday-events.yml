@@ -68,8 +68,8 @@ holidays:
         target: EGG
         amount: 64
     rewards:
-      - type: ITEM
-        target: TOTEM_OF_UNDYING
+      - type: CUSTOM_ITEM
+        target: totem_of_life
         amount: 1
       - type: XP
         amount: 700
@@ -143,5 +143,8 @@ holidays:
       - type: ITEM
         target: DIAMOND
         amount: 6
+      - type: CUSTOM_ITEM
+        target: enhanced_grindstone
+        amount: 1
       - type: XP
         amount: 650

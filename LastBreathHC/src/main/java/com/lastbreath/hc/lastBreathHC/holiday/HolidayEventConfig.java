@@ -95,9 +95,13 @@ public class HolidayEventConfig {
                     continue;
                 }
 
+                String rewardTarget = rewardType.get() == HolidayRewardType.CUSTOM_ITEM
+                        ? target.trim().toLowerCase(Locale.ROOT)
+                        : target.toUpperCase(Locale.ROOT);
+
                 rewards.add(new HolidayRewardDefinition(
                         rewardType.get(),
-                        target.toUpperCase(Locale.ROOT),
+                        rewardTarget,
                         Math.max(1, amount),
                         command
                 ));
