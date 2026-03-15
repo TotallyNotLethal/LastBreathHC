@@ -398,6 +398,9 @@ worldBoss:
       ritualRelicCount: 4
       ritualRelicRadius: 7.0
       cataclysmThreshold: 0.35
+      summonCooldownTicks: 180
+      summonBaseCount: 2
+      summonMaxActive: 12
   rewards:
     Gravewarden:
       drops:

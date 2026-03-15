@@ -8,8 +8,10 @@ import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Blaze;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.WitherSkeleton;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.plugin.Plugin;
@@ -28,10 +30,12 @@ public class AshenOracleBoss extends BaseWorldBossController {
     private static final Material RELIC_MATERIAL = Material.CRYING_OBSIDIAN;
     private static final int DEFAULT_OMEN_COOLDOWN = 160;
     private static final int DEFAULT_ASH_BURST_COOLDOWN = 140;
+    private static final int DEFAULT_SUMMON_COOLDOWN = 180;
 
     private final Set<Location> relics = new HashSet<>();
     private int omenCooldownTicks;
     private int ashBurstCooldownTicks;
+    private int summonCooldownTicks;
 
     public AshenOracleBoss(Plugin plugin, LivingEntity boss) {
         super(plugin, boss, "world_boss_ashenoracle_phase", "world_boss_ashenoracle_relics", "world_boss_ashenoracle_data");
@@ -47,11 +51,11 @@ public class AshenOracleBoss extends BaseWorldBossController {
         String phase = getPhase(PHASE_RITUAL);
         int defaultOmenCooldown = getOmenCooldownTicks();
         int defaultAshBurstCooldown = getAshBurstCooldownTicks();
-        int[] data = parseInts(getData(serializeInts(defaultOmenCooldown, defaultAshBurstCooldown)), 2);
+        int defaultSummonCooldown = getSummonCooldownTicks();
+        int[] data = parseInts(getData(serializeInts(defaultOmenCooldown, defaultAshBurstCooldown, defaultSummonCooldown)), 3);
         omenCooldownTicks = data[0] > 0 ? data[0] : defaultOmenCooldown;
         ashBurstCooldownTicks = data[1] > 0 ? data[1] : defaultAshBurstCooldown;
-        omenCooldownTicks = data[0] > 0 ? data[0] : defaultOmenCooldown;
-        ashBurstCooldownTicks = data[1] > 0 ? data[1] : defaultAshBurstCooldown;
+        summonCooldownTicks = data[2] > 0 ? data[2] : defaultSummonCooldown;
 
         relics.clear();
         relics.addAll(loadBlockLocations());
@@ -95,9 +99,14 @@ public class AshenOracleBoss extends BaseWorldBossController {
 
         spawnSafeRing();
         omenCooldownTicks = Math.max(0, omenCooldownTicks - 20);
+        summonCooldownTicks = Math.max(0, summonCooldownTicks - 20);
         if (omenCooldownTicks <= 0) {
             triggerOmen(PHASE_CATACLYSM.equals(phase));
             omenCooldownTicks = PHASE_CATACLYSM.equals(phase) ? getAshBurstCooldownTicks() : getOmenCooldownTicks();
+        }
+        if (summonCooldownTicks <= 0) {
+            summonAshenWave(phase);
+            summonCooldownTicks = getSummonCooldownTicksForPhase(phase);
         }
 
         if (PHASE_CATACLYSM.equals(phase)) {
@@ -181,6 +190,7 @@ public class AshenOracleBoss extends BaseWorldBossController {
         boss.setInvulnerable(!relics.isEmpty());
         omenCooldownTicks = getOmenCooldownTicks();
         ashBurstCooldownTicks = getAshBurstCooldownTicks();
+        summonCooldownTicks = getSummonCooldownTicks();
         updatePersistentData();
     }
 
@@ -223,6 +233,7 @@ public class AshenOracleBoss extends BaseWorldBossController {
         setPhase(PHASE_PROPHECY);
         boss.setInvulnerable(false);
         omenCooldownTicks = getOmenCooldownTicks();
+        summonCooldownTicks = getSummonCooldownTicks();
         updatePersistentData();
         World world = boss.getWorld();
         world.playSound(boss.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 1.2f, 0.9f);
@@ -234,6 +245,7 @@ public class AshenOracleBoss extends BaseWorldBossController {
         setPhase(PHASE_CATACLYSM);
         omenCooldownTicks = getAshBurstCooldownTicks();
         ashBurstCooldownTicks = getAshBurstCooldownTicks();
+        summonCooldownTicks = Math.min(summonCooldownTicks, Math.max(40, getSummonCooldownTicks() / 2));
         updatePersistentData();
         World world = boss.getWorld();
         world.playSound(boss.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.2f, 0.8f);
@@ -339,6 +351,83 @@ public class AshenOracleBoss extends BaseWorldBossController {
         return plugin.getConfig().getInt("worldBoss.bosses.AshenOracle.ashBurstCooldownTicks", DEFAULT_ASH_BURST_COOLDOWN);
     }
 
+    private int getSummonCooldownTicks() {
+        return Math.max(60, plugin.getConfig().getInt("worldBoss.bosses.AshenOracle.summonCooldownTicks", DEFAULT_SUMMON_COOLDOWN));
+    }
+
+    private int getSummonCooldownTicksForPhase(String phase) {
+        if (PHASE_CATACLYSM.equals(phase)) {
+            return Math.max(40, getSummonCooldownTicks() / 2);
+        }
+        if (PHASE_PROPHECY.equals(phase)) {
+            return Math.max(50, (int) Math.round(getSummonCooldownTicks() * 0.75));
+        }
+        return getSummonCooldownTicks();
+    }
+
+    private int getSummonCountForPhase(String phase) {
+        int baseCount = Math.max(1, plugin.getConfig().getInt("worldBoss.bosses.AshenOracle.summonBaseCount", 2));
+        if (PHASE_CATACLYSM.equals(phase)) {
+            return baseCount + 2;
+        }
+        if (PHASE_PROPHECY.equals(phase)) {
+            return baseCount + 1;
+        }
+        return baseCount;
+    }
+
+    private int getSummonMaxActive() {
+        return Math.max(4, plugin.getConfig().getInt("worldBoss.bosses.AshenOracle.summonMaxActive", 12));
+    }
+
+    private void summonAshenWave(String phase) {
+        World world = boss.getWorld();
+        Location center = boss.getLocation();
+        int activeMinions = 0;
+        for (LivingEntity entity : world.getLivingEntities()) {
+            if (entity.getScoreboardTags().contains(WorldBossConstants.WORLD_BOSS_MINION_TAG)) {
+                activeMinions++;
+            }
+        }
+        int slots = Math.max(0, getSummonMaxActive() - activeMinions);
+        if (slots <= 0) {
+            return;
+        }
+        int summonCount = Math.min(getSummonCountForPhase(phase), slots);
+        for (int i = 0; i < summonCount; i++) {
+            Location spawn = center.clone().add(randomOffset(), 0, randomOffset());
+            spawn.setY(world.getHighestBlockYAt(spawn));
+            if (PHASE_CATACLYSM.equals(phase) && i % 2 == 0) {
+                Blaze blaze = world.spawn(spawn, Blaze.class);
+                blaze.addScoreboardTag(WorldBossConstants.WORLD_BOSS_MINION_TAG);
+                blaze.setTarget(findNearestPlayer());
+                continue;
+            }
+            WitherSkeleton skeleton = world.spawn(spawn, WitherSkeleton.class);
+            skeleton.addScoreboardTag(WorldBossConstants.WORLD_BOSS_MINION_TAG);
+            skeleton.setTarget(findNearestPlayer());
+        }
+        world.playSound(center, Sound.ENTITY_BLAZE_AMBIENT, 0.8f, PHASE_CATACLYSM.equals(phase) ? 0.7f : 1.0f);
+        world.spawnParticle(Particle.SMOKE, center, 24, 1.4, 0.6, 1.4, 0.02);
+    }
+
+    private double randomOffset() {
+        return (Math.random() - 0.5) * 10.0;
+    }
+
+    private Player findNearestPlayer() {
+        Player nearest = null;
+        double nearestDistance = Double.MAX_VALUE;
+        for (Player player : boss.getWorld().getPlayers()) {
+            double distance = player.getLocation().distanceSquared(boss.getLocation());
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = player;
+            }
+        }
+        return nearest;
+    }
+
     private double getRelicRadius() {
         return Math.max(2.0, plugin.getConfig().getDouble("worldBoss.bosses.AshenOracle.ritualRelicRadius", 7.0));
     }
@@ -388,6 +477,6 @@ public class AshenOracleBoss extends BaseWorldBossController {
     }
 
     private void updatePersistentData() {
-        setData(serializeInts(omenCooldownTicks, ashBurstCooldownTicks));
+        setData(serializeInts(omenCooldownTicks, ashBurstCooldownTicks, summonCooldownTicks));
     }
 }
