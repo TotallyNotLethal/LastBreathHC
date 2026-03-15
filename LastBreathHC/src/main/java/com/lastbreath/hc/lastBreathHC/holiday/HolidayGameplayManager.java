@@ -162,8 +162,15 @@ public class HolidayGameplayManager implements Listener {
                     if (material == null) {
                         continue;
                     }
-                    Map<Integer, ItemStack> overflow = player.getInventory().addItem(new ItemStack(material, reward.amount()));
-                    overflow.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
+                    giveOrDrop(player, new ItemStack(material, reward.amount()));
+                }
+                case CUSTOM_ITEM -> {
+                    Optional<ItemStack> customReward = HolidayRewardItemResolver.resolve(reward.target(), reward.amount());
+                    if (customReward.isEmpty()) {
+                        plugin.getLogger().warning("Skipping unknown holiday custom reward item id: " + reward.target());
+                        continue;
+                    }
+                    giveOrDrop(player, customReward.get());
                 }
                 case XP -> player.giveExp(reward.amount());
                 case COMMAND -> {
@@ -176,6 +183,12 @@ public class HolidayGameplayManager implements Listener {
                 }
             }
         }
+    }
+
+
+    private void giveOrDrop(Player player, ItemStack item) {
+        Map<Integer, ItemStack> overflow = player.getInventory().addItem(item);
+        overflow.values().forEach(overflowItem -> player.getWorld().dropItemNaturally(player.getLocation(), overflowItem));
     }
 
     private void updateHolidayState(boolean startup) {
