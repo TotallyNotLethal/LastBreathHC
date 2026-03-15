@@ -75,6 +75,10 @@ import java.util.Set;
 import java.util.UUID;
 
 public class WorldBossManager implements Listener {
+    private static final double PORTAL_COMPASS_MAX_RANGE = 1000.0;
+    private static final double PORTAL_COMPASS_MAX_RANGE_SQUARED = PORTAL_COMPASS_MAX_RANGE * PORTAL_COMPASS_MAX_RANGE;
+    private static final double PORTAL_COMPASS_IDLE_RADIUS = 24.0;
+    private static final double PORTAL_COMPASS_IDLE_ROTATION_SPEED_RADIANS = Math.PI / 16.0;
 
     private static final String CONFIG_ROOT = "worldBoss";
     private static final int DEFAULT_MIN_SECONDS = 1800;
@@ -1907,8 +1911,10 @@ public class WorldBossManager implements Listener {
                     Location portal = findNearestPortalAnchor(player);
                     if (portal != null) {
                         player.setCompassTarget(portal);
-                        continue;
+                    } else {
+                        player.setCompassTarget(getIdleCompassTarget(player));
                     }
+                    continue;
                 }
                 LivingEntity nearest = findNearestBoss(player, bosses);
                 if (nearest != null) {
@@ -1940,12 +1946,23 @@ public class WorldBossManager implements Listener {
         Location nearest = null;
         for (Location anchor : anchors) {
             double distance = anchor.distanceSquared(playerLocation);
+            if (distance > PORTAL_COMPASS_MAX_RANGE_SQUARED) {
+                continue;
+            }
             if (distance < closest) {
                 closest = distance;
                 nearest = anchor;
             }
         }
         return nearest;
+    }
+
+    private Location getIdleCompassTarget(Player player) {
+        Location center = player.getLocation();
+        double angle = (Bukkit.getCurrentTick() * PORTAL_COMPASS_IDLE_ROTATION_SPEED_RADIANS) % (Math.PI * 2);
+        double x = center.getX() + Math.cos(angle) * PORTAL_COMPASS_IDLE_RADIUS;
+        double z = center.getZ() + Math.sin(angle) * PORTAL_COMPASS_IDLE_RADIUS;
+        return new Location(center.getWorld(), x, center.getY(), z);
     }
 
     private void spawnBeaconParticles(LivingEntity boss, double intensity) {
