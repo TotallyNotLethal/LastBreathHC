@@ -19,12 +19,15 @@ import org.bukkit.scheduler.BukkitTask;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class HolidayGameplayManager implements Listener {
 
@@ -155,39 +158,88 @@ public class HolidayGameplayManager implements Listener {
 
     private void rewardPlayer(Player player, HolidayEventDefinition definition) {
         player.sendMessage(Component.text("Holiday objective complete! Rewards granted.", NamedTextColor.GOLD));
+
+        Map<String, List<HolidayRewardDefinition>> pooledCustomRewards = new HashMap<>();
         for (HolidayRewardDefinition reward : definition.rewards()) {
-            if (!reward.shouldGrant()) {
+            if (reward.isPooledCustomItem()) {
+                pooledCustomRewards.computeIfAbsent(reward.pool(), key -> new ArrayList<>()).add(reward);
+            }
+        }
+
+        for (Map.Entry<String, List<HolidayRewardDefinition>> poolEntry : pooledCustomRewards.entrySet()) {
+            if (!shouldGrantPoolReward(poolEntry.getValue())) {
                 continue;
             }
-            switch (reward.type()) {
-                case ITEM -> {
-                    Material material = Material.matchMaterial(reward.target());
-                    if (material == null) {
-                        continue;
-                    }
-                    giveOrDrop(player, new ItemStack(material, reward.amount()));
+            grantWeightedPooledCustomItem(player, poolEntry.getKey(), poolEntry.getValue());
+        }
+
+        for (HolidayRewardDefinition reward : definition.rewards()) {
+            if (reward.isPooledCustomItem() || !reward.shouldGrant()) {
+                continue;
+            }
+            grantReward(player, reward);
+        }
+    }
+
+    private boolean shouldGrantPoolReward(List<HolidayRewardDefinition> options) {
+        double poolChance = 0.0D;
+        for (HolidayRewardDefinition option : options) {
+            poolChance = Math.max(poolChance, option.chance());
+        }
+        return poolChance >= 1.0D || ThreadLocalRandom.current().nextDouble() <= poolChance;
+    }
+
+    private void grantWeightedPooledCustomItem(Player player, String pool, List<HolidayRewardDefinition> options) {
+        if (options.isEmpty()) {
+            return;
+        }
+
+        int totalWeight = 0;
+        for (HolidayRewardDefinition option : options) {
+            totalWeight += Math.max(1, option.weight());
+        }
+
+        int roll = ThreadLocalRandom.current().nextInt(totalWeight);
+        int cumulative = 0;
+        for (HolidayRewardDefinition option : options) {
+            cumulative += Math.max(1, option.weight());
+            if (roll < cumulative) {
+                grantReward(player, option);
+                return;
+            }
+        }
+
+        grantReward(player, options.get(options.size() - 1));
+    }
+
+    private void grantReward(Player player, HolidayRewardDefinition reward) {
+        switch (reward.type()) {
+            case ITEM -> {
+                Material material = Material.matchMaterial(reward.target());
+                if (material == null) {
+                    return;
                 }
-                case CUSTOM_ITEM -> {
-                    Optional<ItemStack> customReward = HolidayRewardItemResolver.resolve(reward.target(), reward.amount());
-                    if (customReward.isEmpty()) {
-                        plugin.getLogger().warning("Skipping unknown holiday custom reward item id: " + reward.target());
-                        continue;
-                    }
-                    giveOrDrop(player, customReward.get());
+                giveOrDrop(player, new ItemStack(material, reward.amount()));
+            }
+            case CUSTOM_ITEM -> {
+                Optional<ItemStack> customReward = HolidayRewardItemResolver.resolve(reward.target(), reward.amount());
+                if (customReward.isEmpty()) {
+                    plugin.getLogger().warning("Skipping unknown holiday custom reward item id: " + reward.target());
+                    return;
                 }
-                case XP -> player.giveExp(reward.amount());
-                case COMMAND -> {
-                    String command = reward.command()
-                            .replace("%player%", player.getName())
-                            .replace("%holiday%", activeHoliday.name().toLowerCase());
-                    if (!command.isBlank()) {
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                    }
+                giveOrDrop(player, customReward.get());
+            }
+            case XP -> player.giveExp(reward.amount());
+            case COMMAND -> {
+                String command = reward.command()
+                        .replace("%player%", player.getName())
+                        .replace("%holiday%", activeHoliday.name().toLowerCase());
+                if (!command.isBlank()) {
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
                 }
             }
         }
     }
-
 
     private void giveOrDrop(Player player, ItemStack item) {
         Map<Integer, ItemStack> overflow = player.getInventory().addItem(item);
