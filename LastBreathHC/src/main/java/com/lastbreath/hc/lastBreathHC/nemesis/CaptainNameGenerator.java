@@ -2,7 +2,6 @@ package com.lastbreath.hc.lastBreathHC.nemesis;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.LivingEntity;
 
 import java.util.ArrayList;
@@ -13,17 +12,19 @@ import java.util.UUID;
 
 public class CaptainNameGenerator {
     private final LastBreathHC plugin;
+    private final NemesisNamingConfig namingConfig;
 
     public CaptainNameGenerator(LastBreathHC plugin) {
         this.plugin = plugin;
+        this.namingConfig = new NemesisNamingConfig(plugin);
     }
 
     public CaptainRecord.Naming generate(UUID captainId, LivingEntity entity, CaptainRecord.Traits traits) {
         long seed = captainId.getMostSignificantBits() ^ captainId.getLeastSignificantBits() ^ (long) entity.getType().name().hashCode();
         Random random = new Random(seed);
 
-        List<String> firstNames = weightedEntries("nemesis.naming.orcish.firstNames", random);
-        List<String> suffixes = weightedEntries("nemesis.naming.orcish.suffixes", random);
+        List<String> firstNames = weightedEntries("orcish.firstNames", random);
+        List<String> suffixes = weightedEntries("orcish.suffixes", random);
 
         String first = pick(firstNames, random, entity.getType().name().substring(0, 1).toUpperCase(Locale.ROOT) + entity.getType().name().substring(1).toLowerCase(Locale.ROOT));
         String suffix = pick(suffixes, random, "fang");
@@ -75,7 +76,7 @@ public class CaptainNameGenerator {
         if (traitType == null) {
             return "";
         }
-        List<String> pool = weightedEntries("nemesis.naming.orcish.traitSuffixes." + traitType, random);
+        List<String> pool = weightedEntries("orcish.traitSuffixes." + traitType, random);
         return pick(pool, random, "");
     }
 
@@ -125,14 +126,14 @@ public class CaptainNameGenerator {
         List<String> weighted = new ArrayList<>();
         String traitType = traits == null ? null : resolveTraitType(traits);
         if (traitType != null) {
-            weighted.addAll(weightedEntries("nemesis.naming.epithets." + traitType, random));
+            weighted.addAll(weightedEntries("epithets." + traitType, random));
         }
-        weighted.addAll(weightedEntries("nemesis.naming.epithets.generic", random));
+        weighted.addAll(weightedEntries("epithets.generic", random));
         return weighted;
     }
 
     private NameModifier selectModifier(Random random, LivingEntity entity, CaptainRecord.Traits traits) {
-        ConfigurationSection section = getConfigSection("nemesis.naming.modifiers");
+        ConfigurationSection section = getConfigSection("modifiers");
         if (section == null) {
             return null;
         }
@@ -195,22 +196,7 @@ public class CaptainNameGenerator {
     }
 
     private ConfigurationSection getConfigSection(String path) {
-        FileConfiguration config = plugin.getConfig();
-        ConfigurationSection section = config.getConfigurationSection(path);
-        if (section != null && !section.getKeys(false).isEmpty()) {
-            return section;
-        }
-
-        FileConfiguration defaults = (FileConfiguration) config.getDefaults();
-        if (defaults == null) {
-            return section;
-        }
-
-        ConfigurationSection defaultSection = defaults.getConfigurationSection(path);
-        if (defaultSection != null && !defaultSection.getKeys(false).isEmpty()) {
-            return defaultSection;
-        }
-        return section;
+        return namingConfig.getSection(path);
     }
 
     private String pick(List<String> options, Random random, String fallback) {
