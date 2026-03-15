@@ -1,11 +1,20 @@
 package com.lastbreath.hc.lastBreathHC.holiday;
 
+import java.util.Optional;
+
 public enum HolidayRewardType {
     ITEM,
     XP,
     COMMAND;
 
-    public static HolidayRewardType fromString(String raw) {
-        return valueOf(raw.trim().toUpperCase());
+    public static Optional<HolidayRewardType> fromString(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(valueOf(raw.trim().toUpperCase()));
+        } catch (IllegalArgumentException ignored) {
+            return Optional.empty();
+        }
     }
 }

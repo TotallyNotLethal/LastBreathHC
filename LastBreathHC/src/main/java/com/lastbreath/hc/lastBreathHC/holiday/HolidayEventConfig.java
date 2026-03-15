@@ -12,6 +12,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 public class HolidayEventConfig {
 
@@ -35,7 +36,8 @@ public class HolidayEventConfig {
 
         ConfigurationSection holidaysSection = config.getConfigurationSection("holidays");
         for (HolidayType type : HolidayType.values()) {
-            ConfigurationSection section = holidaysSection != null ? holidaysSection.getConfigurationSection(type.name().toLowerCase(Locale.ROOT)) : null;
+            String holidayKey = type.name().toLowerCase(Locale.ROOT);
+            ConfigurationSection section = holidaysSection != null ? holidaysSection.getConfigurationSection(holidayKey) : null;
             if (section == null) {
                 continue;
             }
@@ -56,8 +58,14 @@ public class HolidayEventConfig {
                     continue;
                 }
 
+                Optional<HolidayTaskType> taskType = HolidayTaskType.fromString(typeName);
+                if (taskType.isEmpty()) {
+                    plugin.getLogger().warning("Skipping holiday task for " + holidayKey + " due to invalid task type: " + typeName);
+                    continue;
+                }
+
                 tasks.add(new HolidayTaskDefinition(
-                        HolidayTaskType.fromString(typeName),
+                        taskType.get(),
                         target.toUpperCase(Locale.ROOT),
                         amount
                 ));
@@ -73,17 +81,22 @@ public class HolidayEventConfig {
                     continue;
                 }
 
-                HolidayRewardType rewardType = HolidayRewardType.fromString(typeName);
+                Optional<HolidayRewardType> rewardType = HolidayRewardType.fromString(typeName);
+                if (rewardType.isEmpty()) {
+                    plugin.getLogger().warning("Skipping holiday reward for " + holidayKey + " due to invalid reward type: " + typeName);
+                    continue;
+                }
+
                 String target = String.valueOf(rewardMap.getOrDefault("target", ""));
                 int amount = parseInt(rewardMap.get("amount"), 1);
                 String command = String.valueOf(rewardMap.getOrDefault("command", ""));
 
-                if (rewardType == HolidayRewardType.ITEM && Material.matchMaterial(target) == null) {
+                if (rewardType.get() == HolidayRewardType.ITEM && Material.matchMaterial(target) == null) {
                     continue;
                 }
 
                 rewards.add(new HolidayRewardDefinition(
-                        rewardType,
+                        rewardType.get(),
                         target.toUpperCase(Locale.ROOT),
                         Math.max(1, amount),
                         command
