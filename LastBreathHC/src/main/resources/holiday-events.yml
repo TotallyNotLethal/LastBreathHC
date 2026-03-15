@@ -71,6 +71,7 @@ holidays:
       - type: CUSTOM_ITEM
         target: totem_of_life
         amount: 1
+        chance: 0.10
       - type: XP
         amount: 700
 
@@ -106,6 +107,10 @@ holidays:
       - type: ITEM
         target: JACK_O_LANTERN
         amount: 16
+      - type: CUSTOM_ITEM
+        target: rebirth_stone
+        amount: 1
+        chance: 0.02
       - type: XP
         amount: 600
 
@@ -125,9 +130,19 @@ holidays:
     rewards:
       - type: ITEM
         target: GOLDEN_CARROT
-        amount: 32
+        amount: 24
+      - type: ITEM
+        target: BREAD
+        amount: 24
+      - type: ITEM
+        target: COOKED_BEEF
+        amount: 8
+      - type: CUSTOM_ITEM
+        target: gracestone
+        amount: 1
+        chance: 0.05
       - type: XP
-        amount: 500
+        amount: 450
 
   christmas:
     eventName: "Snowman Salvage Operation"
@@ -142,9 +157,10 @@ holidays:
     rewards:
       - type: ITEM
         target: DIAMOND
-        amount: 6
+        amount: 4
       - type: CUSTOM_ITEM
-        target: enhanced_grindstone
+        target: rebirth_stone
         amount: 1
+        chance: 0.02
       - type: XP
         amount: 650
