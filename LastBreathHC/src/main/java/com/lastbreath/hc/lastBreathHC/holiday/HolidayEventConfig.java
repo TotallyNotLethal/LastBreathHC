@@ -35,63 +35,81 @@ public class HolidayEventConfig {
         Map<HolidayType, HolidayEventDefinition> definitions = new EnumMap<>(HolidayType.class);
 
         ConfigurationSection holidaysSection = config.getConfigurationSection("holidays");
-        for (HolidayType type : HolidayType.values()) {
-            String holidayKey = type.name().toLowerCase(Locale.ROOT);
-            ConfigurationSection section = holidaysSection != null ? holidaysSection.getConfigurationSection(holidayKey) : null;
-            if (section == null) {
+        if (holidaysSection == null) {
+            plugin.getLogger().warning("Holiday events config is missing the 'holidays' section.");
+            return new HolidayEventConfig(definitions);
+        }
+
+        for (String holidayKey : holidaysSection.getKeys(false)) {
+            Optional<HolidayType> holidayType = HolidayType.fromStringOrWarn(
+                    holidayKey,
+                    plugin.getLogger()::warning,
+                    "holiday-events.yml:holidays"
+            );
+            if (holidayType.isEmpty()) {
                 continue;
             }
+
+            HolidayType type = holidayType.get();
+            ConfigurationSection section = holidaysSection.getConfigurationSection(holidayKey);
+            if (section == null) {
+                plugin.getLogger().warning("Skipping holiday '" + holidayKey + "' because it is not a configuration section.");
+                continue;
+            }
+
             String eventName = section.getString("eventName", type.eventName());
             String objective = section.getString("objective", type.objective());
             HolidayEventZone zone = readZone(section.getConfigurationSection("zone"), defaultZone);
 
             List<HolidayTaskDefinition> tasks = new ArrayList<>();
-
+            int taskIndex = 0;
             for (Map<?, ?> raw : section.getMapList("tasks")) {
-                Map<String, Object> taskMap = (Map<String, Object>) raw;
+                String context = "holiday '" + holidayKey + "' task #" + taskIndex;
+                taskIndex++;
 
-                String typeName = String.valueOf(taskMap.getOrDefault("type", ""));
-                String target = String.valueOf(taskMap.getOrDefault("target", ""));
-                int amount = parseInt(taskMap.get("amount"), 1);
+                String typeName = asString(raw.get("type"));
+                String target = asString(raw.get("target"));
+                int amount = parseInt(raw.get("amount"), 1);
 
-                if (typeName.isBlank() || target.isBlank() || amount <= 0) {
-                    continue;
-                }
-
-                Optional<HolidayTaskType> taskType = HolidayTaskType.fromString(typeName);
+                Optional<HolidayTaskType> taskType = HolidayTaskType.fromStringOrWarn(typeName, plugin.getLogger()::warning, context);
                 if (taskType.isEmpty()) {
-                    plugin.getLogger().warning("Skipping holiday task for " + holidayKey + " due to invalid task type: " + typeName);
+                    continue;
+                }
+                if (target.isBlank()) {
+                    plugin.getLogger().warning("Skipping " + context + " because target is blank.");
+                    continue;
+                }
+                if (amount <= 0) {
+                    plugin.getLogger().warning("Skipping " + context + " because amount must be greater than 0.");
                     continue;
                 }
 
-                tasks.add(new HolidayTaskDefinition(
-                        taskType.get(),
-                        target.toUpperCase(Locale.ROOT),
-                        amount
-                ));
+                tasks.add(new HolidayTaskDefinition(taskType.get(), target.toUpperCase(Locale.ROOT), amount));
             }
 
             List<HolidayRewardDefinition> rewards = new ArrayList<>();
-
+            int rewardIndex = 0;
             for (Map<?, ?> raw : section.getMapList("rewards")) {
-                Map<String, Object> rewardMap = (Map<String, Object>) raw;
+                String context = "holiday '" + holidayKey + "' reward #" + rewardIndex;
+                rewardIndex++;
 
-                String typeName = String.valueOf(rewardMap.getOrDefault("type", ""));
-                if (typeName.isBlank()) {
-                    continue;
-                }
-
-                Optional<HolidayRewardType> rewardType = HolidayRewardType.fromString(typeName);
+                String typeName = asString(raw.get("type"));
+                Optional<HolidayRewardType> rewardType = HolidayRewardType.fromStringOrWarn(typeName, plugin.getLogger()::warning, context);
                 if (rewardType.isEmpty()) {
-                    plugin.getLogger().warning("Skipping holiday reward for " + holidayKey + " due to invalid reward type: " + typeName);
                     continue;
                 }
 
-                String target = String.valueOf(rewardMap.getOrDefault("target", ""));
-                int amount = parseInt(rewardMap.get("amount"), 1);
-                String command = String.valueOf(rewardMap.getOrDefault("command", ""));
+                String target = asString(raw.get("target"));
+                int amount = parseInt(raw.get("amount"), 1);
+                String command = asString(raw.get("command"));
+
+                if (amount <= 0) {
+                    plugin.getLogger().warning("Skipping " + context + " because amount must be greater than 0.");
+                    continue;
+                }
 
                 if (rewardType.get() == HolidayRewardType.ITEM && Material.matchMaterial(target) == null) {
+                    plugin.getLogger().warning("Skipping " + context + " because material target '" + target + "' is invalid.");
                     continue;
                 }
 
@@ -107,9 +125,12 @@ public class HolidayEventConfig {
                 ));
             }
 
-            if (!tasks.isEmpty() && !rewards.isEmpty()) {
-                definitions.put(type, new HolidayEventDefinition(eventName, objective, zone, tasks, rewards));
+            if (tasks.isEmpty() || rewards.isEmpty()) {
+                plugin.getLogger().warning("Skipping holiday '" + holidayKey + "' because it must have at least one valid task and reward.");
+                continue;
             }
+
+            definitions.put(type, new HolidayEventDefinition(eventName, objective, zone, tasks, rewards));
         }
 
         return new HolidayEventConfig(definitions);
@@ -136,5 +157,9 @@ public class HolidayEventConfig {
         } catch (NumberFormatException ignored) {
             return fallback;
         }
+    }
+
+    private static String asString(Object value) {
+        return value == null ? "" : String.valueOf(value).trim();
     }
 }
