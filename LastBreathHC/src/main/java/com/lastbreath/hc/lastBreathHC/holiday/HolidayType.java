@@ -4,6 +4,9 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 public enum HolidayType {
     NEW_YEAR("New Year", 1, "Midnight Meteor Relay", "Collect 8 Spark Fragments from shooting stars and light the Sky Beacon before dawn."),
@@ -15,6 +18,8 @@ public enum HolidayType {
     THANKSGIVING("Thanksgiving", 11, "Harvest Guardian Feast", "Gather sacred crops while defending village ovens from ravenous scarecrow brutes."),
     CHRISTMAS("Christmas", 12, "Snowman Salvage Operation", "Find missing clockwork snowmen and collect toy parts to rebuild Santa's workshop golems.");
 
+    private static final Pattern NON_ALPHANUMERIC = Pattern.compile("[^A-Z0-9]+");
+
     private final String displayName;
     private final int monthValue;
     private final String eventName;
@@ -25,6 +30,25 @@ public enum HolidayType {
         this.monthValue = monthValue;
         this.eventName = eventName;
         this.objective = objective;
+    }
+
+    public static Optional<HolidayType> fromString(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(valueOf(normalize(raw)));
+        } catch (IllegalArgumentException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<HolidayType> fromStringOrWarn(String raw, Consumer<String> warningSink, String context) {
+        Optional<HolidayType> parsed = fromString(raw);
+        if (parsed.isEmpty() && warningSink != null) {
+            warningSink.accept("Invalid holiday type '" + raw + "' in " + context + ". This holiday section will be ignored.");
+        }
+        return parsed;
     }
 
     public String displayName() {
@@ -55,6 +79,11 @@ public enum HolidayType {
 
     public int monthValue() {
         return monthValue;
+    }
+
+    private static String normalize(String raw) {
+        String normalized = NON_ALPHANUMERIC.matcher(raw.trim().toUpperCase()).replaceAll("_");
+        return normalized.replaceAll("_+", "_");
     }
 
     private static LocalDate easterSunday(int year) {

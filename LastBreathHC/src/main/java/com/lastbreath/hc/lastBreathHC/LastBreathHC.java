@@ -591,7 +591,7 @@ public final class LastBreathHC extends JavaPlugin {
                 new FakePlayerTabSyncListener(this, fakePlayerService), this
         );
         getServer().getPluginManager().registerEvents(
-                new HolidayJoinListener(holidayEventManager), this
+                new HolidayJoinListener(holidayEventManager, holidayGameplayManager), this
         );
         getServer().getPluginManager().registerEvents(
                 holidayGameplayManager, this
