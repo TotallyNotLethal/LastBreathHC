@@ -387,22 +387,34 @@ public class HardcorePotionListener implements Listener {
     }
 
     private void applyLavaWalker(Player player) {
-        Block below = player.getLocation().clone().subtract(0, 1, 0).getBlock();
-        if (below.getType() != Material.LAVA) {
-            return;
-        }
         if (!triggerWithCooldown(player, "lava_walker", TICKS_PER_SECOND, 1.0)) {
             return;
         }
-        below.setType(Material.MAGMA_BLOCK);
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                if (below.getType() == Material.MAGMA_BLOCK) {
-                    below.setType(Material.LAVA);
+
+        Location center = player.getLocation();
+        int radius = 2;
+        int radiusSquared = radius * radius;
+        for (int x = -radius; x <= radius; x++) {
+            for (int z = -radius; z <= radius; z++) {
+                if ((x * x) + (z * z) > radiusSquared) {
+                    continue;
                 }
+                Block lavaBlock = center.getBlock().getRelative(x, -1, z);
+                if (lavaBlock.getType() != Material.LAVA) {
+                    continue;
+                }
+
+                lavaBlock.setType(Material.MAGMA_BLOCK);
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        if (lavaBlock.getType() == Material.MAGMA_BLOCK) {
+                            lavaBlock.setType(Material.LAVA);
+                        }
+                    }
+                }.runTaskLater(plugin, 3 * TICKS_PER_SECOND);
             }
-        }.runTaskLater(plugin, 3 * TICKS_PER_SECOND);
+        }
     }
 
     private void applyNimbleFeet(Player player) {
