@@ -7,6 +7,11 @@ import com.lastbreath.hc.lastBreathHC.asteroid.AsteroidManager;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonListener;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonManager;
 import com.lastbreath.hc.lastBreathHC.bloodmoon.BloodMoonScheduler;
+import com.lastbreath.hc.lastBreathHC.bootstrap.HolidayModule;
+import com.lastbreath.hc.lastBreathHC.bootstrap.ModuleOrchestrator;
+import com.lastbreath.hc.lastBreathHC.bootstrap.NemesisModule;
+import com.lastbreath.hc.lastBreathHC.bootstrap.PluginModule;
+import com.lastbreath.hc.lastBreathHC.bootstrap.StructureModule;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyListener;
 import com.lastbreath.hc.lastBreathHC.bounty.BountyManager;
 import com.lastbreath.hc.lastBreathHC.chat.ChatInventoryShareListener;
@@ -22,9 +27,7 @@ import com.lastbreath.hc.lastBreathHC.heads.HeadListener;
 import com.lastbreath.hc.lastBreathHC.heads.HeadManager;
 import com.lastbreath.hc.lastBreathHC.heads.HeadTrackingLogger;
 import com.lastbreath.hc.lastBreathHC.holiday.HolidayEventManager;
-import com.lastbreath.hc.lastBreathHC.holiday.HolidayEventConfig;
 import com.lastbreath.hc.lastBreathHC.holiday.HolidayGameplayManager;
-import com.lastbreath.hc.lastBreathHC.holiday.HolidayJoinListener;
 import com.lastbreath.hc.lastBreathHC.gui.CosmeticsGUI;
 import com.lastbreath.hc.lastBreathHC.gui.DailyRewardGUI;
 import com.lastbreath.hc.lastBreathHC.gui.EffectsStatusGUI;
@@ -237,6 +240,7 @@ public final class LastBreathHC extends JavaPlugin {
     private ChunkRegenManager chunkRegenManager;
     private HolidayEventManager holidayEventManager;
     private HolidayGameplayManager holidayGameplayManager;
+    private ModuleOrchestrator moduleOrchestrator;
 
 
     @Override
@@ -263,105 +267,57 @@ public final class LastBreathHC extends JavaPlugin {
                 fakePlayersSettings
         );
         fakePlayerService.startup();
-        holidayEventManager = new HolidayEventManager();
-        HolidayEventConfig holidayEventConfig = HolidayEventConfig.load(this);
-        holidayGameplayManager = new HolidayGameplayManager(this, holidayEventManager, holidayEventConfig);
-        structureFootprintRepository = new StructureFootprintRepository(this, new java.io.File(getDataFolder(), "nemesis-structures.yml"));
-        structureFootprintRepository.load();
-        playerPlacedBlockIndex = new PlayerPlacedBlockIndex(this, new java.io.File(getDataFolder(), "player-placed-blocks.yml"));
-        playerPlacedBlockIndex.load();
-        chunkRegenManager = new ChunkRegenManager(this, playerPlacedBlockIndex);
-        StructurePlacementValidator structurePlacementValidator = new StructurePlacementValidator(
-                structureFootprintRepository,
-                new StructurePlacementValidator.NoOpProtectedRegionAdapter(),
-                playerPlacedBlockIndex
+        List<PluginModule> bootModules = new ArrayList<>();
+        StructureModule structureModule = new StructureModule(this);
+        bootModules.add(structureModule);
+        HolidayModule holidayModule = new HolidayModule(this, listener -> getServer().getPluginManager().registerEvents(listener, this));
+        bootModules.add(holidayModule);
+        NemesisModule nemesisModule = new NemesisModule(
+                this,
+                listener -> getServer().getPluginManager().registerEvents(listener, this),
+                structureModule,
+                this::flushDirtyCaptains
         );
-        structureManager = new StructureManagerImpl(structurePlacementValidator, structureFootprintRepository);
-        nemesisBuildingService = new NemesisBuildingService(this, structureManager);
-        nemesisBuildingService.initialize();
-        captainRegistry = new CaptainRegistry();
-        captainHabitatService = new CaptainHabitatService(this, captainRegistry, structureFootprintRepository);
-        nemesisBuildingService.attachCaptainServices(captainRegistry, captainHabitatService);
-        captainSerializer = new CaptainSerializer(this, new java.io.File(getDataFolder(), "nemesis-captains.yml"));
-        captainRegistry.load(captainSerializer.load());
-        armyGraphSerializer = new ArmyGraphSerializer(this, new java.io.File(getDataFolder(), "nemesis-army-graph.yml"));
-        armyGraphService = new ArmyGraphService();
-        armyGraphService.load(armyGraphSerializer.load());
-        armyGraphService.seedFromCaptains(captainRegistry.getAll());
-        structureEventOrchestrator = new StructureEventOrchestrator(captainRegistry, structureManager, captainHabitatService, armyGraphService, nemesisBuildingService);
-        armyGraphService.pruneMissingCaptains(captainRegistry.getAll().stream().map(record -> record.identity().captainId()).collect(java.util.stream.Collectors.toSet()));
-        long captainFlushIntervalTicks = 20L * 60L * 3L;
-        captainFlushTask = getServer().getScheduler().runTaskTimer(this, this::flushDirtyCaptains, captainFlushIntervalTicks, captainFlushIntervalTicks);
-        killerResolver = new KillerResolver();
-        captainTraitRegistry = new CaptainTraitRegistry(this);
-        captainNameGenerator = new CaptainNameGenerator(this);
-        captainEntityBinder = new CaptainEntityBinder(this, captainRegistry);
-        captainTraitService = new CaptainTraitService(captainEntityBinder, captainTraitRegistry);
-        captainEntityBinder.setTraitService(captainTraitService);
-        nemesisProgressionService = new NemesisProgressionService(this, captainRegistry, captainEntityBinder, captainTraitRegistry, structureEventOrchestrator);
-        nemesisProgressionService.start();
-        captainSpawner = new CaptainSpawner(this, captainRegistry, captainEntityBinder, new CaptainSpawner.NoOpProtectedRegionChecker(), playerPlacedBlockIndex, captainNameGenerator, structureEventOrchestrator);
-        captainSpawner.start();
-        minionController = new MinionController(this, captainRegistry, captainEntityBinder, nemesisProgressionService, captainHabitatService);
-        minionController.start();
-        nemesisAdminWarbandService = new NemesisAdminWarbandService(captainSpawner, minionController, armyGraphService, structureEventOrchestrator);
-        nemesisUI = new NemesisUI(this, captainRegistry, captainEntityBinder);
-        nemesisUI.start();
-        nemesisCaptainListGUI = new NemesisCaptainListGUI(captainRegistry, captainEntityBinder, captainTraitRegistry);
-        nemesisRewardService = new NemesisRewardService(this, captainEntityBinder, captainRegistry);
-        nemesisRivalryDirector = new NemesisRivalryDirector(this, captainRegistry, captainEntityBinder);
-        nemesisRivalryDirector.start();
-        promotionEvaluator = new PromotionEvaluator(this, captainRegistry, structureEventOrchestrator);
-        promotionEvaluator.start();
-        dialogueEngine = new DialogueEngine(this);
-        loyaltyService = new LoyaltyService(this, captainRegistry, captainEntityBinder, armyGraphService, structureEventOrchestrator, dialogueEngine);
-        nemesisWarbandCoordinator = new NemesisWarbandCoordinator(this, captainRegistry, captainEntityBinder, dialogueEngine);
-        nemesisWarbandCoordinator.start();
-        territoryPressureService = new TerritoryPressureService(this, structureEventOrchestrator);
-        dialogueEngine.setActionHook((actionType, speaker, listener, channelKey, location) -> {
-            if (actionType == null || speaker == null || speaker.identity() == null) {
-                return;
-            }
+        bootModules.add(nemesisModule);
+        moduleOrchestrator = new ModuleOrchestrator(bootModules);
+        moduleOrchestrator.registerAll();
 
-            CaptainRecord updated = speaker;
-            switch (actionType) {
-                case BETRAYAL, BLOOD_FEUD, AGGRESSION -> {
-                    if (listener != null && listener.identity() != null) {
-                        armyGraphService.addRivalry(speaker.identity().captainId(), listener.identity().captainId());
-                    }
-                    updated = NemesisTelemetry.incrementCounter(updated, "dialogue.hostile", 1);
-                }
-                case UNITY, FORTIFY -> updated = NemesisTelemetry.incrementCounter(updated, "dialogue.unity", 1);
-                case STAND_DOWN -> updated = NemesisTelemetry.incrementCounter(updated, "dialogue.standDown", 1);
-            }
+        holidayEventManager = holidayModule.holidayEventManager();
+        holidayGameplayManager = holidayModule.holidayGameplayManager();
 
-            if (territoryPressureService != null && territoryPressureService.enabled()) {
-                String region = updated.political().map(CaptainRecord.Political::region).orElse("");
-                if (region != null && !region.isBlank()) {
-                    double delta = switch (actionType) {
-                        case BETRAYAL, BLOOD_FEUD, AGGRESSION -> 3.0;
-                        case UNITY, FORTIFY -> 1.5;
-                        case STAND_DOWN -> -1.0;
-                    };
-                    territoryPressureService.applyChange(region, "dialogue." + channelKey, delta);
-                }
-            }
+        structureFootprintRepository = structureModule.structureFootprintRepository();
+        playerPlacedBlockIndex = structureModule.playerPlacedBlockIndex();
+        chunkRegenManager = structureModule.chunkRegenManager();
+        structureManager = structureModule.structureManager();
+        nemesisBuildingService = structureModule.nemesisBuildingService();
 
-            captainRegistry.upsert(updated);
-        });
-        antiCheeseMonitor = new AntiCheeseMonitor(this, captainEntityBinder);
-        structureRaidService = new StructureRaidService(this, captainRegistry, structureFootprintRepository, territoryPressureService, structureEventOrchestrator, captainEntityBinder);
-        getServer().getPluginManager().registerEvents(killerResolver, this);
-        getServer().getPluginManager().registerEvents(new CaptainCombatListener(this, captainRegistry, killerResolver, captainEntityBinder, captainTraitService, captainTraitRegistry, nemesisUI, nemesisProgressionService, new TokenAwareDeathOutcomeResolver(), captainNameGenerator, captainHabitatService, armyGraphService, dialogueEngine), this);
-        getServer().getPluginManager().registerEvents(captainSpawner, this);
-        getServer().getPluginManager().registerEvents(playerPlacedBlockIndex, this);
-        getServer().getPluginManager().registerEvents(minionController, this);
-        getServer().getPluginManager().registerEvents(nemesisCaptainListGUI, this);
-        getServer().getPluginManager().registerEvents(nemesisRewardService, this);
-        getServer().getPluginManager().registerEvents(loyaltyService, this);
-        getServer().getPluginManager().registerEvents(new InfluenceItemHandler(this, captainRegistry, captainEntityBinder, territoryPressureService, loyaltyService), this);
-        getServer().getPluginManager().registerEvents(antiCheeseMonitor, this);
-        getServer().getPluginManager().registerEvents(structureRaidService, this);
+        captainFlushTask = nemesisModule.captainFlushTask();
+        captainRegistry = nemesisModule.captainRegistry();
+        captainSerializer = nemesisModule.captainSerializer();
+        armyGraphSerializer = nemesisModule.armyGraphSerializer();
+        armyGraphService = nemesisModule.armyGraphService();
+        killerResolver = nemesisModule.killerResolver();
+        captainEntityBinder = nemesisModule.captainEntityBinder();
+        captainSpawner = nemesisModule.captainSpawner();
+        captainTraitRegistry = nemesisModule.captainTraitRegistry();
+        captainTraitService = nemesisModule.captainTraitService();
+        minionController = nemesisModule.minionController();
+        nemesisUI = nemesisModule.nemesisUI();
+        nemesisCaptainListGUI = nemesisModule.nemesisCaptainListGUI();
+        captainNameGenerator = nemesisModule.captainNameGenerator();
+        nemesisProgressionService = nemesisModule.nemesisProgressionService();
+        nemesisRewardService = nemesisModule.nemesisRewardService();
+        nemesisRivalryDirector = nemesisModule.nemesisRivalryDirector();
+        antiCheeseMonitor = nemesisModule.antiCheeseMonitor();
+        promotionEvaluator = nemesisModule.promotionEvaluator();
+        loyaltyService = nemesisModule.loyaltyService();
+        dialogueEngine = nemesisModule.dialogueEngine();
+        territoryPressureService = nemesisModule.territoryPressureService();
+        structureEventOrchestrator = nemesisModule.structureEventOrchestrator();
+        nemesisAdminWarbandService = nemesisModule.nemesisAdminWarbandService();
+        captainHabitatService = nemesisModule.captainHabitatService();
+        structureRaidService = nemesisModule.structureRaidService();
+        nemesisWarbandCoordinator = nemesisModule.nemesisWarbandCoordinator();
         dailyRewardManager = new DailyRewardManager(this);
         potionDefinitionRegistry = PotionDefinitionRegistry.load(this, "potion-definitions.yml");
         customPotionEffectRegistry = CustomPotionEffectRegistry.load(this, "custom-effects.yml");
@@ -590,12 +546,6 @@ public final class LastBreathHC extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new FakePlayerTabSyncListener(this, fakePlayerService), this
         );
-        getServer().getPluginManager().registerEvents(
-                new HolidayJoinListener(holidayEventManager, holidayGameplayManager), this
-        );
-        getServer().getPluginManager().registerEvents(
-                holidayGameplayManager, this
-        );
         worldBossManager = new WorldBossManager(this, bloodMoonManager);
         getServer().getPluginManager().registerEvents(
                 worldBossManager, this
@@ -629,7 +579,6 @@ public final class LastBreathHC extends JavaPlugin {
         worldBossManager.start();
         mobStackManager.start();
         dailyCosmeticListener.start();
-        holidayGameplayManager.start();
 
         getLifecycleManager().registerEventHandler(
                 LifecycleEvents.COMMANDS,
@@ -699,17 +648,9 @@ public final class LastBreathHC extends JavaPlugin {
             statsAutosaveTask.cancel();
             statsAutosaveTask = null;
         }
-        if (captainFlushTask != null) {
-            captainFlushTask.cancel();
-            captainFlushTask = null;
-        }
         if (apiStatsTask != null) {
             apiStatsTask.cancel();
             apiStatsTask = null;
-        }
-        if (holidayGameplayManager != null) {
-            holidayGameplayManager.stop();
-            holidayGameplayManager = null;
         }
         if (cosmeticAuraService != null) {
             cosmeticAuraService.stop();
@@ -750,68 +691,40 @@ public final class LastBreathHC extends JavaPlugin {
             fakePlayerService.shutdown();
             fakePlayerService = null;
         }
-        if (nemesisBuildingService != null) {
-            nemesisBuildingService.shutdown();
-            nemesisBuildingService = null;
+        if (moduleOrchestrator != null) {
+            moduleOrchestrator.shutdownAll();
+            moduleOrchestrator = null;
         }
-        if (structureFootprintRepository != null) {
-            structureFootprintRepository.saveIfDirty();
-            structureFootprintRepository = null;
-        }
-        if (playerPlacedBlockIndex != null) {
-            playerPlacedBlockIndex.saveIfDirty();
-            playerPlacedBlockIndex = null;
-        }
-        if (chunkRegenManager != null) {
-            chunkRegenManager.shutdown();
-            chunkRegenManager = null;
-        }
+        captainFlushTask = null;
+        holidayGameplayManager = null;
+        structureFootprintRepository = null;
+        playerPlacedBlockIndex = null;
+        chunkRegenManager = null;
         structureManager = null;
         structureEventOrchestrator = null;
+        nemesisBuildingService = null;
         nemesisAdminWarbandService = null;
         captainHabitatService = null;
         structureRaidService = null;
-        flushDirtyCaptains();
         captainRegistry = null;
         captainSerializer = null;
         armyGraphSerializer = null;
         killerResolver = null;
         captainEntityBinder = null;
-        if (captainSpawner != null) {
-            captainSpawner.stop();
-            captainSpawner = null;
-        }
+        captainSpawner = null;
         captainTraitService = null;
         captainTraitRegistry = null;
-        if (minionController != null) {
-            minionController.stop();
-            minionController = null;
-        }
-        if (nemesisUI != null) {
-            nemesisUI.stop();
-            nemesisUI = null;
-        }
+        minionController = null;
+        nemesisUI = null;
         nemesisCaptainListGUI = null;
-        if (nemesisProgressionService != null) {
-            nemesisProgressionService.stop();
-            nemesisProgressionService = null;
-        }
+        nemesisProgressionService = null;
         nemesisRewardService = null;
-        if (nemesisRivalryDirector != null) {
-            nemesisRivalryDirector.stop();
-            nemesisRivalryDirector = null;
-        }
+        nemesisRivalryDirector = null;
         loyaltyService = null;
         dialogueEngine = null;
-        if (nemesisWarbandCoordinator != null) {
-            nemesisWarbandCoordinator.stop();
-            nemesisWarbandCoordinator = null;
-        }
+        nemesisWarbandCoordinator = null;
         territoryPressureService = null;
-        if (promotionEvaluator != null) {
-            promotionEvaluator.stop();
-            promotionEvaluator = null;
-        }
+        promotionEvaluator = null;
         armyGraphService = null;
         antiCheeseMonitor = null;
         int removedAsteroidMobs = AsteroidManager.clearAsteroidMobsForShutdown();
