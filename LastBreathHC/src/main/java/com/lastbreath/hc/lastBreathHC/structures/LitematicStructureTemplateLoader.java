@@ -1,18 +1,30 @@
 package com.lastbreath.hc.lastBreathHC.structures;
 
 import org.bukkit.Material;
+import org.bukkit.block.data.BlockData;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.Map;
 
 /**
  * Loader for modern .litematic files.
  */
 public final class LitematicStructureTemplateLoader {
+
+    private final Function<Material, BlockData> blockDataFactory;
+
+    public LitematicStructureTemplateLoader() {
+        this(Material::createBlockData);
+    }
+
+    LitematicStructureTemplateLoader(Function<Material, BlockData> blockDataFactory) {
+        this.blockDataFactory = blockDataFactory;
+    }
 
     public StructureTemplate load(String id, File litematicFile) throws IOException {
         if (!litematicFile.exists()) {
@@ -34,7 +46,7 @@ public final class LitematicStructureTemplateLoader {
             throw new IOException(parseContext(id, litematicFile, "Regions") + ": no regions found");
         }
 
-        PaletteStructureTemplateBuilder builder = new PaletteStructureTemplateBuilder(id);
+        PaletteStructureTemplateBuilder builder = new PaletteStructureTemplateBuilder(id, blockDataFactory);
         int placements = 0;
 
         for (Map.Entry<String, NbtBinaryReader.NbtTag> regionEntry : regions.value().entrySet()) {

@@ -1,17 +1,29 @@
 package com.lastbreath.hc.lastBreathHC.structures;
 
 import org.bukkit.Material;
+import org.bukkit.block.data.BlockData;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * Loader for vanilla structure block NBT files.
  */
 public final class NbtStructureTemplateLoader {
+
+    private final Function<Material, BlockData> blockDataFactory;
+
+    public NbtStructureTemplateLoader() {
+        this(Material::createBlockData);
+    }
+
+    NbtStructureTemplateLoader(Function<Material, BlockData> blockDataFactory) {
+        this.blockDataFactory = blockDataFactory;
+    }
 
     public StructureTemplate load(String id, File nbtStructureFile) throws IOException {
         if (!nbtStructureFile.exists()) {
@@ -45,7 +57,7 @@ public final class NbtStructureTemplateLoader {
 
         // Vanilla structure NBT positions are already relative to the structure origin.
         // We keep this origin convention unchanged and emit each decoded block at its listed `pos`.
-        PaletteStructureTemplateBuilder builder = new PaletteStructureTemplateBuilder(id);
+        PaletteStructureTemplateBuilder builder = new PaletteStructureTemplateBuilder(id, blockDataFactory);
         int placements = 0;
         for (int i = 0; i < blocks.size(); i++) {
             String blockContext = parseContext(id, nbtStructureFile, "blocks[" + i + "]");
