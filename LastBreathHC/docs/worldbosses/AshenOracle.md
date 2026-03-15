@@ -14,6 +14,9 @@ The **Ashen Oracle** is a Wither Skeleton-based world boss that begins in a ritu
 - **Ash burst radius:** `10.0` blocks (configurable).
 - **Ash burst cooldown:** `140` ticks (≈7 seconds, configurable).
 - **Cataclysm threshold:** `35%` health (configurable).
+- **Summon cooldown:** `180` ticks (≈9 seconds, configurable).
+- **Summon base count:** `2` minions per wave (scales by phase, configurable).
+- **Summon max active:** `12` total boss minions alive at once (configurable).
 
 > **Config source:** `worldBoss.bosses.AshenOracle.*` in `config.yml`.
 
@@ -26,18 +29,21 @@ The **Ashen Oracle** is a Wither Skeleton-based world boss that begins in a ritu
 ### Phase 2 — Prophecy
 - **Omen pulses:** Periodic omen blasts damage and debuff players within 20 blocks, except those standing in the omen safe ring around the boss.
 - **Debuffs:** Omen applies **Blindness** and **Slowness**.
+- **Summon waves:** Timed waves of Wither Skeleton minions spawn while Prophecy is active.
 - **Safe ring:** A persistent END_ROD ring around the boss indicates the omen safe radius.
 
 ### Phase 3 — Cataclysm (Low Health)
 - **Trigger:** At ≤35% health.
 - **Empowered omens:** Omen pulses deal higher damage and occur more frequently.
 - **Ash burst:** Periodic ash explosions knock back, ignite, and damage players within range.
+- **Escalated summons:** Summon waves accelerate and add Blaze minions in Cataclysm.
 - **Burning melee:** Boss attacks ignite players during Cataclysm.
 
 ## Custom Moves
 - **Ritual Shield:** Invulnerability tied to relics that must be destroyed.
 - **Omen Pulse:** Area pulse that damages and applies Blindness + Slowness outside the safe ring.
 - **Ash Burst (Cataclysm):** Fiery knockback burst that ignites and damages nearby players.
+- **Ashen Reinforcements:** Timed summon waves that scale up by phase (Wither Skeletons in Prophecy, mixed Blaze + Wither Skeletons in Cataclysm).
 - **Burning Strikes (Cataclysm):** Boss melee hits set targets on fire.
 
 ## How to Defeat the Ashen Oracle (Step-by-Step)
