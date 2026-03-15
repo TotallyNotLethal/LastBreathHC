@@ -7,17 +7,24 @@ import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public final class PaletteStructureTemplateBuilder {
     private final String id;
     private final List<StructureBlockPlacement> placements = new ArrayList<>();
+    private final Function<Material, BlockData> blockDataFactory;
 
     public PaletteStructureTemplateBuilder(String id) {
+        this(id, Material::createBlockData);
+    }
+
+    public PaletteStructureTemplateBuilder(String id, Function<Material, BlockData> blockDataFactory) {
         this.id = id;
+        this.blockDataFactory = blockDataFactory;
     }
 
     public PaletteStructureTemplateBuilder addBlock(int x, int y, int z, Material material) {
-        BlockData data = material.createBlockData();
+        BlockData data = blockDataFactory.apply(material);
         return addBlock(x, y, z, data);
     }
 
