@@ -27,9 +27,15 @@ public class HolidayCommand implements BasicCommand {
     public void execute(CommandSourceStack source, String[] args) {
         var sender = source.getSender();
 
-        if (args.length > 0 && args[0].equalsIgnoreCase("progress") && sender instanceof Player player) {
-            sender.sendMessage(Component.text(holidayGameplayManager.progressLine(player), NamedTextColor.YELLOW));
-            return;
+        if (args.length > 0 && sender instanceof Player player) {
+            if (args[0].equalsIgnoreCase("progress")) {
+                holidayGameplayManager.openProgressGui(player);
+                return;
+            }
+            if (args[0].equalsIgnoreCase("rewards")) {
+                holidayGameplayManager.openRewardsGui(player);
+                return;
+            }
         }
 
         holidayEventManager.getActiveHolidayEvent().ifPresentOrElse(active -> {

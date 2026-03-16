@@ -32,6 +32,7 @@ public class HolidayEventConfig {
         FileConfiguration config = YamlConfiguration.loadConfiguration(file);
 
         HolidayEventZone defaultZone = readZone(config.getConfigurationSection("defaultZone"), new HolidayEventZone("world", 0, 64, 0, 300));
+        boolean defaultRestrictCollectionToZone = config.getBoolean("defaultRestrictCollectionToZone", true);
         Map<HolidayType, HolidayEventDefinition> definitions = new EnumMap<>(HolidayType.class);
 
         ConfigurationSection holidaysSection = config.getConfigurationSection("holidays");
@@ -59,6 +60,7 @@ public class HolidayEventConfig {
 
             String eventName = section.getString("eventName", type.eventName());
             String objective = section.getString("objective", type.objective());
+            boolean restrictCollectionToZone = section.getBoolean("restrictCollectionToZone", defaultRestrictCollectionToZone);
             HolidayEventZone zone = readZone(section.getConfigurationSection("zone"), defaultZone);
 
             List<HolidayTaskDefinition> tasks = new ArrayList<>();
@@ -151,7 +153,7 @@ public class HolidayEventConfig {
                 continue;
             }
 
-            definitions.put(type, new HolidayEventDefinition(eventName, objective, zone, tasks, rewards));
+            definitions.put(type, new HolidayEventDefinition(eventName, objective, restrictCollectionToZone, zone, tasks, rewards));
         }
 
         return new HolidayEventConfig(definitions);
