@@ -5,6 +5,10 @@ defaultZone:
   z: 0.0
   radius: 300.0
 
+# If true, task progress only counts inside the configured zone.
+# Can be overridden per holiday with `restrictCollectionToZone`.
+defaultRestrictCollectionToZone: true
+
 # CUSTOM_ITEM inflation tuning defaults (Option B: weighted pools):
 # - Use the same `pool` for mutually exclusive CUSTOM_ITEM rewards.
 # - Keep `chance` conservative for rare pools (recommended 0.01-0.03 for high-impact items).
@@ -16,6 +20,7 @@ holidays:
   new_year:
     eventName: "Midnight Meteor Relay"
     objective: "Hunt phantoms and collect gunpowder in the holiday zone."
+    restrictCollectionToZone: false
     tasks:
       - type: KILL_ENTITY
         target: PHANTOM
@@ -33,6 +38,7 @@ holidays:
   valentines:
     eventName: "Cupid's Lost Letters"
     objective: "Collect roses and cocoa beans in the holiday zone."
+    restrictCollectionToZone: true
     tasks:
       - type: BREAK_BLOCK
         target: ROSE_BUSH
