@@ -1904,9 +1904,6 @@ public class WorldBossManager implements Listener {
                 .map(WorldBossController::getBoss)
                 .filter(entity -> entity != null && entity.isValid())
                 .toList();
-        if (bosses.isEmpty()) {
-            return;
-        }
         if (beaconEnabled && beaconTickCounter == 0) {
             double intensity = Math.max(0.5, plugin.getConfig().getDouble(CONFIG_ROOT + ".particleIntensity", 1.0));
             for (LivingEntity boss : bosses) {
