@@ -19,67 +19,97 @@ defaultRestrictCollectionToZone: true
 holidays:
   new_year:
     eventName: "Midnight Meteor Relay"
-    objective: "Hunt phantoms and collect gunpowder in the holiday zone."
+    objective: "Defend the countdown by hunting phantoms, collecting gunpowder, and crafting signal stars."
     restrictCollectionToZone: false
     tasks:
       - type: KILL_ENTITY
         target: PHANTOM
-        amount: 10
+        amount: 24
       - type: COLLECT_ITEM
         target: GUNPOWDER
-        amount: 64
+        amount: 128
+      - type: COLLECT_ITEM
+        target: FIREWORK_STAR
+        amount: 16
     rewards:
       - type: ITEM
         target: FIREWORK_ROCKET
-        amount: 64
+        amount: 128
+      - type: ITEM
+        target: NETHER_STAR
+        amount: 1
+      - type: CUSTOM_ITEM
+        target: cosmetic_bow_trail_starfall
+        amount: 1
       - type: XP
-        amount: 500
+        amount: 950
 
   valentines:
     eventName: "Cupid's Lost Letters"
-    objective: "Collect roses and cocoa beans in the holiday zone."
+    objective: "Run deliveries for Cupid by gathering petals, sweets, and shining gifts in the love grove."
     restrictCollectionToZone: true
     tasks:
       - type: BREAK_BLOCK
         target: ROSE_BUSH
-        amount: 24
+        amount: 48
       - type: COLLECT_ITEM
         target: COCOA_BEANS
-        amount: 32
-    rewards:
-      - type: ITEM
-        target: GOLDEN_APPLE
-        amount: 8
-      - type: XP
-        amount: 400
-
-  st_patricks:
-    eventName: "Emerald Gremlin Hunt"
-    objective: "Kill cave spiders and gather emeralds from the event zone."
-    tasks:
-      - type: KILL_ENTITY
-        target: CAVE_SPIDER
-        amount: 20
+        amount: 96
       - type: COLLECT_ITEM
-        target: EMERALD
+        target: HONEY_BOTTLE
         amount: 16
     rewards:
       - type: ITEM
-        target: EMERALD
+        target: GOLDEN_APPLE
+        amount: 12
+      - type: ITEM
+        target: PINK_CANDLE
         amount: 24
+      - type: CUSTOM_ITEM
+        target: cosmetic_aura_rose_quartz
+        amount: 1
       - type: XP
-        amount: 450
+        amount: 800
+
+  st_patricks:
+    eventName: "Emerald Gremlin Hunt"
+    objective: "Purge gremlins in the clover caves, recover emerald caches, and brew luck draughts."
+    tasks:
+      - type: KILL_ENTITY
+        target: CAVE_SPIDER
+        amount: 30
+      - type: COLLECT_ITEM
+        target: EMERALD
+        amount: 48
+      - type: COLLECT_ITEM
+        target: POTION
+        amount: 8
+    rewards:
+      - type: ITEM
+        target: EMERALD
+        amount: 48
+      - type: ITEM
+        target: EXPERIENCE_BOTTLE
+        amount: 24
+      - type: CUSTOM_ITEM
+        target: cosmetic_prefix_ashen
+        amount: 1
+      - type: XP
+        amount: 850
 
   easter:
     eventName: "Colossal Bunny Rampage"
-    objective: "Defeat giant bunnies (rabbits) and gather eggs for the Spring Totem."
+    objective: "Fight enraged giant bunnies in the spring arena, crack their egg stashes, and gather offerings for the ritual."
     tasks:
       - type: KILL_ENTITY
         target: RABBIT
-        amount: 30
+        amount: 36
       - type: COLLECT_ITEM
         target: EGG
-        amount: 64
+        amount: 96
+      - type: COLLECT_ITEM
+        target: RABBIT_HIDE
+        amount: 48
     rewards:
       - type: CUSTOM_ITEM
         target: enhanced_grindstone
@@ -93,41 +123,55 @@ holidays:
         chance: 0.10
         pool: spring_relics
         weight: 2
+      - type: CUSTOM_ITEM
+        target: cosmetic_aura_rose_quartz
+        amount: 1
       - type: XP
-        amount: 700
+        amount: 1000
 
   independence_day:
     eventName: "Powder Keg Convoy"
-    objective: "Collect TNT and gunpowder while defending the holiday zone."
+    objective: "Escort the powder convoy by stockpiling explosives, signal rockets, and iron for cannon repairs."
     tasks:
       - type: COLLECT_ITEM
         target: GUNPOWDER
-        amount: 64
+        amount: 128
       - type: COLLECT_ITEM
         target: TNT
-        amount: 16
+        amount: 32
+      - type: COLLECT_ITEM
+        target: IRON_INGOT
+        amount: 64
     rewards:
       - type: ITEM
         target: TNT
-        amount: 16
+        amount: 32
       - type: ITEM
         target: FIREWORK_ROCKET
-        amount: 64
+        amount: 128
+      - type: CUSTOM_ITEM
+        target: cosmetic_bow_trail_thunder_spark
+        amount: 1
+      - type: XP
+        amount: 900
 
   halloween:
     eventName: "Lanterns of the Hollow"
-    objective: "Eliminate undead and carve pumpkins in the holiday zone."
+    objective: "Seal the Hollow by slaying undead, carving cursed pumpkins, and collecting candles for warding altars."
     tasks:
       - type: KILL_ENTITY
         target: ZOMBIE
-        amount: 35
+        amount: 60
       - type: BREAK_BLOCK
         target: PUMPKIN
-        amount: 20
+        amount: 40
+      - type: COLLECT_ITEM
+        target: CANDLE
+        amount: 32
     rewards:
       - type: ITEM
         target: JACK_O_LANTERN
-        amount: 16
+        amount: 32
       - type: CUSTOM_ITEM
         target: enhanced_grindstone
         amount: 1
@@ -140,32 +184,38 @@ holidays:
         chance: 0.02
         pool: spooky_relics
         weight: 1
+      - type: CUSTOM_ITEM
+        target: cosmetic_kill_message_gravewarden
+        amount: 1
       - type: XP
-        amount: 600
+        amount: 1100
 
   thanksgiving:
     eventName: "Harvest Guardian Feast"
-    objective: "Gather harvest crops from the event area."
+    objective: "Prepare the guardian feast with major crop hauls and a hunter's tribute from the event fields."
     tasks:
       - type: COLLECT_ITEM
         target: WHEAT
-        amount: 64
+        amount: 128
       - type: COLLECT_ITEM
         target: CARROT
-        amount: 64
+        amount: 128
       - type: COLLECT_ITEM
         target: POTATO
-        amount: 64
+        amount: 128
+      - type: COLLECT_ITEM
+        target: COOKED_BEEF
+        amount: 32
     rewards:
       - type: ITEM
         target: GOLDEN_CARROT
-        amount: 24
+        amount: 32
       - type: ITEM
         target: BREAD
-        amount: 24
+        amount: 48
       - type: ITEM
         target: COOKED_BEEF
-        amount: 8
+        amount: 32
       - type: CUSTOM_ITEM
         target: enhanced_grindstone
         amount: 1
@@ -178,23 +228,29 @@ holidays:
         chance: 0.05
         pool: harvest_relics
         weight: 3
+      - type: CUSTOM_ITEM
+        target: cosmetic_prefix_hollowed
+        amount: 1
       - type: XP
-        amount: 450
+        amount: 900
 
   christmas:
     eventName: "Snowman Salvage Operation"
-    objective: "Recover snowman parts by collecting snow blocks and killing strays."
+    objective: "Rebuild the workshop by collecting snow blocks, defeating strays, and delivering festive sweets."
     tasks:
       - type: COLLECT_ITEM
         target: SNOW_BLOCK
-        amount: 64
+        amount: 160
       - type: KILL_ENTITY
         target: STRAY
-        amount: 20
+        amount: 32
+      - type: COLLECT_ITEM
+        target: COOKIE
+        amount: 64
     rewards:
       - type: ITEM
         target: DIAMOND
-        amount: 4
+        amount: 8
       - type: CUSTOM_ITEM
         target: enhanced_grindstone
         amount: 1
@@ -207,5 +263,8 @@ holidays:
         chance: 0.02
         pool: winter_relics
         weight: 1
+      - type: CUSTOM_ITEM
+        target: cosmetic_aura_frost_glint
+        amount: 1
       - type: XP
-        amount: 650
+        amount: 1200

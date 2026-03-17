@@ -2,6 +2,7 @@ package com.lastbreath.hc.lastBreathHC.bootstrap;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.holiday.HolidayEventConfig;
+import com.lastbreath.hc.lastBreathHC.holiday.HolidayThemedEncounterListener;
 import com.lastbreath.hc.lastBreathHC.holiday.HolidayEventManager;
 import com.lastbreath.hc.lastBreathHC.holiday.HolidayGameplayManager;
 import com.lastbreath.hc.lastBreathHC.holiday.HolidayJoinListener;
@@ -24,6 +25,7 @@ public final class HolidayModule implements PluginModule {
         holidayGameplayManager = new HolidayGameplayManager(plugin, holidayEventManager, holidayEventConfig);
 
         listenerRegistrar.register(new HolidayJoinListener(holidayEventManager, holidayGameplayManager));
+        listenerRegistrar.register(new HolidayThemedEncounterListener(holidayGameplayManager));
         listenerRegistrar.register(holidayGameplayManager);
         holidayGameplayManager.start();
     }

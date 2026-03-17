@@ -84,6 +84,10 @@ public class HolidayGameplayManager implements Listener {
         return Optional.ofNullable(holidayEventConfig.definitionFor(activeHoliday));
     }
 
+    public Optional<HolidayType> getActiveHolidayType() {
+        return Optional.ofNullable(activeHoliday);
+    }
+
     public String progressLine(Player player) {
         if (activeHoliday == null) {
             return "No active holiday gameplay event.";
