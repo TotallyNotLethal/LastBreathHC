@@ -113,7 +113,8 @@ public class EchoInfuserListener implements Listener {
     private Color getSyncedCycleColor() {
         long now = System.currentTimeMillis();
         float hue = ((now % 2500L) / 2500.0F);
-        return Color.fromRGB(java.awt.Color.HSBtoRGB(hue, 0.95F, 1.0F));
+        int rgb = java.awt.Color.HSBtoRGB(hue, 0.95F, 1.0F) & 0x00FFFFFF;
+        return Color.fromRGB(rgb);
     }
 
     private TrimMaterial getSyncedTrimMaterial() {
@@ -137,7 +138,7 @@ public class EchoInfuserListener implements Listener {
             return;
         }
 
-        armorMeta.setTrim(new ArmorTrim(syncedTrimMaterial, currentTrim.getPattern(), currentTrim.isShowInTooltip()));
+        armorMeta.setTrim(new ArmorTrim(syncedTrimMaterial, currentTrim.getPattern()));
         armor.setItemMeta(armorMeta);
     }
 

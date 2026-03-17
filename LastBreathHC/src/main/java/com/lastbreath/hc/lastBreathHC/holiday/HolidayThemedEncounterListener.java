@@ -1,5 +1,6 @@
 package com.lastbreath.hc.lastBreathHC.holiday;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
@@ -116,7 +117,7 @@ public class HolidayThemedEncounterListener implements Listener {
             return;
         }
         entity.addScoreboardTag("holiday_elite");
-        entity.customName(name);
+        entity.customName(Component.text(name));
         entity.setCustomNameVisible(true);
 
         AttributeInstance health = entity.getAttribute(Attribute.MAX_HEALTH);
