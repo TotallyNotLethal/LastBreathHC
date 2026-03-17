@@ -2,9 +2,7 @@ package com.lastbreath.hc.lastBreathHC.items;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Bukkit;
-import org.bukkit.Color;
 import org.bukkit.Material;
-import org.bukkit.Particle;
 import org.bukkit.Registry;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -73,48 +71,17 @@ public class EchoInfuserListener implements Listener {
     }
 
     private void tickVisuals() {
-        Color syncedColor = getSyncedCycleColor();
         TrimMaterial syncedTrimMaterial = getSyncedTrimMaterial();
         for (Player player : Bukkit.getOnlinePlayers()) {
             PlayerInventory inventory = player.getInventory();
-            int infusedPieces = 0;
             ItemStack[] armorContents = inventory.getArmorContents();
-            for (int slot = 0; slot < armorContents.length; slot++) {
-                ItemStack armor = armorContents[slot];
+            for (ItemStack armor : armorContents) {
                 if (!isInfusedTrimArmor(armor)) {
                     continue;
                 }
                 cycleTrimMaterial(armor, syncedTrimMaterial);
-                inventory.setItem(36 + slot, armor);
-                infusedPieces++;
-            }
-            if (infusedPieces == 0) {
-                continue;
-            }
-
-            float size = Math.min(1.8F, 0.9F + (infusedPieces * 0.2F));
-            Particle.DustOptions dust = new Particle.DustOptions(syncedColor, size);
-
-            for (int i = 0; i < infusedPieces; i++) {
-                player.getWorld().spawnParticle(
-                        Particle.DUST,
-                        player.getLocation().add(0, 1.1, 0),
-                        4,
-                        0.35,
-                        0.55,
-                        0.35,
-                        0,
-                        dust
-                );
             }
         }
-    }
-
-    private Color getSyncedCycleColor() {
-        long now = System.currentTimeMillis();
-        float hue = ((now % 2500L) / 2500.0F);
-        int rgb = java.awt.Color.HSBtoRGB(hue, 0.95F, 1.0F) & 0x00FFFFFF;
-        return Color.fromRGB(rgb);
     }
 
     private TrimMaterial getSyncedTrimMaterial() {
