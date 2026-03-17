@@ -348,8 +348,7 @@ public class AsteroidManager {
                         continue;
                     }
                     if (entity instanceof ArmorStand stand
-                            && stand.getScoreboardTags().contains(ASTEROID_MARKER_TAG)
-                            && stand.getScoreboardTags().contains(ASTEROID_MARKER_KEY_PREFIX + key)) {
+                            && stand.getScoreboardTags().contains(ASTEROID_MARKER_TAG)) {
                         stand.remove();
                     }
                 }

@@ -1,6 +1,6 @@
 package com.lastbreath.hc.lastBreathHC.bootstrap;
 
-import com.lastbreath.hc.lastBreathHC.ChunkRegenManager;
+import com.lastbreath.hc.lastBreathHC.worldregen.ChunkRegenManager;
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.nemesis.NemesisBuildingService;
 import com.lastbreath.hc.lastBreathHC.structures.PlayerPlacedBlockIndex;
