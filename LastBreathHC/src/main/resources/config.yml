@@ -142,6 +142,7 @@ asteroid:
         rebirthStoneChance: 5
         totemOfLifeChance: 5
         enhancedGrindstoneChance: 5
+        echoInfuserChance: 8
     tier3:
       ironIngot:
         min: 12
@@ -162,6 +163,7 @@ asteroid:
         rebirthStoneChance: 5
         totemOfLifeChance: 5
         enhancedGrindstoneChance: 10
+        echoInfuserChance: 14
       cosmetics:
         chance: 2
         auras:
