@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.Registry;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -13,6 +14,8 @@ import org.bukkit.inventory.CraftingInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ArmorMeta;
+import org.bukkit.inventory.meta.trim.ArmorTrim;
+import org.bukkit.inventory.meta.trim.TrimMaterial;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -55,8 +58,6 @@ public class EchoInfuserListener implements Listener {
         }
 
         armorMeta.getPersistentDataContainer().set(EchoInfuser.INFUSED_ARMOR_KEY, PersistentDataType.BYTE, (byte) 1);
-        armorMeta.addEnchant(org.bukkit.enchantments.Enchantment.UNBREAKING, 1, true);
-        armorMeta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ENCHANTS);
 
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
         if (armorMeta.lore() != null) {
@@ -73,13 +74,18 @@ public class EchoInfuserListener implements Listener {
 
     private void tickVisuals() {
         Color syncedColor = getSyncedCycleColor();
+        TrimMaterial syncedTrimMaterial = getSyncedTrimMaterial();
         for (Player player : Bukkit.getOnlinePlayers()) {
             PlayerInventory inventory = player.getInventory();
             int infusedPieces = 0;
-            for (ItemStack armor : inventory.getArmorContents()) {
+            ItemStack[] armorContents = inventory.getArmorContents();
+            for (int slot = 0; slot < armorContents.length; slot++) {
+                ItemStack armor = armorContents[slot];
                 if (!isInfusedTrimArmor(armor)) {
                     continue;
                 }
+                cycleTrimMaterial(armor, syncedTrimMaterial);
+                inventory.setItem(36 + slot, armor);
                 infusedPieces++;
             }
             if (infusedPieces == 0) {
@@ -108,6 +114,31 @@ public class EchoInfuserListener implements Listener {
         long now = System.currentTimeMillis();
         float hue = ((now % 2500L) / 2500.0F);
         return Color.fromRGB(java.awt.Color.HSBtoRGB(hue, 0.95F, 1.0F));
+    }
+
+    private TrimMaterial getSyncedTrimMaterial() {
+        List<TrimMaterial> materials = Registry.TRIM_MATERIAL.stream().toList();
+        if (materials.isEmpty()) {
+            return null;
+        }
+
+        long now = System.currentTimeMillis();
+        int index = (int) ((now / 800L) % materials.size());
+        return materials.get(index);
+    }
+
+    private void cycleTrimMaterial(ItemStack armor, TrimMaterial syncedTrimMaterial) {
+        if (syncedTrimMaterial == null || !(armor.getItemMeta() instanceof ArmorMeta armorMeta)) {
+            return;
+        }
+
+        ArmorTrim currentTrim = armorMeta.getTrim();
+        if (currentTrim == null || currentTrim.getMaterial().equals(syncedTrimMaterial)) {
+            return;
+        }
+
+        armorMeta.setTrim(new ArmorTrim(syncedTrimMaterial, currentTrim.getPattern(), currentTrim.isShowInTooltip()));
+        armor.setItemMeta(armorMeta);
     }
 
     private CraftMatch findMatch(ItemStack[] matrix) {
