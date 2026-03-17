@@ -6,6 +6,7 @@ import com.lastbreath.hc.lastBreathHC.cosmetics.BowTrailType;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenHelper;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchant;
 import com.lastbreath.hc.lastBreathHC.items.CustomEnchantPage;
+import com.lastbreath.hc.lastBreathHC.items.EchoInfuser;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstone;
 import com.lastbreath.hc.lastBreathHC.items.RebirthStone;
 import com.lastbreath.hc.lastBreathHC.items.TotemOfLife;
@@ -127,6 +128,9 @@ public class AsteroidLoot {
         }
         if (random.nextInt(100) < getTierChance(config, tier, "customItems.enhancedGrindstoneChance", 5, 10)) {
             inv.addItem(EnhancedGrindstone.create());
+        }
+        if (random.nextInt(100) < getTierChance(config, tier, "customItems.echoInfuserChance", 8, 14)) {
+            inv.addItem(EchoInfuser.create());
         }
     }
 
