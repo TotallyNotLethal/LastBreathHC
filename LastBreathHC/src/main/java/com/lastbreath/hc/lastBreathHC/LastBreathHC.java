@@ -797,6 +797,10 @@ public final class LastBreathHC extends JavaPlugin {
         return worldBossManager;
     }
 
+    public PlayerPlacedBlockIndex getPlayerPlacedBlockIndex() {
+        return playerPlacedBlockIndex;
+    }
+
     public FakePlayerService getFakePlayerService() {
         return fakePlayerService;
     }
