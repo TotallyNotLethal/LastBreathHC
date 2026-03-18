@@ -19,6 +19,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
+import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.WorldCreator;
@@ -37,14 +38,19 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Wither;
+import org.bukkit.entity.WitherSkull;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
@@ -56,9 +62,13 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.block.BlockFace;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Projectile;
+
+import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.structures.PlayerPlacedBlockIndex;
 
 import java.io.File;
 import java.io.IOException;
@@ -117,9 +127,8 @@ public class WorldBossManager implements Listener {
     private final File portalDataFile;
     private boolean purgePortalsOnChunkLoad = true;
     private boolean enabled = true;
-    private boolean arenaMarkedForDeletion;
-    private String markedArenaWorldName;
-    private boolean bossDefeated;
+    private final Set<String> arenasMarkedForDeletion = new HashSet<>();
+    private final Set<String> defeatedArenaWorldNames = new HashSet<>();
 
     public WorldBossManager(Plugin plugin, BloodMoonManager bloodMoonManager) {
         this.plugin = plugin;
@@ -172,9 +181,6 @@ public class WorldBossManager implements Listener {
     }
 
     public void start() {
-        if (createArenaWorld() == null) {
-            plugin.getLogger().warning("World boss arena world could not be created during startup.");
-        }
         clearPortalPersistenceOnStartup();
         purgeLegacyPortals();
         scheduleNextRandomSpawn();
@@ -206,6 +212,8 @@ public class WorldBossManager implements Listener {
         removeAllBossBars();
         removeAllPortals();
         portalCooldowns.clear();
+        arenasMarkedForDeletion.clear();
+        defeatedArenaWorldNames.clear();
     }
 
     public void enableBosses() {
@@ -224,8 +232,7 @@ public class WorldBossManager implements Listener {
             bloodMoonCheckTask.cancel();
             bloodMoonCheckTask = null;
         }
-        World arenaWorld = resolveArenaWorld();
-        if (arenaWorld != null) {
+        for (World arenaWorld : getLoadedArenaWorlds()) {
             for (Player player : arenaWorld.getPlayers()) {
                 teleportPlayerToRespawn(player);
             }
@@ -244,6 +251,8 @@ public class WorldBossManager implements Listener {
         activeBosses.clear();
         removeAllBossBars();
         removeAllPortals();
+        arenasMarkedForDeletion.clear();
+        defeatedArenaWorldNames.clear();
     }
 
     public boolean spawnTestBoss(World world, Location origin, WorldBossType overrideType) {
@@ -287,10 +296,7 @@ public class WorldBossManager implements Listener {
         boolean escapeEnabled = plugin.getConfig().getBoolean(CONFIG_ROOT + ".arena.escape.enabled", true);
 
         Set<World> worldsToScan = new java.util.LinkedHashSet<>(getEligibleWorlds());
-        World arenaWorld = resolveArenaWorld();
-        if (arenaWorld != null) {
-            worldsToScan.add(arenaWorld);
-        }
+        worldsToScan.addAll(getLoadedArenaWorlds());
 
         int frameRemoved = 0;
         int innerRemoved = 0;
@@ -510,17 +516,61 @@ public class WorldBossManager implements Listener {
 
     @EventHandler
     public void onBossBlockBreak(BlockBreakEvent event) {
-        World arenaWorld = getLoadedArenaWorld();
+        World arenaWorld = getLoadedArenaWorld(event.getBlock().getWorld());
         if (arenaWorld != null && event.getBlock().getWorld().equals(arenaWorld)) {
-            event.setDropItems(false);
-            if (!isBreakableMechanicBlock(event.getBlock())) {
-                event.setCancelled(true);
-                return;
+            Block block = event.getBlock();
+            if (isPlayerPlacedInventoryCarrier(block)) {
+                if (block.getType() == Material.ENDER_CHEST) {
+                    event.setDropItems(false);
+                    Bukkit.getScheduler().runTask(plugin, () -> block.getWorld().dropItemNaturally(
+                            block.getLocation().add(0.5, 0.5, 0.5),
+                            new ItemStack(Material.ENDER_CHEST)
+                    ));
+                }
+            } else {
+                event.setDropItems(false);
+                if (!isBreakableMechanicBlock(block)) {
+                    event.setCancelled(true);
+                    return;
+                }
             }
         }
         for (WorldBossController controller : activeBosses.values()) {
             controller.handleBlockBreak(event);
         }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onArenaPearlTeleport(PlayerTeleportEvent event) {
+        if (event.getCause() != PlayerTeleportEvent.TeleportCause.ENDER_PEARL) {
+            return;
+        }
+        World arenaWorld = getLoadedArenaWorld(event.getFrom().getWorld());
+        if (arenaWorld == null || !arenaWorld.equals(event.getFrom().getWorld())) {
+            return;
+        }
+        if (isWithinArenaPlayableBounds(event.getTo())) {
+            return;
+        }
+        event.setCancelled(true);
+        event.getPlayer().sendMessage("§cYou cannot ender pearl out of the world boss arena.");
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onArenaWitherExplode(EntityExplodeEvent event) {
+        if (!isArenaWitherDamageSource(event.getEntity())) {
+            return;
+        }
+        event.blockList().clear();
+        event.setYield(0F);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onArenaWitherChangeBlock(EntityChangeBlockEvent event) {
+        if (!isArenaWitherDamageSource(event.getEntity())) {
+            return;
+        }
+        event.setCancelled(true);
     }
 
     @EventHandler
@@ -530,7 +580,7 @@ public class WorldBossManager implements Listener {
             controller.cleanup();
             antiCheese.clear(event.getEntity());
             removeBossBars(event.getEntity().getUniqueId());
-            bossDefeated = true;
+            defeatedArenaWorldNames.add(event.getEntity().getWorld().getName());
             WorldBossType type = getBossType(event.getEntity());
             Player killer = event.getEntity().getKiller();
             if (killer != null && type != null) {
@@ -542,12 +592,8 @@ public class WorldBossManager implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        World arenaWorld = resolveArenaWorld();
-        if (arenaWorld == null) {
-            return;
-        }
         Player player = event.getPlayer();
-        if (!player.getWorld().equals(arenaWorld)) {
+        if (!isArenaWorld(player.getWorld())) {
             return;
         }
         Location returnLocation = resolveReturnLocation(player);
@@ -824,8 +870,8 @@ public class WorldBossManager implements Listener {
                 });
                 tickBeaconAndCompass();
                 spawnPortalParticles();
-                markArenaForDeletionIfEmpty();
-                checkArenaForDeletion();
+                markInactiveArenasForDeletion();
+                checkArenasForDeletion();
             }
         }.runTaskTimer(plugin, 20L, 20L);
     }
@@ -882,9 +928,6 @@ public class WorldBossManager implements Listener {
         if (!enabled) {
             return false;
         }
-        if (!activeBosses.isEmpty()) {
-            return false;
-        }
         Location base = origin != null ? origin : pickRandomBaseLocation(world);
         if (base == null) {
             return false;
@@ -908,15 +951,22 @@ public class WorldBossManager implements Listener {
         if (!enabled) {
             return false;
         }
+        PortalBase portalBase = resolvePortalBaseForOrigin(sourceWorld, base);
+        if (portalBase == null) {
+            plugin.getLogger().warning("World boss arena could not be resolved for portal entry.");
+            return false;
+        }
         BossSettings settings = getBossSettings(bossType);
-        World arenaWorld = createArenaWorld();
+        World arenaWorld = createArenaWorld(portalBase);
         if (arenaWorld == null) {
             plugin.getLogger().warning("World boss arena world could not be created.");
             return false;
         }
-        bossDefeated = false;
-        arenaMarkedForDeletion = false;
-        markedArenaWorldName = null;
+        if (hasActiveBossInWorld(arenaWorld)) {
+            return false;
+        }
+        defeatedArenaWorldNames.remove(arenaWorld.getName());
+        arenasMarkedForDeletion.remove(arenaWorld.getName());
         prepareArena(arenaWorld);
         Location spawnLocation = findArenaSpawnLocation(arenaWorld, settings.spawnRadius);
         if (spawnLocation == null) {
@@ -1063,13 +1113,56 @@ public class WorldBossManager implements Listener {
         bossEntity.setHealth(maxHealth);
     }
 
-    private World resolveArenaWorld() {
-        String worldName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.worldName", "world_boss_arena");
-        return Bukkit.getWorld(worldName);
+    private String getArenaWorldNamePrefix() {
+        return plugin.getConfig().getString(CONFIG_ROOT + ".arena.worldName", "world_boss_arena");
     }
 
-    private World createArenaWorld() {
-        String worldName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.worldName", "world_boss_arena");
+    private String getArenaWorldName(PortalBase portalBase) {
+        return getArenaWorldNamePrefix()
+                + "_"
+                + sanitizeWorldName(portalBase.worldName)
+                + "_"
+                + portalBase.x
+                + "_"
+                + portalBase.y
+                + "_"
+                + portalBase.z;
+    }
+
+    private String sanitizeWorldName(String worldName) {
+        return worldName == null ? "world" : worldName.replaceAll("[^A-Za-z0-9_\\-]", "_");
+    }
+
+    private boolean isArenaWorld(World world) {
+        if (world == null) {
+            return false;
+        }
+        String prefix = getArenaWorldNamePrefix();
+        return world.getName().equals(prefix) || world.getName().startsWith(prefix + "_");
+    }
+
+    private Set<World> getLoadedArenaWorlds() {
+        Set<World> arenaWorlds = new HashSet<>();
+        for (World world : Bukkit.getWorlds()) {
+            if (isArenaWorld(world)) {
+                arenaWorlds.add(world);
+            }
+        }
+        return arenaWorlds;
+    }
+
+    private World resolveArenaWorld(PortalBase portalBase) {
+        if (portalBase == null) {
+            return null;
+        }
+        return Bukkit.getWorld(getArenaWorldName(portalBase));
+    }
+
+    private World createArenaWorld(PortalBase portalBase) {
+        if (portalBase == null) {
+            return null;
+        }
+        String worldName = getArenaWorldName(portalBase);
         World existing = Bukkit.getWorld(worldName);
         if (existing != null) {
             return existing;
@@ -1081,9 +1174,8 @@ public class WorldBossManager implements Listener {
         return creator.createWorld();
     }
 
-    private World getLoadedArenaWorld() {
-        String worldName = plugin.getConfig().getString(CONFIG_ROOT + ".arena.worldName", "world_boss_arena");
-        return Bukkit.getWorld(worldName);
+    private World getLoadedArenaWorld(World world) {
+        return isArenaWorld(world) ? world : null;
     }
 
     private void prepareArena(World world) {
@@ -1217,6 +1309,41 @@ public class WorldBossManager implements Listener {
         persistPortalBase(base);
     }
 
+    private PortalBase resolvePortalBaseForOrigin(World world, Location origin) {
+        if (world == null || origin == null) {
+            return null;
+        }
+        Location base = origin.clone().add(2, 0, 2);
+        base.setY(resolvePortalBaseY(world, base));
+        return new PortalBase(world.getName(), base.getBlockX(), base.getBlockY(), base.getBlockZ());
+    }
+
+    private PortalBase resolvePortalBase(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return null;
+        }
+        World world = location.getWorld();
+        int x = location.getBlockX();
+        int y = location.getBlockY();
+        int z = location.getBlockZ();
+        for (PortalBase base : persistedPortalBases) {
+            if (!base.worldName.equals(world.getName())) {
+                continue;
+            }
+            if (z != base.z) {
+                continue;
+            }
+            if (x < base.x || x > base.x + PORTAL_WIDTH - 1) {
+                continue;
+            }
+            if (y < base.y || y > base.y + PORTAL_HEIGHT - 1) {
+                continue;
+            }
+            return base;
+        }
+        return null;
+    }
+
     private int resolvePortalBaseY(World world, Location base) {
         int baseY = Math.max(world.getMinHeight() + 2, base.getBlockY());
         Block baseBlock = world.getBlockAt(base.getBlockX(), base.getBlockY(), base.getBlockZ());
@@ -1266,14 +1393,15 @@ public class WorldBossManager implements Listener {
         for (Location location : escapeBlocks) {
             location.getBlock().setType(Material.AIR);
         }
-        removeArenaEscapeBlock();
+        for (World arenaWorld : getLoadedArenaWorlds()) {
+            removeArenaEscapeBlock(arenaWorld);
+        }
         portalBlocks.clear();
         portalAnchors.clear();
         escapeBlocks.clear();
     }
 
-    private void removeArenaEscapeBlock() {
-        World arenaWorld = getLoadedArenaWorld();
+    private void removeArenaEscapeBlock(World arenaWorld) {
         if (arenaWorld == null) {
             return;
         }
@@ -1642,37 +1770,46 @@ public class WorldBossManager implements Listener {
         }
     }
 
-    private void markArenaForDeletionIfEmpty() {
-        if (!activeBosses.isEmpty()) {
+    private void markArenaForDeletionIfEmpty(World arenaWorld) {
+        if (arenaWorld == null || !isArenaWorld(arenaWorld)) {
             return;
         }
-        World arenaWorld = getLoadedArenaWorld();
-        if (arenaWorld == null) {
+        if (!arenaWorld.getPlayers().isEmpty() || hasActiveBossInWorld(arenaWorld)) {
             return;
         }
-        arenaMarkedForDeletion = true;
-        markedArenaWorldName = arenaWorld.getName();
+        arenasMarkedForDeletion.add(arenaWorld.getName());
     }
 
-    private void checkArenaForDeletion() {
-        if (!arenaMarkedForDeletion) {
+    private void markInactiveArenasForDeletion() {
+        for (World arenaWorld : getLoadedArenaWorlds()) {
+            if (!hasActiveBossInWorld(arenaWorld) && arenaWorld.getPlayers().isEmpty()) {
+                arenasMarkedForDeletion.add(arenaWorld.getName());
+            }
+        }
+    }
+
+    private void checkArenasForDeletion() {
+        if (arenasMarkedForDeletion.isEmpty()) {
             return;
         }
-        World arenaWorld = markedArenaWorldName == null ? null : Bukkit.getWorld(markedArenaWorldName);
-        if (arenaWorld == null) {
-            arenaMarkedForDeletion = false;
-            markedArenaWorldName = null;
-            return;
+        Iterator<String> iterator = arenasMarkedForDeletion.iterator();
+        while (iterator.hasNext()) {
+            String arenaWorldName = iterator.next();
+            World arenaWorld = Bukkit.getWorld(arenaWorldName);
+            if (arenaWorld == null) {
+                defeatedArenaWorldNames.remove(arenaWorldName);
+                iterator.remove();
+                continue;
+            }
+            if (!arenaWorld.getPlayers().isEmpty() || hasActiveBossInWorld(arenaWorld)) {
+                continue;
+            }
+            cleanupBossesInArena(arenaWorld);
+            Bukkit.unloadWorld(arenaWorld, false);
+            deleteWorldFolder(arenaWorld.getWorldFolder());
+            defeatedArenaWorldNames.remove(arenaWorldName);
+            iterator.remove();
         }
-        if (!arenaWorld.getPlayers().isEmpty()) {
-            return;
-        }
-        cleanupBossesInArena(arenaWorld);
-        removeAllPortals();
-        Bukkit.unloadWorld(arenaWorld, false);
-        deleteWorldFolder(arenaWorld.getWorldFolder());
-        arenaMarkedForDeletion = false;
-        markedArenaWorldName = null;
     }
 
     private void cleanupBossesInArena(World arenaWorld) {
@@ -1702,15 +1839,69 @@ public class WorldBossManager implements Listener {
         return false;
     }
 
+    private boolean isWithinArenaPlayableBounds(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return false;
+        }
+        World arenaWorld = getLoadedArenaWorld(location.getWorld());
+        if (arenaWorld == null || !arenaWorld.equals(location.getWorld())) {
+            return false;
+        }
+        Location center = arenaWorld.getSpawnLocation();
+        int radius = getArenaRadius(arenaWorld);
+        int wallHeight = Math.max(2, plugin.getConfig().getInt(CONFIG_ROOT + ".arena.wallHeight", DEFAULT_ARENA_WALL_HEIGHT));
+        double dx = Math.abs(location.getX() - center.getX());
+        double dz = Math.abs(location.getZ() - center.getZ());
+        double minY = center.getY();
+        double maxY = center.getY() + wallHeight - 0.01D;
+        return dx < radius - 1 && dz < radius - 1 && location.getY() >= minY && location.getY() <= maxY;
+    }
+
+    private boolean isArenaWitherDamageSource(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+        World arenaWorld = getLoadedArenaWorld(entity.getWorld());
+        if (arenaWorld == null || !arenaWorld.equals(entity.getWorld())) {
+            return false;
+        }
+        if (entity instanceof Wither || entity instanceof WitherSkull) {
+            return true;
+        }
+        Entity source = resolveDamageSource(entity);
+        return source instanceof Wither || isWorldBossOrMinion(source) || isWorldBossOrMinion(entity);
+    }
+
+    private boolean isPlayerPlacedInventoryCarrier(Block block) {
+        if (block == null || block.getWorld() == null) {
+            return false;
+        }
+        PlayerPlacedBlockIndex placedBlockIndex = getPlayerPlacedBlockIndex();
+        if (placedBlockIndex == null || !placedBlockIndex.isPlayerPlaced(block)) {
+            return false;
+        }
+        if (block.getState() instanceof InventoryHolder) {
+            return true;
+        }
+        return block.getType() == Material.ENDER_CHEST || Tag.SHULKER_BOXES.isTagged(block.getType());
+    }
+
+    private PlayerPlacedBlockIndex getPlayerPlacedBlockIndex() {
+        if (plugin instanceof LastBreathHC lastBreathHC) {
+            return lastBreathHC.getPlayerPlacedBlockIndex();
+        }
+        return null;
+    }
+
     public boolean isArenaBlockProtected(Block block) {
         if (block == null) {
             return false;
         }
-        World arenaWorld = getLoadedArenaWorld();
+        World arenaWorld = getLoadedArenaWorld(block.getWorld());
         if (arenaWorld == null || !arenaWorld.equals(block.getWorld())) {
             return false;
         }
-        return !isBreakableMechanicBlock(block);
+        return !isBreakableMechanicBlock(block) && !isPlayerPlacedInventoryCarrier(block);
     }
 
     private void deleteWorldFolder(File folder) {
@@ -1731,25 +1922,29 @@ public class WorldBossManager implements Listener {
     }
 
     private void teleportViaPortal(Player player) {
-        World arenaWorld = resolveArenaWorld();
-        if (arenaWorld == null) {
-            arenaWorld = createArenaWorld();
-        }
         World current = player.getWorld();
-        World targetWorld;
-        if (current.equals(arenaWorld)) {
+        if (isArenaWorld(current)) {
             teleportPlayerToRespawn(player);
-            if (bossDefeated) {
-                markArenaForDeletionIfEmpty();
+            if (defeatedArenaWorldNames.contains(current.getName())) {
+                markArenaForDeletionIfEmpty(current);
             }
             return;
-        } else {
-            targetWorld = arenaWorld;
+        }
+        PortalBase portalBase = resolvePortalBase(player.getLocation());
+        if (portalBase == null) {
+            return;
+        }
+        World arenaWorld = resolveArenaWorld(portalBase);
+        if (arenaWorld == null) {
+            arenaWorld = createArenaWorld(portalBase);
+        }
+        if (arenaWorld == null) {
+            return;
         }
         if (!hasActiveBossInWorld(arenaWorld)) {
-            spawnBossForPortalEntry(player);
+            spawnBossForPortalEntry(player, portalBase);
         }
-        player.teleport(targetWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5));
+        player.teleport(arenaWorld.getSpawnLocation().clone().add(0.5, 1.0, 0.5));
     }
 
     private boolean hasActiveBossInWorld(World world) {
@@ -1771,12 +1966,18 @@ public class WorldBossManager implements Listener {
         return false;
     }
 
-    private void spawnBossForPortalEntry(Player player) {
+    private void spawnBossForPortalEntry(Player player, PortalBase portalBase) {
         if (!enabled || player == null) {
             return;
         }
-        World sourceWorld = player.getWorld();
-        Location base = resolvePortalSpawnBase(sourceWorld, player.getLocation());
+        World sourceWorld = portalBase == null ? player.getWorld() : Bukkit.getWorld(portalBase.worldName);
+        if (sourceWorld == null) {
+            plugin.getLogger().warning("World boss portal entry skipped because the source world was unavailable.");
+            return;
+        }
+        Location base = portalBase == null
+                ? resolvePortalSpawnBase(player.getWorld(), player.getLocation())
+                : new Location(sourceWorld, portalBase.x - 2, portalBase.y, portalBase.z - 2);
         if (base == null) {
             plugin.getLogger().warning("World boss portal entry skipped because no eligible location was found.");
             return;
