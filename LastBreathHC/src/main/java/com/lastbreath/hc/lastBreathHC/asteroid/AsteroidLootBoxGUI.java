@@ -39,36 +39,59 @@ public class AsteroidLootBoxGUI implements Listener {
         }
     }
 
-    public static void tryOpen(Player player) {
+    public static boolean tryOpen(Player player) {
         if (player == null || !player.isOnline()) {
-            return;
+            return false;
         }
-        PlayerStats stats = StatsManager.get(player.getUniqueId());
-        int earnedBoxes = stats.asteroidLoots / 100;
-        int remaining = earnedBoxes - Math.max(stats.asteroidLootBoxClaims, 0);
+
+        int remaining = getRemainingLootBoxes(player);
         if (remaining <= 0) {
-            return;
+            return false;
         }
 
         Session existing = ACTIVE_SESSIONS.get(player.getUniqueId());
         if (existing != null) {
-            return;
+            player.openInventory(existing.inventory());
+            return true;
         }
 
         Inventory inventory = Bukkit.createInventory(null, GUI_SIZE, GUI_TITLE);
         fillInventory(inventory);
         ACTIVE_SESSIONS.put(player.getUniqueId(), new Session(inventory, false));
-
-        player.sendMessage("§d§lLoot Box §7» §fYou unlocked a loot box! Pick one custom enchant book.");
         player.openInventory(inventory);
+        return true;
     }
 
+    public static int getRemainingLootBoxes(Player player) {
+        if (player == null) {
+            return 0;
+        }
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        int earnedBoxes = stats.asteroidLoots / 100;
+        return Math.max(earnedBoxes - Math.max(stats.asteroidLootBoxClaims, 0), 0);
+    }
+
+    public static void notifyLootBoxAvailable(Player player) {
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+
+        int remaining = getRemainingLootBoxes(player);
+        if (remaining <= 0) {
+            return;
+        }
+
+        player.sendMessage("§d§lLoot Box §7» §fYou have §d" + remaining
+                + "§f asteroid loot box claim" + (remaining == 1 ? "" : "s")
+                + " ready. Use §d/asteroid lootbox §fto claim "
+                + (remaining == 1 ? "it" : "one") + ".");
+    }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         Bukkit.getScheduler().runTaskLater(com.lastbreath.hc.lastBreathHC.LastBreathHC.getInstance(),
-                () -> tryOpen(player),
+                () -> notifyLootBoxAvailable(player),
                 20L);
     }
 
@@ -115,6 +138,8 @@ public class AsteroidLootBoxGUI implements Listener {
         StatsManager.markDirty(player.getUniqueId());
         ACTIVE_SESSIONS.put(player.getUniqueId(), session.withClaimed(true));
 
+        int remainingAfterClaim = Math.max(earnedBoxes - stats.asteroidLootBoxClaims, 0);
+
         ItemStack reward = CustomEnchantBook.create(enchantId);
         Map<Integer, ItemStack> overflow = player.getInventory().addItem(reward);
         if (!overflow.isEmpty()) {
@@ -123,12 +148,13 @@ public class AsteroidLootBoxGUI implements Listener {
             }
         }
 
-        player.sendMessage("§aYou selected §f" + CustomEnchantPage.formatEnchantId(enchantId) + "§a and received the enchant book.");
+        player.sendMessage("§aYou selected §f" + CustomEnchantPage.formatEnchantId(enchantId)
+                + "§a and received the enchant book."
+                + (remainingAfterClaim > 0
+                ? " §7Use §f/asteroid lootbox§7 again to claim your remaining §f" + remainingAfterClaim + "§7 box"
+                + (remainingAfterClaim == 1 ? "" : "es") + "."
+                : ""));
         player.closeInventory();
-
-        Bukkit.getScheduler().runTaskLater(com.lastbreath.hc.lastBreathHC.LastBreathHC.getInstance(),
-                () -> tryOpen(player),
-                1L);
     }
 
     @EventHandler(ignoreCancelled = true)
