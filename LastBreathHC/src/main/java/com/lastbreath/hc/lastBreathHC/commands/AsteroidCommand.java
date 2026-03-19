@@ -19,16 +19,25 @@ public class AsteroidCommand implements BasicCommand {
 
     @Override
     public List<String> suggest(CommandSourceStack source, String[] args) {
-        if (!source.getSender().isOp()) {
-            return List.of();
-        }
+        CommandSender sender = source.getSender();
+        boolean isOp = sender.isOp();
 
         if (args.length == 0) {
-            return List.of("<x>", "<z>", "lootbox", "clear-mobs", "cleanup", "stop");
+            if (isOp) {
+                return List.of("<x>", "<z>", "lootbox", "clear-mobs", "cleanup", "stop");
+            }
+            return List.of("lootbox");
         }
 
         if (args.length == 1) {
-            return List.of("lootbox", "clear-mobs", "cleanup", "stop");
+            if (isOp) {
+                return List.of("lootbox", "clear-mobs", "cleanup", "stop");
+            }
+            return List.of("lootbox");
+        }
+
+        if (!isOp) {
+            return List.of();
         }
 
         if (args.length == 2 && args[0].equalsIgnoreCase("cleanup")) {
@@ -44,8 +53,26 @@ public class AsteroidCommand implements BasicCommand {
 
     @Override
     public void execute(CommandSourceStack source, String[] args) {
-
         CommandSender sender = source.getSender();
+
+        if (args.length == 1 && args[0].equalsIgnoreCase("lootbox")) {
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage("§cOnly players can use /asteroid lootbox.");
+                return;
+            }
+
+            int remaining = AsteroidLootBoxGUI.getRemainingLootBoxes(player);
+            if (remaining <= 0) {
+                player.sendMessage("§cYou do not have any unclaimed asteroid loot boxes.");
+                return;
+            }
+
+            if (!AsteroidLootBoxGUI.tryOpen(player)) {
+                player.sendMessage("§cUnable to open your asteroid loot box right now.");
+            }
+            return;
+        }
+
         if (!sender.isOp()) {
             sender.sendMessage("§cNo permission.");
             return;
@@ -102,7 +129,7 @@ public class AsteroidCommand implements BasicCommand {
 
             stats.asteroidLootBoxClaims = Math.max(0, stats.asteroidLootBoxClaims - missingBoxes);
             StatsManager.markDirty(target.getUniqueId());
-            AsteroidLootBoxGUI.tryOpen(target);
+            AsteroidLootBoxGUI.notifyLootBoxAvailable(target);
 
             sender.sendMessage("§aGranted " + missingBoxes + " asteroid loot box claim"
                     + (missingBoxes == 1 ? "" : "s") + " to " + target.getName() + ".");
