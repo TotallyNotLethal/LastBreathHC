@@ -4,9 +4,11 @@ import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.RecipeChoice;
-import org.bukkit.inventory.ShapelessRecipe;
+import org.bukkit.inventory.ShapedRecipe;
+
+import java.util.List;
+import java.util.Locale;
 
 public class CustomItemRecipes {
 
@@ -20,36 +22,49 @@ public class CustomItemRecipes {
     }
 
     private static void registerCustomEnchantBook() {
-        NamespacedKey key = new NamespacedKey(
+        NamespacedKey legacyKey = new NamespacedKey(
                 LastBreathHC.getInstance(), "custom_enchant_book"
         );
-        ShapedRecipe recipe = new ShapedRecipe(key, CustomEnchantBook.create("unknown"));
+        Bukkit.removeRecipe(legacyKey);
+
+        List<String> ids = CustomEnchant.filterAllowedIds(
+                LastBreathHC.getInstance()
+                        .getConfig()
+                        .getStringList("asteroid.loot.enchantPages.ids")
+        );
+
+        for (String id : ids) {
+            if (id == null || id.isBlank()) {
+                continue;
+            }
+            registerCustomEnchantBookRecipe(id);
+        }
+    }
+
+    private static void registerCustomEnchantBookRecipe(String enchantId) {
+        NamespacedKey key = new NamespacedKey(
+                LastBreathHC.getInstance(),
+                "custom_enchant_book_" + sanitizeRecipeKey(enchantId)
+        );
+        Bukkit.removeRecipe(key);
+
+        ShapedRecipe recipe = new ShapedRecipe(key, CustomEnchantBook.create(enchantId));
         recipe.shape(
                 "SPP",
                 "SPP",
                 "SPP"
         );
-
         recipe.setIngredient('S', Material.NETHER_STAR);
-
-        java.util.List<String> ids = CustomEnchant.filterAllowedIds(
-                LastBreathHC.getInstance()
-                        .getConfig()
-                        .getStringList("asteroid.loot.enchantPages.ids")
-        );
-        java.util.List<org.bukkit.inventory.ItemStack> choices = new java.util.ArrayList<>();
-        if (ids.isEmpty()) {
-            choices.add(CustomEnchantPage.create("unknown"));
-        } else {
-            for (String id : ids) {
-                if (id != null && !id.isBlank()) {
-                    choices.add(CustomEnchantPage.create(id));
-                }
-            }
-        }
-        recipe.setIngredient('P', new RecipeChoice.ExactChoice(choices));
+        recipe.setIngredient('P', new RecipeChoice.ExactChoice(CustomEnchantPage.create(enchantId)));
 
         Bukkit.addRecipe(recipe);
+    }
+
+    private static String sanitizeRecipeKey(String enchantId) {
+        return enchantId
+                .toLowerCase(Locale.ROOT)
+                .replace(':', '_')
+                .replaceAll("[^a-z0-9_/.-]", "_");
     }
 
     private static void registerEnhancedGrindstone() {
