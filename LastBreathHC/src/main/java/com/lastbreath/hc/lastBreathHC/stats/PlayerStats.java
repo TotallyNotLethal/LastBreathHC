@@ -32,6 +32,7 @@ public class PlayerStats {
     public Set<BossPrefix> unlockedPrefixes = new HashSet<>();
     public BossPrefix equippedPrefix;
     public Set<BossAura> unlockedAuras = new HashSet<>();
+    public Set<BossAura> enabledBackgroundAuras = new HashSet<>();
     public BossAura equippedAura;
     public Set<BossKillMessage> unlockedKillMessages = new HashSet<>();
     public BossKillMessage equippedKillMessage;

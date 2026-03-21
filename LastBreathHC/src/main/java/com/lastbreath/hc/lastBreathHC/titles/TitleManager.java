@@ -352,6 +352,18 @@ public class TitleManager {
         if (!stats.unlockedTitles.contains(Title.WORLD_SCALER)) {
             stats.worldScalerEnabled = false;
         }
+        ensureStasisAuraUnlocked(stats);
+        boolean cleanedBackgroundAuras = stats.enabledBackgroundAuras.removeIf(
+                aura -> !stats.unlockedAuras.contains(aura) || !aura.isBackgroundEffect()
+        );
+        boolean clearedEquippedAura = false;
+        if (stats.equippedAura != null && !stats.equippedAura.isPassiveAura()) {
+            stats.equippedAura = null;
+            clearedEquippedAura = true;
+        }
+        if (cleanedBackgroundAuras || clearedEquippedAura) {
+            StatsManager.markDirty(stats.uuid);
+        }
     }
 
     public static void unlockTitle(Player player, Title title, String reason) {
@@ -369,6 +381,10 @@ public class TitleManager {
         if (ensureWorldScalerUnlocked(stats)) {
             player.sendMessage("§6New background title unlocked: §e" + Title.WORLD_SCALER.displayName()
                     + "§6. " + Title.WORLD_SCALER.requirementDescription());
+        }
+        if (ensureStasisAuraUnlocked(stats)) {
+            player.sendMessage("§6New background cosmetic unlocked: §e" + BossAura.STASIS_AURA.displayName()
+                    + "§6. Activate it from §e/cosmetics§6 after defeating all 4 world bosses.");
         }
     }
 
@@ -529,6 +545,19 @@ public class TitleManager {
         if (stats.asteroidLoots >= STARFORGED_ASTEROIDS) {
             unlockTitle(player, Title.STARFORGED, Title.STARFORGED.requirementDescription());
         }
+    }
+
+
+    private static boolean ensureStasisAuraUnlocked(PlayerStats stats) {
+        if (stats == null || stats.unlockedAuras.contains(BossAura.STASIS_AURA)) {
+            return false;
+        }
+        if (!stats.unlockedTitles.containsAll(WORLD_SCALER_REQUIRED_BOSS_TITLES)) {
+            return false;
+        }
+        stats.unlockedAuras.add(BossAura.STASIS_AURA);
+        StatsManager.markDirty(stats.uuid);
+        return true;
     }
 
     private static boolean ensureWorldScalerUnlocked(PlayerStats stats) {

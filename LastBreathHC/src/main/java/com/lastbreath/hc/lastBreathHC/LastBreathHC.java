@@ -21,6 +21,7 @@ import com.lastbreath.hc.lastBreathHC.combat.DispenserSwordListener;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BowTrailListener;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticAuraService;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticTokenListener;
+import com.lastbreath.hc.lastBreathHC.cosmetics.StasisAuraTeleportListener;
 import com.lastbreath.hc.lastBreathHC.daily.DailyCosmeticListener;
 import com.lastbreath.hc.lastBreathHC.daily.DailyJoinListener;
 import com.lastbreath.hc.lastBreathHC.daily.DailyRewardManager;
@@ -537,6 +538,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new CosmeticTokenListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new StasisAuraTeleportListener(), this
         );
         getServer().getPluginManager().registerEvents(
                 new BowTrailListener(this), this
