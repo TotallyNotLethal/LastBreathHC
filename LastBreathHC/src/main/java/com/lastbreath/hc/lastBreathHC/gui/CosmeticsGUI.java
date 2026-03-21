@@ -36,6 +36,7 @@ public class CosmeticsGUI implements Listener {
     private static final String TYPE_DAILY = "daily";
     private static final String PAGE_BOSS = "boss";
     private static final String PAGE_ASTEROID = "asteroid";
+    private static final String CLEAR_BACKGROUND = "background";
     private static final int[] BOSS_PREFIX_SLOTS = createRange(9, 17);
     private static final int[] BOSS_AURA_SLOTS = createRange(18, 26);
     private static final int[] BOSS_KILL_SLOTS = createRange(27, 35);
@@ -63,6 +64,7 @@ public class CosmeticsGUI implements Listener {
         inventory.setItem(4, buildInfoItem(bossPage));
         inventory.setItem(2, buildClearItem("Clear Prefix", TYPE_CLEAR, TYPE_PREFIX));
         inventory.setItem(6, buildClearItem("Clear Aura", TYPE_CLEAR, TYPE_AURA));
+        inventory.setItem(7, buildClearItem("Clear Background FX", TYPE_CLEAR, CLEAR_BACKGROUND));
         inventory.setItem(8, buildClearItem("Clear Kill Message", TYPE_CLEAR, TYPE_KILL));
 
         inventory.setItem(0, buildPageItem(
@@ -139,7 +141,15 @@ public class CosmeticsGUI implements Listener {
             if (aura == null) {
                 return;
             }
-            if (!CosmeticManager.equipAura(player, aura)) {
+            if (aura.isBackgroundEffect()) {
+                boolean enabled = !CosmeticManager.isBackgroundAuraEnabled(player, aura);
+                if (!CosmeticManager.setBackgroundAuraEnabled(player, aura, enabled)) {
+                    player.sendMessage(ChatColor.RED + "You have not unlocked that background effect yet.");
+                } else {
+                    player.sendMessage(ChatColor.GREEN + aura.displayName() + " background effect "
+                            + (enabled ? "enabled" : "disabled") + ".");
+                }
+            } else if (!CosmeticManager.equipAura(player, aura)) {
                 player.sendMessage(ChatColor.RED + "You have not unlocked that aura yet.");
             } else {
                 player.sendMessage(ChatColor.GREEN + "Equipped aura: " + aura.displayName());
@@ -176,6 +186,7 @@ public class CosmeticsGUI implements Listener {
                 ChatColor.GRAY + (bossPage
                         ? "Equip cosmetics earned from world bosses."
                         : "Equip cosmetics found in tier 3 asteroids and /daily."),
+                ChatColor.DARK_GRAY + "Background effects can be toggled without replacing other effects.",
                 ChatColor.DARK_GRAY + "Use the button to swap pages."
         ));
         item.setItemMeta(meta);
@@ -229,7 +240,18 @@ public class CosmeticsGUI implements Listener {
         meta.setDisplayName(aura.color() + aura.displayName());
         List<String> lore = new ArrayList<>();
         boolean unlocked = CosmeticManager.getUnlockedAuras(player).contains(aura);
-        if (CosmeticManager.getEquippedAura(player) == aura) {
+        if (aura.isBackgroundEffect()) {
+            boolean enabled = CosmeticManager.isBackgroundAuraEnabled(player, aura);
+            if (!unlocked) {
+                lore.add(ChatColor.DARK_RED + "Locked - defeat all 4 world bosses.");
+            } else {
+                lore.add(ChatColor.GRAY + "Background effect: "
+                        + (enabled ? ChatColor.GREEN + "Enabled" : ChatColor.RED + "Disabled"));
+                lore.add(ChatColor.YELLOW + "Click to toggle.");
+            }
+            lore.add(ChatColor.GRAY + "Triggers a stasis burst when your ender pearl lands.");
+            lore.add(ChatColor.DARK_AQUA + "Can stay active alongside World Scaler.");
+        } else if (CosmeticManager.getEquippedAura(player) == aura) {
             lore.add(ChatColor.GREEN + "Equipped");
         } else if (unlocked) {
             lore.add(ChatColor.YELLOW + "Click to equip.");
@@ -297,6 +319,9 @@ public class CosmeticsGUI implements Listener {
             CosmeticManager.equipAura(player, null);
             dailyRewardManager.equipCosmetic(player.getUniqueId(), null);
             player.sendMessage(ChatColor.YELLOW + "Aura cleared.");
+        } else if (CLEAR_BACKGROUND.equals(id)) {
+            CosmeticManager.clearBackgroundAuras(player);
+            player.sendMessage(ChatColor.YELLOW + "Background effects cleared.");
         } else if (TYPE_KILL.equals(id)) {
             CosmeticManager.equipKillMessage(player, null);
             player.sendMessage(ChatColor.YELLOW + "Kill message cleared.");

@@ -4,8 +4,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -21,7 +21,7 @@ public class CosmeticAuraService {
             public void run() {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     BossAura aura = CosmeticManager.getEquippedAura(player);
-                    if (aura == null) {
+                    if (aura == null || !aura.isPassiveAura()) {
                         continue;
                     }
                     Location center = player.getLocation().clone().add(0, 1.0, 0);

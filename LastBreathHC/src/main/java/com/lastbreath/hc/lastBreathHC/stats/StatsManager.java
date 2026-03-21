@@ -203,6 +203,16 @@ public class StatsManager {
             }
             playerStats.unlockedAuras = auraSet;
 
+            List<String> enabledBackgroundAuras = config.getStringList(base + ".enabledBackgroundAuras");
+            Set<BossAura> enabledBackgroundAuraSet = new HashSet<>();
+            for (String auraName : enabledBackgroundAuras) {
+                BossAura aura = BossAura.fromInput(auraName);
+                if (aura != null && aura.isBackgroundEffect() && auraSet.contains(aura)) {
+                    enabledBackgroundAuraSet.add(aura);
+                }
+            }
+            playerStats.enabledBackgroundAuras = enabledBackgroundAuraSet;
+
             String equippedAuraName = config.getString(base + ".equippedAura");
             if (equippedAuraName != null && !equippedAuraName.isBlank()) {
                 playerStats.equippedAura = BossAura.fromInput(equippedAuraName);
@@ -272,6 +282,12 @@ public class StatsManager {
                 .collect(Collectors.toList()));
         config.set(base + ".equippedPrefix", playerStats.equippedPrefix != null ? playerStats.equippedPrefix.name() : null);
         config.set(base + ".unlockedAuras", playerStats.unlockedAuras.stream()
+                .map(BossAura::name)
+                .sorted()
+                .collect(Collectors.toList()));
+        config.set(base + ".enabledBackgroundAuras", playerStats.enabledBackgroundAuras.stream()
+                .filter(playerStats.unlockedAuras::contains)
+                .filter(BossAura::isBackgroundEffect)
                 .map(BossAura::name)
                 .sorted()
                 .collect(Collectors.toList()));
@@ -426,6 +442,16 @@ public class StatsManager {
         }
         playerStats.unlockedAuras = auraSet;
 
+        List<String> enabledBackgroundAuras = config.getStringList(base + ".enabledBackgroundAuras");
+        Set<BossAura> enabledBackgroundAuraSet = new HashSet<>();
+        for (String auraName : enabledBackgroundAuras) {
+            BossAura aura = BossAura.fromInput(auraName);
+            if (aura != null && aura.isBackgroundEffect() && auraSet.contains(aura)) {
+                enabledBackgroundAuraSet.add(aura);
+            }
+        }
+        playerStats.enabledBackgroundAuras = enabledBackgroundAuraSet;
+
         String equippedAuraName = config.getString(base + ".equippedAura");
         if (equippedAuraName != null && !equippedAuraName.isBlank()) {
             playerStats.equippedAura = BossAura.fromInput(equippedAuraName);
@@ -470,6 +496,7 @@ public class StatsManager {
         copy.unlockedPrefixes = new HashSet<>(original.unlockedPrefixes);
         copy.equippedPrefix = original.equippedPrefix;
         copy.unlockedAuras = new HashSet<>(original.unlockedAuras);
+        copy.enabledBackgroundAuras = new HashSet<>(original.enabledBackgroundAuras);
         copy.equippedAura = original.equippedAura;
         copy.unlockedKillMessages = new HashSet<>(original.unlockedKillMessages);
         copy.equippedKillMessage = original.equippedKillMessage;

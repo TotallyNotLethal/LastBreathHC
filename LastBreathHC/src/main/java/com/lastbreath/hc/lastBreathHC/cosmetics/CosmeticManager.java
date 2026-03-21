@@ -14,6 +14,7 @@ public final class CosmeticManager {
     public static void unlockPrefix(Player player, BossPrefix prefix, String reason) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         if (stats.unlockedPrefixes.add(prefix)) {
+            StatsManager.markDirty(player.getUniqueId());
             player.sendMessage("§6New prefix unlocked: §e" + prefix.displayName() + "§6. " + reason);
         }
     }
@@ -21,6 +22,7 @@ public final class CosmeticManager {
     public static void unlockAura(Player player, BossAura aura, String reason) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         if (stats.unlockedAuras.add(aura)) {
+            StatsManager.markDirty(player.getUniqueId());
             player.sendMessage("§6New aura unlocked: §e" + aura.displayName() + "§6. " + reason);
         }
     }
@@ -28,6 +30,7 @@ public final class CosmeticManager {
     public static void unlockKillMessage(Player player, BossKillMessage message, String reason) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         if (stats.unlockedKillMessages.add(message)) {
+            StatsManager.markDirty(player.getUniqueId());
             player.sendMessage("§6New kill message unlocked: §e" + message.displayName() + "§6. " + reason);
         }
     }
@@ -38,15 +41,17 @@ public final class CosmeticManager {
             return false;
         }
         stats.equippedPrefix = prefix;
+        StatsManager.markDirty(player.getUniqueId());
         return true;
     }
 
     public static boolean equipAura(Player player, BossAura aura) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
-        if (aura != null && !stats.unlockedAuras.contains(aura)) {
+        if (aura != null && (!stats.unlockedAuras.contains(aura) || !aura.isPassiveAura())) {
             return false;
         }
         stats.equippedAura = aura;
+        StatsManager.markDirty(player.getUniqueId());
         return true;
     }
 
@@ -56,7 +61,46 @@ public final class CosmeticManager {
             return false;
         }
         stats.equippedKillMessage = message;
+        StatsManager.markDirty(player.getUniqueId());
         return true;
+    }
+
+    public static boolean isBackgroundAuraEnabled(Player player, BossAura aura) {
+        if (aura == null || !aura.isBackgroundEffect()) {
+            return false;
+        }
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        return stats.unlockedAuras.contains(aura) && stats.enabledBackgroundAuras.contains(aura);
+    }
+
+    public static boolean setBackgroundAuraEnabled(Player player, BossAura aura, boolean enabled) {
+        if (aura == null || !aura.isBackgroundEffect()) {
+            return false;
+        }
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        if (!stats.unlockedAuras.contains(aura)) {
+            return false;
+        }
+        boolean changed = enabled
+                ? stats.enabledBackgroundAuras.add(aura)
+                : stats.enabledBackgroundAuras.remove(aura);
+        if (changed) {
+            StatsManager.markDirty(player.getUniqueId());
+        }
+        return true;
+    }
+
+    public static boolean toggleBackgroundAura(Player player, BossAura aura) {
+        boolean enabled = !isBackgroundAuraEnabled(player, aura);
+        return setBackgroundAuraEnabled(player, aura, enabled);
+    }
+
+    public static void clearBackgroundAuras(Player player) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        if (!stats.enabledBackgroundAuras.isEmpty()) {
+            stats.enabledBackgroundAuras.clear();
+            StatsManager.markDirty(player.getUniqueId());
+        }
     }
 
     public static BossPrefix getEquippedPrefix(Player player) {
@@ -66,6 +110,10 @@ public final class CosmeticManager {
 
     public static BossAura getEquippedAura(Player player) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
+        if (stats.equippedAura != null && !stats.equippedAura.isPassiveAura()) {
+            stats.equippedAura = null;
+            StatsManager.markDirty(player.getUniqueId());
+        }
         return stats.equippedAura;
     }
 
@@ -92,6 +140,15 @@ public final class CosmeticManager {
     public static List<BossAura> getUnlockedAuras(Player player) {
         PlayerStats stats = StatsManager.get(player.getUniqueId());
         return stats.unlockedAuras.stream()
+                .sorted(Comparator.comparing(BossAura::displayName))
+                .toList();
+    }
+
+    public static List<BossAura> getEnabledBackgroundAuras(Player player) {
+        PlayerStats stats = StatsManager.get(player.getUniqueId());
+        return stats.enabledBackgroundAuras.stream()
+                .filter(stats.unlockedAuras::contains)
+                .filter(BossAura::isBackgroundEffect)
                 .sorted(Comparator.comparing(BossAura::displayName))
                 .toList();
     }
