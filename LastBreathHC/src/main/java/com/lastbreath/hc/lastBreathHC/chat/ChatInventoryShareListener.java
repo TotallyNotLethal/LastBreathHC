@@ -19,7 +19,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Locale;
 import java.util.Set;
@@ -60,20 +62,33 @@ public class ChatInventoryShareListener implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (isShareInventory(event.getInventory().getHolder())) {
-            event.setCancelled(true);
+        Inventory topInventory = event.getView().getTopInventory();
+        InventoryHolder holder = topInventory.getHolder();
+        if (!isShareInventory(holder)) {
+            return;
         }
+
+        event.setCancelled(true);
+        if (!(event.getWhoClicked() instanceof Player viewer) || event.getClickedInventory() == null || !event.getClickedInventory().equals(topInventory)) {
+            return;
+        }
+
+        ItemStack clickedItem = event.getCurrentItem();
+        ChatInventoryShareService.handleInventoryClick(viewer,
+                (ChatInventoryShareService.ShareInventoryHolder) holder,
+                event.getRawSlot(),
+                clickedItem);
     }
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (isShareInventory(event.getInventory().getHolder())) {
+        if (isShareInventory(event.getView().getTopInventory().getHolder())) {
             event.setCancelled(true);
         }
     }
 
     private boolean isShareInventory(InventoryHolder holder) {
-        return holder instanceof ChatInventoryShareService.ShareInventoryHolder;
+        return ChatInventoryShareService.isShareInventory(holder);
     }
 
     private Component buildFormattedMessage(Player player, String message) {
