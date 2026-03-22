@@ -1,6 +1,7 @@
 package com.lastbreath.hc.lastBreathHC.environment;
 
 import com.lastbreath.hc.lastBreathHC.LastBreathHC;
+import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
@@ -12,10 +13,8 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Drowned;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntitySpawnEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -27,10 +26,13 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class EnvironmentalEffectsManager implements Listener {
+
+    private static final String SWAMP_POISON_UNTIL_KEY = "lb_swamp_poison_until";
+    private static final String DESERT_FIRE_UNTIL_KEY = "lb_desert_fire_until";
+    private static final String DEEP_OCEAN_SLOW_UNTIL_KEY = "lb_deep_ocean_slow_until";
 
     private static final Set<PotionEffectType> DECAY_POTIONS = Set.of(
             PotionEffectType.POISON,
@@ -191,6 +193,13 @@ public class EnvironmentalEffectsManager implements Listener {
 
             applyFireScaling(player, scale);
             applyPotionDecay(player, scale);
+
+            if (TitleManager.isWorldScalerEnabled(player)) {
+                clearTrackedBiomeEffects(player);
+                updateSwimSlow(player, false);
+                continue;
+            }
+
             applyBiomeEffects(player, location);
         }
     }
@@ -234,6 +243,7 @@ public class EnvironmentalEffectsManager implements Listener {
                         true,
                         true
                 ));
+                setTrackedEffectExpiry(player, SWAMP_POISON_UNTIL_KEY, swampPoisonDurationTicks);
                 player.spawnParticle(Particle.SPORE_BLOSSOM_AIR,
                         location, 8, 0.6, 0.6, 0.6, 0.01);
             }
@@ -248,6 +258,7 @@ public class EnvironmentalEffectsManager implements Listener {
                 player.setFireTicks(
                         Math.max(player.getFireTicks(), desertHeatTicks)
                 );
+                setTrackedEffectExpiry(player, DESERT_FIRE_UNTIL_KEY, desertHeatTicks);
 
                 player.spawnParticle(
                         Particle.ASH,
@@ -266,9 +277,49 @@ public class EnvironmentalEffectsManager implements Listener {
                     false,
                     false
             ));
+            setTrackedEffectExpiry(player, DEEP_OCEAN_SLOW_UNTIL_KEY, (int) intervalTicks * 2);
         }
 
         updateSwimSlow(player, isDeepOcean);
+    }
+
+
+    private void clearTrackedBiomeEffects(Player player) {
+        clearTrackedPotionEffect(player, PotionEffectType.POISON, swampPoisonAmplifier, SWAMP_POISON_UNTIL_KEY);
+        clearTrackedPotionEffect(player, PotionEffectType.SLOWNESS, 0, DEEP_OCEAN_SLOW_UNTIL_KEY);
+        clearTrackedFire(player, DESERT_FIRE_UNTIL_KEY);
+    }
+
+    private void clearTrackedPotionEffect(Player player, PotionEffectType effectType, int amplifier, String metadataKey) {
+        PotionEffect effect = player.getPotionEffect(effectType);
+        if (effect == null || effect.getAmplifier() != amplifier) {
+            clearTrackedEffect(player, metadataKey);
+            return;
+        }
+
+        int remainingTracked = getTrackedEffectRemaining(player, metadataKey);
+        if (remainingTracked <= 0) {
+            clearTrackedEffect(player, metadataKey);
+            return;
+        }
+
+        if (effect.getDuration() <= remainingTracked + (int) intervalTicks) {
+            player.removePotionEffect(effectType);
+            clearTrackedEffect(player, metadataKey);
+        }
+    }
+
+    private void clearTrackedFire(Player player, String metadataKey) {
+        int remainingTracked = getTrackedEffectRemaining(player, metadataKey);
+        if (remainingTracked <= 0) {
+            clearTrackedEffect(player, metadataKey);
+            return;
+        }
+
+        if (player.getFireTicks() <= remainingTracked + (int) intervalTicks) {
+            player.setFireTicks(0);
+            clearTrackedEffect(player, metadataKey);
+        }
     }
 
     private void updateSwimSlow(Player player, boolean inDeepOcean) {
@@ -284,6 +335,29 @@ public class EnvironmentalEffectsManager implements Listener {
                     deepOceanSwimSlowMultiplier - 1.0,
                     AttributeModifier.Operation.MULTIPLY_SCALAR_1
             ));
+        }
+    }
+
+
+    private void setTrackedEffectExpiry(Player player, String metadataKey, int durationTicks) {
+        player.setMetadata(
+                metadataKey,
+                new org.bukkit.metadata.FixedMetadataValue(plugin, player.getTicksLived() + Math.max(durationTicks, 0))
+        );
+    }
+
+    private int getTrackedEffectRemaining(Player player, String metadataKey) {
+        if (!player.hasMetadata(metadataKey)) {
+            return 0;
+        }
+
+        int expiresAt = player.getMetadata(metadataKey).getFirst().asInt();
+        return Math.max(0, expiresAt - player.getTicksLived());
+    }
+
+    private void clearTrackedEffect(Player player, String metadataKey) {
+        if (player.hasMetadata(metadataKey)) {
+            player.removeMetadata(metadataKey, plugin);
         }
     }
 
