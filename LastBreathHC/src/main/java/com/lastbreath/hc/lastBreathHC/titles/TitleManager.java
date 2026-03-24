@@ -805,10 +805,16 @@ public class TitleManager {
             nametagTeam.addEntry(entry);
         }
 
-        nametagTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
-        String titlePrefix = getTitleTag(player);
-        nametagTeam.prefix(LegacyComponentSerializer.legacySection().deserialize(titlePrefix));
+        // Hide the vanilla scoreboard-based nameplate (which always appends the real username)
+        // and render a single custom name instead.
+        nametagTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+        nametagTeam.prefix(Component.empty());
         nametagTeam.suffix(Component.empty());
+
+        String preferredName = resolvePreferredDisplayName(player);
+        Component preferredComponent = LegacyComponentSerializer.legacySection().deserialize(preferredName);
+        player.customName(preferredComponent);
+        player.setCustomNameVisible(true);
     }
 
     public static String resolvePreferredDisplayName(Player player) {
