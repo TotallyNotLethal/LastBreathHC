@@ -42,6 +42,7 @@ public class MobStackManager {
     private final NamespacedKey stackRadiusKey;
     private final NamespacedKey aiRadiusKey;
     private final NamespacedKey aiFrozenKey;
+    private final NamespacedKey aiEvaluatedKey;
 
     private BukkitTask scanTask;
 
@@ -53,6 +54,7 @@ public class MobStackManager {
         this.stackRadiusKey = new NamespacedKey(plugin, "stack_radius");
         this.aiRadiusKey = new NamespacedKey(plugin, "ai_radius");
         this.aiFrozenKey = new NamespacedKey(plugin, "ai_frozen");
+        this.aiEvaluatedKey = new NamespacedKey(plugin, "ai_evaluated");
     }
 
     public void start() {
@@ -156,10 +158,14 @@ public class MobStackManager {
             Map<StackGroupKey, List<LivingEntity>> grouped = new HashMap<>();
 
             for (LivingEntity entity : tagged) {
-                BlockKey blockKey = BlockKey.from(entity.getLocation());
-                boolean aiEnabled = aiEnabledCache.computeIfAbsent(blockKey, key -> resolveAiEnabled(entity.getLocation()));
-                applyAiSetting(entity, aiEnabled);
+                if (!isAiEvaluated(entity)) {
+                    BlockKey blockKey = BlockKey.from(entity.getLocation());
+                    boolean aiEnabled = aiEnabledCache.computeIfAbsent(blockKey, key -> resolveAiEnabled(entity.getLocation()));
+                    applyAiSetting(entity, aiEnabled);
+                    markAiEvaluated(entity);
+                }
 
+                BlockKey blockKey = BlockKey.from(entity.getLocation());
                 boolean stackAllowed = stackAllowedCache.computeIfAbsent(blockKey, key -> resolveStackingAllowed(entity.getLocation()));
                 if (!stackAllowed) {
                     continue;
@@ -301,24 +307,24 @@ public class MobStackManager {
         if (!(entity instanceof Mob mob)) return;
 
         if (aiEnabled) {
-            mob.setAI(true);
-            mob.setAware(true);
+            entity.getPersistentDataContainer().remove(aiFrozenKey);
             return;
         }
 
-        // KEEP AI ENABLED
-        mob.setAI(true);
-
-        // Prevent behavior
+        mob.setAI(false);
+        mob.setAware(false);
         mob.setTarget(null);
-        mob.setSilent(true);
+        entity.getPersistentDataContainer().set(aiFrozenKey, PersistentDataType.BYTE, (byte) 1);
+    }
 
-        // Stop movement without freezing physics
-        mob.getAttribute(Attribute.MOVEMENT_SPEED)
-                .setBaseValue(0.0);
+    private boolean isAiEvaluated(LivingEntity entity) {
+        PersistentDataContainer container = entity.getPersistentDataContainer();
+        Byte evaluated = container.get(aiEvaluatedKey, PersistentDataType.BYTE);
+        return evaluated != null && evaluated > 0;
+    }
 
-        mob.getAttribute(Attribute.FOLLOW_RANGE)
-                .setBaseValue(0.0);
+    private void markAiEvaluated(LivingEntity entity) {
+        entity.getPersistentDataContainer().set(aiEvaluatedKey, PersistentDataType.BYTE, (byte) 1);
     }
 
 
