@@ -765,13 +765,11 @@ public class TitleManager {
 
         String displayName = resolvePreferredDisplayName(player);
         Component displayComponent = LegacyComponentSerializer.legacySection().deserialize(displayName);
-        Component tabComponent = LegacyComponentSerializer.legacySection()
-                .deserialize(getTitleTabTag(player))
-                .append(displayComponent);
 
-        // Chat and tab are presentation surfaces; they do not control the in-world player nameplate.
+        // Keep chat + tab aligned to the same single resolved identity string.
+        // In-world nametag replacement itself is still handled by packet profile rewriting.
         player.displayName(displayComponent);
-        player.playerListName(tabComponent);
+        player.playerListName(displayComponent);
         player.customName(null);
         player.setCustomNameVisible(false);
 
