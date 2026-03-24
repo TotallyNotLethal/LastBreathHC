@@ -14,6 +14,8 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -39,6 +41,9 @@ public class TitleManager {
     private static final int HARVESTER_CROPS = 500;
     private static final int DEEP_DELVER_BLOCKS = 3000;
     private static final int PROSPECTOR_RARES = 100;
+    private static final String NICK_PERMISSION_NODE = "lastbreathhc.nick";
+    private static final String NICKNAME_PDC_KEY = "nickname";
+    private static final String NAMETAG_TEAM_PREFIX = "lbhcnt_";
     private static final int ANGLER_FISH = 200;
     private static final long SKYBOUND_DISTANCE_CM = 2_500_000L;
     private static final int STARFORGED_ASTEROIDS = 500;
@@ -758,16 +763,67 @@ public class TitleManager {
         if (player == null) {
             return;
         }
-        NamespacedKey nicknameKey = new NamespacedKey(LastBreathHC.getInstance(), "nickname");
-        String nickname = player.getPersistentDataContainer().get(nicknameKey, PersistentDataType.STRING);
-        String displayName = nickname == null || nickname.isBlank() ? player.getName() : nickname;
-        player.setDisplayName(displayName);
-        player.setPlayerListName(getTitleTabTag(player) + displayName);
 
-        Component nameTagComponent = LegacyComponentSerializer.legacySection().deserialize(displayName);
-        player.customName(nameTagComponent);
-        player.setCustomName(displayName);
-        player.setCustomNameVisible(true);
+        String displayName = resolvePreferredDisplayName(player);
+        Component displayComponent = LegacyComponentSerializer.legacySection().deserialize(displayName);
+        Component tabComponent = LegacyComponentSerializer.legacySection()
+                .deserialize(getTitleTabTag(player))
+                .append(displayComponent);
+
+        // Chat and tab are presentation surfaces; they do not control the in-world player nameplate.
+        player.displayName(displayComponent);
+        player.playerListName(tabComponent);
+
+        // In-world player nameplates are rendered from scoreboard teams (prefix/suffix + entry name).
+        applyNametag(player, displayName);
+    }
+
+    public static void applyNametag(Player player, String displayName) {
+        if (player == null) {
+            return;
+        }
+        Scoreboard scoreboard = Bukkit.getScoreboardManager() != null
+                ? Bukkit.getScoreboardManager().getMainScoreboard()
+                : null;
+        if (scoreboard == null) {
+            return;
+        }
+
+        String entry = player.getName();
+        Team currentTeam = scoreboard.getEntryTeam(entry);
+        String expectedTeamName = NAMETAG_TEAM_PREFIX + player.getUniqueId().toString().replace("-", "").substring(0, 8);
+
+        Team nametagTeam = scoreboard.getTeam(expectedTeamName);
+        if (nametagTeam == null) {
+            nametagTeam = scoreboard.registerNewTeam(expectedTeamName);
+        }
+
+        if (currentTeam != null && !currentTeam.getName().equals(expectedTeamName)) {
+            currentTeam.removeEntry(entry);
+        }
+        if (!nametagTeam.hasEntry(entry)) {
+            nametagTeam.addEntry(entry);
+        }
+
+        nametagTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
+        nametagTeam.prefix(LegacyComponentSerializer.legacySection().deserialize(displayName + " "));
+        nametagTeam.suffix(Component.empty());
+    }
+
+    public static String resolvePreferredDisplayName(Player player) {
+        if (player == null) {
+            return "";
+        }
+        if (!player.hasPermission(NICK_PERMISSION_NODE)) {
+            return player.getName();
+        }
+
+        NamespacedKey nicknameKey = new NamespacedKey(LastBreathHC.getInstance(), NICKNAME_PDC_KEY);
+        String nickname = player.getPersistentDataContainer().get(nicknameKey, PersistentDataType.STRING);
+        if (nickname == null || nickname.isBlank()) {
+            return player.getName();
+        }
+        return nickname;
     }
 
     public static void refreshAllTabTitles() {

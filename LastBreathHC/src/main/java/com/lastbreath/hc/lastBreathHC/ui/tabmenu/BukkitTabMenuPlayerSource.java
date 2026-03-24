@@ -3,8 +3,6 @@ package com.lastbreath.hc.lastBreathHC.ui.tabmenu;
 import com.lastbreath.hc.lastBreathHC.cosmetics.CosmeticManager;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerRecord;
 import com.lastbreath.hc.lastBreathHC.fakeplayer.FakePlayerService;
-import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
-import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import com.lastbreath.hc.lastBreathHC.titles.Title;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import com.lastbreath.hc.lastBreathHC.ui.tabmenu.TabMenuModelBuilder.PlayerEntry;
@@ -26,9 +24,7 @@ public final class BukkitTabMenuPlayerSource implements TabMenuPlayerSource {
         List<PlayerEntry> entries = new ArrayList<>();
         for (Player player : Bukkit.getOnlinePlayers()) {
             String prefix = TitleManager.getTitleTabTag(player) + CosmeticManager.getPrefixTag(player, true);
-            PlayerStats stats = StatsManager.get(player.getUniqueId());
-            String nickname = stats != null ? stats.nickname : null;
-            String displayName = nickname != null && !nickname.isBlank() ? nickname : player.getName();
+            String displayName = TitleManager.resolvePreferredDisplayName(player);
             entries.add(new PlayerEntry(
                     player.getName(),
                     displayName,
