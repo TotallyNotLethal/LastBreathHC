@@ -7,6 +7,7 @@ import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Statistic;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -828,6 +829,10 @@ public class TitleManager {
         NamespacedKey nicknameKey = new NamespacedKey(LastBreathHC.getInstance(), NICKNAME_PDC_KEY);
         String nickname = player.getPersistentDataContainer().get(nicknameKey, PersistentDataType.STRING);
         if (nickname == null || nickname.isBlank()) {
+            return player.getName();
+        }
+        String visibleNickname = ChatColor.stripColor(nickname);
+        if (visibleNickname == null || visibleNickname.trim().isEmpty()) {
             return player.getName();
         }
         return nickname;
