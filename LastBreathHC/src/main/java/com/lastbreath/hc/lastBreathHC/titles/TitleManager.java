@@ -6,6 +6,7 @@ import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import com.lastbreath.hc.lastBreathHC.nickname.NicknamePacketManager;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Statistic;
@@ -15,8 +16,6 @@ import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.Team;
 
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -44,7 +43,6 @@ public class TitleManager {
     private static final int PROSPECTOR_RARES = 100;
     private static final String NICK_PERMISSION_NODE = "lastbreathhc.nick";
     private static final String NICKNAME_PDC_KEY = "nickname";
-    private static final String NAMETAG_TEAM_PREFIX = "lbhcnt_";
     private static final int ANGLER_FISH = 200;
     private static final long SKYBOUND_DISTANCE_CM = 2_500_000L;
     private static final int STARFORGED_ASTEROIDS = 500;
@@ -775,50 +773,12 @@ public class TitleManager {
         player.displayName(displayComponent);
         player.playerListName(tabComponent);
 
-        // In-world player nameplates are rendered from scoreboard teams (prefix/suffix + entry name).
-        applyNametag(player);
+        // In-world nametag replacement is handled via ProtocolLib profile packet rewriting.
+        NicknamePacketManager.refreshPlayerName(player);
     }
 
     public static void applyNametag(Player player) {
-        if (player == null) return;
-
-        Scoreboard scoreboard = Bukkit.getScoreboardManager() != null
-                ? Bukkit.getScoreboardManager().getMainScoreboard()
-                : null;
-        if (scoreboard == null) return;
-
-        String entry = player.getName();
-        String teamName = NAMETAG_TEAM_PREFIX
-                + player.getUniqueId().toString().replace("-", "").substring(0, 8);
-
-        Team team = scoreboard.getTeam(teamName);
-        if (team == null) {
-            team = scoreboard.registerNewTeam(teamName);
-        }
-
-        // Remove from old team if needed
-        Team current = scoreboard.getEntryTeam(entry);
-        if (current != null && current != team) {
-            current.removeEntry(entry);
-        }
-
-        if (!team.hasEntry(entry)) {
-            team.addEntry(entry);
-        }
-
-        // 🔑 THIS is the important line
-        String visibleName = resolvePreferredDisplayName(player);
-
-        Component prefix = LegacyComponentSerializer.legacySection()
-                .deserialize(visibleName + " ");
-
-        team.prefix(prefix);
-        team.suffix(Component.empty());
-
-        team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
-
-        player.customName(null);
-        player.setCustomNameVisible(false);
+        // Legacy no-op: nametag replacement is handled by NicknamePacketManager packet rewriting.
     }
 
     public static String resolvePreferredDisplayName(Player player) {

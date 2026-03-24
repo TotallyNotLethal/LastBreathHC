@@ -158,6 +158,7 @@ import com.lastbreath.hc.lastBreathHC.potion.CustomPotionEffectRegistry;
 import com.lastbreath.hc.lastBreathHC.potion.CauldronBrewingListener;
 import com.lastbreath.hc.lastBreathHC.potion.PotionHandler;
 import com.lastbreath.hc.lastBreathHC.potion.PotionDefinitionRegistry;
+import com.lastbreath.hc.lastBreathHC.nickname.NicknamePacketManager;
 import com.lastbreath.hc.lastBreathHC.nickname.NicknamePermissionMonitor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -593,6 +594,7 @@ public final class LastBreathHC extends JavaPlugin {
         scheduleLeaderboardTopTitleChecks();
         scheduleStatsAutosave();
         scheduleTabMenuRefresh();
+        NicknamePacketManager.initialize(this);
         cosmeticAuraService.start(this);
         worldBossManager.start();
         mobStackManager.start();
@@ -698,6 +700,7 @@ public final class LastBreathHC extends JavaPlugin {
             deathMarkerManager.shutdown();
             deathMarkerManager = null;
         }
+        NicknamePacketManager.shutdown();
         if (teamWaypointManager != null) {
             teamWaypointManager.save();
             teamWaypointManager = null;

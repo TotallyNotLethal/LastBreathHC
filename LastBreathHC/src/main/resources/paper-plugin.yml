@@ -29,3 +29,9 @@ permissions:
   lastbreathhc.worldregen.admin:
     description: Allows use of /lbhc regen world regeneration admin commands.
     default: op
+
+dependencies:
+  server:
+    ProtocolLib:
+      load: BEFORE
+      required: false
