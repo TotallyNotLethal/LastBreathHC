@@ -780,48 +780,46 @@ public class TitleManager {
     }
 
     public static void applyNametag(Player player) {
-    if (player == null) return;
+        if (player == null) return;
 
-    Scoreboard scoreboard = Bukkit.getScoreboardManager() != null
-            ? Bukkit.getScoreboardManager().getMainScoreboard()
-            : null;
-    if (scoreboard == null) return;
+        Scoreboard scoreboard = Bukkit.getScoreboardManager() != null
+                ? Bukkit.getScoreboardManager().getMainScoreboard()
+                : null;
+        if (scoreboard == null) return;
 
-    String entry = player.getName();
-    String teamName = NAMETAG_TEAM_PREFIX
-            + player.getUniqueId().toString().replace("-", "").substring(0, 8);
+        String entry = player.getName();
+        String teamName = NAMETAG_TEAM_PREFIX
+                + player.getUniqueId().toString().replace("-", "").substring(0, 8);
 
-    Team team = scoreboard.getTeam(teamName);
-    if (team == null) {
-        team = scoreboard.registerNewTeam(teamName);
+        Team team = scoreboard.getTeam(teamName);
+        if (team == null) {
+            team = scoreboard.registerNewTeam(teamName);
+        }
+
+        // Remove from old team if needed
+        Team current = scoreboard.getEntryTeam(entry);
+        if (current != null && current != team) {
+            current.removeEntry(entry);
+        }
+
+        if (!team.hasEntry(entry)) {
+            team.addEntry(entry);
+        }
+
+        // 🔑 THIS is the important line
+        String visibleName = resolvePreferredDisplayName(player);
+
+        Component prefix = LegacyComponentSerializer.legacySection()
+                .deserialize(visibleName + " ");
+
+        team.prefix(prefix);
+        team.suffix(Component.empty());
+
+        team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
+
+        player.customName(null);
+        player.setCustomNameVisible(false);
     }
-
-    // Remove from previous team ONLY if needed
-    Team current = scoreboard.getEntryTeam(entry);
-    if (current != null && current != team) {
-        current.removeEntry(entry);
-    }
-
-    if (!team.hasEntry(entry)) {
-        team.addEntry(entry);
-    }
-
-    // Build display
-    String titleTag = getTitleTag(player);
-    String name = resolvePreferredDisplayName(player);
-
-    Component prefix = LegacyComponentSerializer.legacySection().deserialize(titleTag);
-    Component suffix = Component.empty();
-
-    team.prefix(prefix);
-    team.suffix(suffix);
-
-    team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
-
-    // REMOVE THESE (they are wrong for players)
-    player.customName(null);
-    player.setCustomNameVisible(false);
-}
 
     public static String resolvePreferredDisplayName(Player player) {
         if (player == null) {
