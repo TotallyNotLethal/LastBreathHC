@@ -10,6 +10,7 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.PlayerInfoData;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
+import com.comphenix.protocol.wrappers.WrappedChatComponent;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import org.bukkit.Bukkit;
@@ -177,7 +178,8 @@ public final class NicknamePacketManager implements Listener {
         }
 
         WrappedGameProfile rewrittenProfile = copyProfileWithNewName(profile, preferredName);
-        return copyPlayerInfoData(original, rewrittenProfile, uuid);
+        WrappedChatComponent rewrittenDisplayName = WrappedChatComponent.fromText(preferredName);
+        return copyPlayerInfoData(original, rewrittenProfile, rewrittenDisplayName, uuid);
     }
 
     private WrappedGameProfile copyProfileWithNewName(WrappedGameProfile original, String newName) {
@@ -193,10 +195,13 @@ public final class NicknamePacketManager implements Listener {
         return rewritten;
     }
 
-    private PlayerInfoData copyPlayerInfoData(PlayerInfoData original, WrappedGameProfile profile, UUID uuid) {
+    private PlayerInfoData copyPlayerInfoData(PlayerInfoData original,
+                                              WrappedGameProfile profile,
+                                              WrappedChatComponent displayName,
+                                              UUID uuid) {
         try {
             for (Constructor<?> constructor : PlayerInfoData.class.getConstructors()) {
-                Object[] args = mapConstructorArgs(constructor.getParameterTypes(), original, profile, uuid);
+                Object[] args = mapConstructorArgs(constructor.getParameterTypes(), original, profile, displayName, uuid);
                 if (args == null) {
                     continue;
                 }
@@ -211,6 +216,7 @@ public final class NicknamePacketManager implements Listener {
     private Object[] mapConstructorArgs(Class<?>[] parameterTypes,
                                         PlayerInfoData original,
                                         WrappedGameProfile profile,
+                                        WrappedChatComponent displayName,
                                         UUID uuid) {
         Object[] args = new Object[parameterTypes.length];
         int intIndex = 0;
@@ -238,7 +244,7 @@ public final class NicknamePacketManager implements Listener {
                 continue;
             }
 
-            Object reflected = resolveOptionalValue(original, type);
+            Object reflected = resolveOptionalValue(original, type, displayName);
             if (reflected == null && type.isPrimitive()) {
                 return null;
             }
@@ -247,9 +253,9 @@ public final class NicknamePacketManager implements Listener {
         return args;
     }
 
-    private Object resolveOptionalValue(PlayerInfoData original, Class<?> targetType) {
+    private Object resolveOptionalValue(PlayerInfoData original, Class<?> targetType, WrappedChatComponent displayName) {
         if (targetType.getSimpleName().contains("WrappedChatComponent")) {
-            return original.getDisplayName();
+            return displayName;
         }
         Object listOrder = invokeGetterRaw(original, "getListOrder");
         if (listOrder != null && targetType.isInstance(listOrder)) {
