@@ -775,10 +775,10 @@ public class TitleManager {
         player.playerListName(tabComponent);
 
         // In-world player nameplates are rendered from scoreboard teams (prefix/suffix + entry name).
-        applyNametag(player, displayName);
+        applyNametag(player);
     }
 
-    public static void applyNametag(Player player, String displayName) {
+    public static void applyNametag(Player player) {
         if (player == null) {
             return;
         }
@@ -806,7 +806,8 @@ public class TitleManager {
         }
 
         nametagTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
-        nametagTeam.prefix(LegacyComponentSerializer.legacySection().deserialize(displayName + " "));
+        String titlePrefix = getTitleTag(player);
+        nametagTeam.prefix(LegacyComponentSerializer.legacySection().deserialize(titlePrefix));
         nametagTeam.suffix(Component.empty());
     }
 
