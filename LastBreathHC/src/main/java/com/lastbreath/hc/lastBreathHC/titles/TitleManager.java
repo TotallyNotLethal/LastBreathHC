@@ -4,6 +4,8 @@ import com.lastbreath.hc.lastBreathHC.LastBreathHC;
 import com.lastbreath.hc.lastBreathHC.cosmetics.BossAura;
 import com.lastbreath.hc.lastBreathHC.stats.PlayerStats;
 import com.lastbreath.hc.lastBreathHC.stats.StatsManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Statistic;
 import org.bukkit.attribute.Attribute;
@@ -761,6 +763,9 @@ public class TitleManager {
         String displayName = nickname == null || nickname.isBlank() ? player.getName() : nickname;
         player.setDisplayName(displayName);
         player.setPlayerListName(getTitleTabTag(player) + displayName);
+
+        Component nameTagComponent = LegacyComponentSerializer.legacySection().deserialize(displayName);
+        player.customName(nameTagComponent);
         player.setCustomName(displayName);
         player.setCustomNameVisible(true);
     }
