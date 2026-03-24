@@ -15,6 +15,7 @@ public class CustomItemRecipes {
     public static void register() {
         registerCustomEnchantBook();
         registerEnhancedGrindstone();
+        registerEnhancedEnchantingTable();
         registerTotemOfLife();
         registerWorldBossPortalCompass();
         registerRebirthStone();
@@ -82,6 +83,25 @@ public class CustomItemRecipes {
         recipe.setIngredient('E', Material.DRAGON_EGG);
         recipe.setIngredient('G', Material.GRINDSTONE);
         recipe.setIngredient('B', Material.NETHERITE_BLOCK);
+        Bukkit.addRecipe(recipe);
+    }
+
+
+    private static void registerEnhancedEnchantingTable() {
+        NamespacedKey key = new NamespacedKey(
+                LastBreathHC.getInstance(), "enhanced_enchanting_table"
+        );
+        ShapedRecipe recipe = new ShapedRecipe(key, EnhancedEnchantingTable.create());
+        recipe.shape(
+                "SES",
+                "ETE",
+                "SBS"
+        );
+
+        recipe.setIngredient('S', Material.NETHER_STAR);
+        recipe.setIngredient('E', Material.DRAGON_EGG);
+        recipe.setIngredient('T', Material.ENCHANTING_TABLE);
+        recipe.setIngredient('B', Material.CHISELED_BOOKSHELF);
         Bukkit.addRecipe(recipe);
     }
 

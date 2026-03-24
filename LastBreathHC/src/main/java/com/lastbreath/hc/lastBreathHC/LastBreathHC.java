@@ -145,6 +145,7 @@ import com.lastbreath.hc.lastBreathHC.listeners.CustomEnchantListener;
 import com.lastbreath.hc.lastBreathHC.listeners.ServerListMotdListener;
 import com.lastbreath.hc.lastBreathHC.items.CustomItemRecipes;
 import com.lastbreath.hc.lastBreathHC.items.EchoInfuserListener;
+import com.lastbreath.hc.lastBreathHC.items.EnhancedEnchantingTableListener;
 import com.lastbreath.hc.lastBreathHC.items.EnhancedGrindstoneListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneLifeListener;
 import com.lastbreath.hc.lastBreathHC.items.GracestoneListener;
@@ -436,6 +437,9 @@ public final class LastBreathHC extends JavaPlugin {
         );
         getServer().getPluginManager().registerEvents(
                 new EnhancedGrindstoneListener(), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new EnhancedEnchantingTableListener(), this
         );
         getServer().getPluginManager().registerEvents(
                 new CustomEnchantAnvilListener(), this
