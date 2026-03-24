@@ -772,6 +772,8 @@ public class TitleManager {
         // Chat and tab are presentation surfaces; they do not control the in-world player nameplate.
         player.displayName(displayComponent);
         player.playerListName(tabComponent);
+        player.customName(null);
+        player.setCustomNameVisible(false);
 
         // In-world nametag replacement is handled via ProtocolLib profile packet rewriting.
         NicknamePacketManager.refreshPlayerName(player);
@@ -799,6 +801,18 @@ public class TitleManager {
             return player.getName();
         }
         return nickname;
+    }
+
+    public static String resolvePreferredProfileName(Player player) {
+        if (player == null) {
+            return "";
+        }
+        String preferredDisplayName = resolvePreferredDisplayName(player);
+        String stripped = ChatColor.stripColor(preferredDisplayName == null ? "" : preferredDisplayName);
+        if (stripped == null || stripped.isBlank()) {
+            return player.getName();
+        }
+        return stripped.trim();
     }
 
     public static void refreshAllTabTitles() {

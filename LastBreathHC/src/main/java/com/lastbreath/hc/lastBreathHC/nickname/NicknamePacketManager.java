@@ -13,7 +13,6 @@ import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.lastbreath.hc.lastBreathHC.titles.TitleManager;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -172,7 +171,7 @@ public final class NicknamePacketManager implements Listener {
             return original;
         }
 
-        String preferredName = sanitizeName(TitleManager.resolvePreferredDisplayName(target), target.getName());
+        String preferredName = sanitizeName(TitleManager.resolvePreferredProfileName(target), target.getName());
         if (preferredName.equals(profile.getName())) {
             return original;
         }
@@ -306,11 +305,10 @@ public final class NicknamePacketManager implements Listener {
     }
 
     private String sanitizeName(String preferred, String fallback) {
-        String stripped = ChatColor.stripColor(preferred == null ? "" : preferred);
-        if (stripped == null || stripped.isBlank()) {
+        if (preferred == null || preferred.isBlank()) {
             return fallback;
         }
-        String trimmed = stripped.trim();
+        String trimmed = preferred.trim();
         if (trimmed.length() > 16) {
             return trimmed.substring(0, 16);
         }
