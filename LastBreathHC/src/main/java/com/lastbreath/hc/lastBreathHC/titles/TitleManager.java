@@ -780,43 +780,48 @@ public class TitleManager {
     }
 
     public static void applyNametag(Player player) {
-        if (player == null) {
-            return;
-        }
-        Scoreboard scoreboard = Bukkit.getScoreboardManager() != null
-                ? Bukkit.getScoreboardManager().getMainScoreboard()
-                : null;
-        if (scoreboard == null) {
-            return;
-        }
+    if (player == null) return;
 
-        String entry = player.getName();
-        Team currentTeam = scoreboard.getEntryTeam(entry);
-        String expectedTeamName = NAMETAG_TEAM_PREFIX + player.getUniqueId().toString().replace("-", "").substring(0, 8);
+    Scoreboard scoreboard = Bukkit.getScoreboardManager() != null
+            ? Bukkit.getScoreboardManager().getMainScoreboard()
+            : null;
+    if (scoreboard == null) return;
 
-        Team nametagTeam = scoreboard.getTeam(expectedTeamName);
-        if (nametagTeam == null) {
-            nametagTeam = scoreboard.registerNewTeam(expectedTeamName);
-        }
+    String entry = player.getName();
+    String teamName = NAMETAG_TEAM_PREFIX
+            + player.getUniqueId().toString().replace("-", "").substring(0, 8);
 
-        if (currentTeam != null && !currentTeam.getName().equals(expectedTeamName)) {
-            currentTeam.removeEntry(entry);
-        }
-        if (!nametagTeam.hasEntry(entry)) {
-            nametagTeam.addEntry(entry);
-        }
-
-        // Hide the vanilla scoreboard-based nameplate (which always appends the real username)
-        // and render a single custom name instead.
-        nametagTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-        nametagTeam.prefix(Component.empty());
-        nametagTeam.suffix(Component.empty());
-
-        String preferredName = resolvePreferredDisplayName(player);
-        Component preferredComponent = LegacyComponentSerializer.legacySection().deserialize(preferredName);
-        player.customName(preferredComponent);
-        player.setCustomNameVisible(true);
+    Team team = scoreboard.getTeam(teamName);
+    if (team == null) {
+        team = scoreboard.registerNewTeam(teamName);
     }
+
+    // Remove from previous team ONLY if needed
+    Team current = scoreboard.getEntryTeam(entry);
+    if (current != null && current != team) {
+        current.removeEntry(entry);
+    }
+
+    if (!team.hasEntry(entry)) {
+        team.addEntry(entry);
+    }
+
+    // Build display
+    String titleTag = getTitleTag(player);
+    String name = resolvePreferredDisplayName(player);
+
+    Component prefix = LegacyComponentSerializer.legacySection().deserialize(titleTag);
+    Component suffix = Component.empty();
+
+    team.prefix(prefix);
+    team.suffix(suffix);
+
+    team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
+
+    // REMOVE THESE (they are wrong for players)
+    player.customName(null);
+    player.setCustomNameVisible(false);
+}
 
     public static String resolvePreferredDisplayName(Player player) {
         if (player == null) {
