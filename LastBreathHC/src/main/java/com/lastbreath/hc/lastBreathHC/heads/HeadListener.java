@@ -191,9 +191,9 @@ public class HeadListener implements Listener {
         String targetName = target.getName();
 
         if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (ReviveTokenHelper.hasToken(e.getPlayer())) {
-                if (!ReviveTokenHelper.consumeToken(e.getPlayer())) {
-                    e.getPlayer().sendMessage("§cYou need a Revival Token to revive this soul.");
+            if (ReviveTokenHelper.hasTokenInHands(e.getPlayer())) {
+                if (!ReviveTokenHelper.consumeTokenFromHands(e.getPlayer())) {
+                    e.getPlayer().sendMessage("§cYou need a Revival Token in your main hand or offhand to revive this soul.");
                     return;
                 }
 
@@ -233,6 +233,8 @@ public class HeadListener implements Listener {
                 skull.update();
                 return;
             }
+
+            e.getPlayer().sendMessage("§cYou need a Revival Token in your main hand or offhand to revive this soul.");
         }
 
         Inventory inv = HeadManager.get(uuid);

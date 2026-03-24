@@ -607,6 +607,7 @@ public final class LastBreathHC extends JavaPlugin {
                     event.registrar().register("bounty", new BountyCommand());
                     event.registrar().register("effects", new EffectsCommand(customPotionEffectManager, customPotionEffectRegistry, effectsStatusGUI));
                     event.registrar().register("rtp", new RtpCommand(this));
+                    event.registrar().register("revive", new ReviveCommand());
                     event.registrar().register("nick", new NickCommand(this));
                     event.registrar().register("discord", new DiscordCommand());
                     event.registrar().register("t", new TeamChatCommand(teamChatService));
