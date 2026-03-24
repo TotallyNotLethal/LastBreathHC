@@ -18,10 +18,40 @@ public class ReviveTokenHelper {
                 || hasTokenInHand(player.getInventory().getItemInOffHand());
     }
 
+    public static boolean hasTokenInHands(Player player) {
+        ItemStack mainHand = player.getInventory().getItemInMainHand();
+        ItemStack offHand = player.getInventory().getItemInOffHand();
+        return ReviveToken.isToken(mainHand) || ReviveToken.isToken(offHand);
+    }
+
     public static boolean consumeToken(Player player) {
         return consumeTokenFromHand(player)
                 || consumeToken(player.getInventory())
                 || consumeToken(player.getEnderChest());
+    }
+
+    public static boolean consumeTokenFromHands(Player player) {
+        ItemStack mainHand = player.getInventory().getItemInMainHand();
+        if (consumeDirectToken(mainHand, player.getInventory()::setItemInMainHand)) {
+            return true;
+        }
+
+        ItemStack offHand = player.getInventory().getItemInOffHand();
+        return consumeDirectToken(offHand, player.getInventory()::setItemInOffHand);
+    }
+
+    private static boolean consumeDirectToken(ItemStack item, Consumer<ItemStack> setter) {
+        if (!ReviveToken.isToken(item)) {
+            return false;
+        }
+
+        if (item.getAmount() > 1) {
+            item.setAmount(item.getAmount() - 1);
+            setter.accept(item);
+        } else {
+            setter.accept(null);
+        }
+        return true;
     }
 
     private static boolean hasTokenInHand(ItemStack item) {

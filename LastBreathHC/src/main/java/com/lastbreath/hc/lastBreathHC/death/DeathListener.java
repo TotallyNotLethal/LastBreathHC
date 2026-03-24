@@ -85,10 +85,12 @@ public class DeathListener implements Listener {
         );
 
         player.setHealth(1.0);
-        Location destination = player.getBedSpawnLocation() != null
-                ? player.getBedSpawnLocation()
-                : player.getWorld().getSpawnLocation();
-        player.teleport(destination);
+        if (ReviveStateManager.isTeleportOnDeathEnabled(player.getUniqueId())) {
+            Location destination = player.getBedSpawnLocation() != null
+                    ? player.getBedSpawnLocation()
+                    : player.getWorld().getSpawnLocation();
+            player.teleport(destination);
+        }
 
         Bukkit.broadcastMessage(
                 "§6⚡ " + TitleManager.getTitleTag(player) + player.getName()
@@ -217,11 +219,13 @@ public class DeathListener implements Listener {
 
         player.setGameMode(GameMode.SURVIVAL);
         ReviveStateManager.markRevivePending(player.getUniqueId());
-        player.teleport(
-                player.getBedSpawnLocation() != null
-                        ? player.getBedSpawnLocation()
-                        : player.getWorld().getSpawnLocation()
-        );
+        if (ReviveStateManager.isTeleportOnDeathEnabled(player.getUniqueId())) {
+            player.teleport(
+                    player.getBedSpawnLocation() != null
+                            ? player.getBedSpawnLocation()
+                            : player.getWorld().getSpawnLocation()
+            );
+        }
 
         Bukkit.broadcastMessage(
                 "§6⚡ " + TitleManager.getTitleTag(player) + player.getName() + " defied death!"
