@@ -208,6 +208,7 @@ Includes:
 - Totem of Life
 - Gracestone
 - Enhanced Grindstone
+- Enhanced Enchanting Table (guaranteed 50-level bottom offer sourced from nearby chiseled bookshelf books)
 - Token recipes and revive token GUI recipe registration
 - Event-linked item drops (asteroid/world boss/reward systems)
 
@@ -339,8 +340,9 @@ Registered command set (non-spectator):
 - `/list`
 - `/nemesis ...`
 
-Player-friendly command guide:
+Player-friendly guides:
 - Team system guide: `LastBreathHC/docs/player/team-guide.md`
+- Enhanced Enchanting Table guide: `LastBreathHC/docs/player/enhanced-enchanting-table.md`
 
 ---
 
@@ -442,6 +444,7 @@ Messaging systems include:
 - Nemesis docs in `LastBreathHC/docs/nemesis/`
 - World boss docs in `LastBreathHC/docs/worldbosses/`
 - Admin docs in `LastBreathHC/docs/admin/`
+- Player docs in `LastBreathHC/docs/player/`
 - Potion branch references in `LastBreathHC/POTION_BRANCHES.md`
 
 If you want, I can also generate a second companion file that is purely **operator-focused** (with “safe defaults vs high-chaos defaults” for every critical setting), while still excluding spectator mode.
